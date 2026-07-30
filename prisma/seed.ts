@@ -2,9 +2,7 @@ import "dotenv/config";
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient({
-	datasourceUrl: process.env.DATABASE_URL,
-});
+const prisma = new PrismaClient();
 
 async function main() {
 	console.log("Seeding database...");
@@ -31,7 +29,7 @@ async function main() {
 				name: "Spoon",
 				tagline: "La cuisine créole élevée au rang d'art",
 				description: "Au cœur de Saint-Denis, Spoon vous propose une expérience gastronomique unique, mêlant les saveurs authentiques de La Réunion à une cuisine créative et raffinée.",
-				phone: "+262 692 00 00 00",
+				phone: "+262 692 12 34 56",
 				email: "contact@spoon.re",
 				address: "12 Rue de Paris, 97400 Saint-Denis, La Réunion",
 				googleMapsUrl: "https://maps.google.com",
