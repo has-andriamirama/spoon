@@ -9,9 +9,10 @@ import RefundForm from "./refund-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPaymentDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminPaymentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const payment = await prisma.payment.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { reservation: true },
   });
   if (!payment) notFound();

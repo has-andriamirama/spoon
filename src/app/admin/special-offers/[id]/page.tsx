@@ -3,10 +3,11 @@ import SpecialOfferForm from "./special-offer-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminSpecialOfferPage({ params }: { params: { id: string } }) {
+export default async function AdminSpecialOfferPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [dishes, offer] = await Promise.all([
     prisma.dish.findMany({ where: { isAvailable: true }, include: { category: true }, orderBy: [{ category: { order: "asc" } }, { order: "asc" }] }),
-    params.id !== "new" ? prisma.specialOffer.findUnique({ where: { id: params.id }, include: { items: { include: { dish: true } }, targets: { include: { user: true } } } }) : null,
+    id !== "new" ? prisma.specialOffer.findUnique({ where: { id }, include: { items: { include: { dish: true } }, targets: { include: { user: true } } } }) : null,
   ]);
   return (
     <div>

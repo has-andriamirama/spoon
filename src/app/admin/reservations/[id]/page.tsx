@@ -9,9 +9,10 @@ import AdminReservationActions from "./reservation-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminReservationDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminReservationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const reservation = await prisma.reservation.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { payment: true, invoice: true, user: { select: { id: true, firstName: true, lastName: true, email: true } } },
   });
   if (!reservation) notFound();

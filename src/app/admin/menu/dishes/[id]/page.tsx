@@ -4,10 +4,11 @@ import DishForm from "./dish-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDishPage({ params }: { params: { id: string } }) {
+export default async function AdminDishPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const categories = await prisma.menuCategory.findMany({ where: { isActive: true }, orderBy: { order: "asc" } });
-  const dish = params.id === "new" ? null : await prisma.dish.findUnique({ where: { id: params.id } });
-  if (params.id !== "new" && !dish) notFound();
+  const dish = id === "new" ? null : await prisma.dish.findUnique({ where: { id } });
+  if (id !== "new" && !dish) notFound();
   return (
     <div>
       <h1 className="font-display text-3xl text-[#F5F0EB] mb-8">{dish ? "Modifier le plat" : "Nouveau plat"}</h1>

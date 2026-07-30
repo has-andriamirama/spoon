@@ -9,11 +9,12 @@ import Link from "next/link";
 import { Calendar, Clock, Users, Mail, Phone, ArrowLeft } from "lucide-react";
 import CancelReservationButton from "./cancel-button";
 
-export default async function ReservationDetailPage({ params }: { params: { id: string } }) {
+export default async function ReservationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) redirect("/auth/login");
   const reservation = await prisma.reservation.findFirst({
-    where: { id: params.id, userId: (session.user as any).id },
+    where: { id, userId: (session.user as any).id },
     include: { payment: true, invoice: true },
   });
   if (!reservation) notFound();

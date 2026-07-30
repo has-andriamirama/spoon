@@ -8,9 +8,10 @@ import { ArrowLeft, Calendar, Mail, Phone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminCustomerDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminCustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const customer = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       reservations: { include: { payment: true }, orderBy: { date: "desc" }, take: 20 },
       invoices: { orderBy: { issuedAt: "desc" }, take: 10 },
