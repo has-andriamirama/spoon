@@ -6,6 +6,7 @@ import { UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function RegisterPage() {
       if (!res.ok) throw new Error(data.error || "Erreur");
       toast.success("Compte créé ! Vérifiez votre email.");
       router.push("/auth/login");
-    } catch (err: any) { toast.error(err.message); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, Clock, Users, User, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getErrorMessage } from "@/lib/utils";
 import type { ReservationFormData } from "./reservation-stepper";
 import toast from "react-hot-toast";
 
@@ -39,8 +39,8 @@ export default function StepSummary({ data, onPrev, onConfirmed }: Props) {
       if (!res.ok) throw new Error(json.error || "Erreur lors de la réservation");
       onConfirmed(json.data.id);
       router.push(`/reservation/confirmation?id=${json.data.id}`);
-    } catch (err: any) {
-      toast.error(err.message || "Une erreur est survenue.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Une erreur est survenue."));
     } finally {
       setLoading(false);
     }

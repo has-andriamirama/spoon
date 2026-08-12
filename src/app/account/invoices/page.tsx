@@ -3,7 +3,6 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatDate, formatPrice } from "@/lib/utils";
-import Link from "next/link";
 import { FileText, Download } from "lucide-react";
 
 export const metadata = { title: "Mes factures" };
@@ -11,7 +10,7 @@ export const metadata = { title: "Mes factures" };
 export default async function AccountInvoicesPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/auth/login");
-  const invoices = await prisma.invoice.findMany({ where: { userId: (session.user as any).id }, orderBy: { issuedAt: "desc" } });
+  const invoices = await prisma.invoice.findMany({ where: { userId: session.user.id }, orderBy: { issuedAt: "desc" } });
 
   return (
     <div>

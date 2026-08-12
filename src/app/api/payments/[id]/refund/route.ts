@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { sendRefundConfirmation } from "@/services/email.service";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
 		const { amount } = await request.json();
 		const payment = await prisma.payment.findUnique({
-			where: { id: params.id },
+			where: { id: id },
 			include: { reservation: true }
 		});
 		if (!payment || !payment.stripePaymentIntentId) return NextResponse.json({ error: "Paiement introuvable" }, { status: 404 });
@@ -21,7 +22,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
 		const isFullRefund = !refundAmount || refundAmount >= Math.round(payment.amount * 100);
 		await prisma.payment.update({
-			where: { id: params.id },
+			where: { id: id },
 			data: {
 				status: isFullRefund ? "REFUNDED" : "PARTIALLY_REFUNDED",
 				refundedAmount: (refundAmount || Math.round(payment.amount * 100)) / 100,

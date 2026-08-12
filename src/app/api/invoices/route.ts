@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 export async function GET() {
 	try {
 		const session = await getServerSession(authOptions);
-		const userId = (session?.user as any)?.id;
+		const userId = session?.user?.id;
 		const invoices = await prisma.invoice.findMany({
 			where: userId ? { userId } : {},
 			orderBy: { issuedAt: "desc" },

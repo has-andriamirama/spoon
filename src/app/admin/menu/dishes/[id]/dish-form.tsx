@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { ALLERGENS, DIETARY_TAGS } from "@/lib/constants";
 import type { Dish, MenuCategory } from "@/types";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 interface Props { dish: Dish | null; categories: MenuCategory[]; }
 
@@ -41,7 +42,7 @@ export default function DishForm({ dish, categories }: Props) {
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success(dish ? "Plat modifié !" : "Plat créé !");
       router.push("/admin/menu");
-    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 

@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDate } from "@/lib/utils";
-import { Trash2, Plus, X } from "lucide-react";
+import { formatDate, getErrorMessage } from "@/lib/utils";
+import { Trash2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
 type ClosedDay = { id: string; date: string; reason?: string | null };
@@ -32,7 +32,7 @@ export default function AdminClosedDaysPage() {
       setDays(p => [...p, data.data]);
       setForm({ date: "", reason: "" });
       toast.success("Jour fermé ajouté");
-    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 

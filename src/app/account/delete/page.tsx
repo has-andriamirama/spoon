@@ -10,7 +10,7 @@ export default function DeleteAccountPage() {
   const { data: session } = useSession();
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-  const userId = (session?.user as any)?.id;
+  const userId = session?.user?.id;
 
   const handleDelete = async () => {
     if (confirm !== "SUPPRIMER") return;

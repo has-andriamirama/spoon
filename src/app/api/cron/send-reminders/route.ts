@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendReservationReminder } from "@/services/email.service";
 import { addDays, startOfDay, endOfDay } from "date-fns";
 
-export async function GET(request: Request) {
+export async function GET() {
 	try {
 		const tomorrow = addDays(new Date(), 1);
 		const reservations = await prisma.reservation.findMany({

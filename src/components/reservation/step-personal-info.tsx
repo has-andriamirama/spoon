@@ -17,10 +17,10 @@ export default function StepPersonalInfo({ data, updateData, onNext, onPrev }: P
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Prefill from session
-  if (session && !data.guestFirstName && (session.user as any)?.firstName) {
+  if (session && !data.guestFirstName && session.user?.firstName) {
     updateData({
-      guestFirstName: (session.user as any).firstName || "",
-      guestLastName: (session.user as any).lastName || "",
+      guestFirstName: session.user.firstName || "",
+      guestLastName: session.user.lastName || "",
       guestEmail: session.user?.email || "",
     });
   }

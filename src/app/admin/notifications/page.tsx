@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/utils";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell } from "lucide-react";
 import MarkAllReadButton from "./mark-all-read";
 
 export const dynamic = "force-dynamic";

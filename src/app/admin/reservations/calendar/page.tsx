@@ -30,7 +30,7 @@ export default async function AdminReservationsCalendarPage({
 	const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 	const prevWeek = format(addDays(weekStart, -7), "yyyy-MM-dd");
 	const nextWeek = format(addDays(weekStart, 7), "yyyy-MM-dd");
-	const variantMap: Record<string, any> = {
+	const variantMap: Record<string, "yellow" | "green" | "red" | "gray" | "orange"> = {
 		yellow: "yellow",
 		green: "green",
 		red: "red",

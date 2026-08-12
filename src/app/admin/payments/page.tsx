@@ -10,7 +10,7 @@ export const metadata = { title: "Paiements" };
 export default async function AdminPaymentsPage() {
   const payments = await prisma.payment.findMany({ include: { reservation: { select: { guestFirstName: true, guestLastName: true, date: true, timeSlot: true } } }, orderBy: { createdAt: "desc" }, take: 100 });
   const total = payments.filter(p => p.status === "PAID").reduce((s, p) => s + p.amount, 0);
-  const variantMap: Record<string, any> = { gray: "gray", yellow: "yellow", green: "green", blue: "blue", red: "red" };
+  const variantMap: Record<string, "gray" | "yellow" | "green" | "blue" | "red"> = { gray: "gray", yellow: "yellow", green: "green", blue: "blue", red: "red" };
 
   return (
     <div>

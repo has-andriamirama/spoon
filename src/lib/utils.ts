@@ -47,3 +47,7 @@ export function getInitials(firstName: string, lastName: string): string {
 export function truncate(str: string, maxLength: number): string {
   return str.length > maxLength ? `${str.slice(0, maxLength)}...` : str;
 }
+
+export function getErrorMessage(error: unknown, fallback = "Erreur"): string {
+	return error instanceof Error ? error.message : fallback;
+}

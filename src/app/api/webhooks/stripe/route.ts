@@ -5,6 +5,7 @@ import { generateInvoice } from "@/services/invoice.service";
 import { sendPaymentConfirmation } from "@/services/email.service";
 import { createAdminNotification } from "@/services/notification.service";
 import { formatPrice } from "@/lib/utils";
+import type Stripe from "stripe";
 
 export async function POST(request: Request) {
 	const body = await request.text();
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
 
 	try {
 		if (event.type === "payment_intent.succeeded") {
-			const paymentIntent = event.data.object as any;
+			const paymentIntent = event.data.object as Stripe.PaymentIntent;
 			const { reservationId } = paymentIntent.metadata;
 			const amount = paymentIntent.amount / 100;
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
 				where: { stripePaymentIntentId: paymentIntent.id },
 				data: {
 					status: "PAID",
-					stripeChargeId: paymentIntent.latest_charge,
+					stripeChargeId: typeof paymentIntent.latest_charge === "string" ? paymentIntent.latest_charge : null,
 					paidAt: new Date()
 				}
 			});
@@ -58,12 +59,12 @@ export async function POST(request: Request) {
 		}
 
 		if (event.type === "payment_intent.payment_failed") {
-			const paymentIntent = event.data.object as any;
+			const paymentIntent = event.data.object as Stripe.PaymentIntent;
 			await prisma.payment.update({
 				where: { stripePaymentIntentId: paymentIntent.id },
 				data: {
 					status: "FAILED",
-					failureReason: paymentIntent.last_payment_error?.message
+					failureReason: paymentIntent.last_payment_error?.message ?? null
 				}
 			});
 		}

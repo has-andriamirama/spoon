@@ -11,8 +11,8 @@ export async function GET(request: Request) {
 	try {
 		const { searchParams } = new URL(request.url);
 		const session = await getServerSession(authOptions);
-		const userId = (session?.user as any)?.id;
-		const where: any = userId ? { userId } : {};
+		const userId = session?.user?.id;
+		const where: { userId?: string; status?: string } = userId ? { userId } : {};
 		if (searchParams.get("status")) where.status = searchParams.get("status");
 		const reservations = await prisma.reservation.findMany({
 			where,
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 			take: 100
 		});
 		return NextResponse.json({ data: reservations });
-	} catch (error) {
+	} catch {
 		return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
 	}
 }
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 			data: {
 				...parsed.data,
 				date: new Date(date),
-				userId: (session?.user as any)?.id || null,
+				userId: session?.user?.id || null,
 				status: settings?.autoConfirmReservations ? "CONFIRMED" : "PENDING",
 				confirmedAt: settings?.autoConfirmReservations ? new Date() : null,
 			},
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 		}
 
 		return NextResponse.json({ data: reservation }, { status: 201 });
-	} catch (error) {
+	} catch {
 		console.error(error);
 		return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 });
 	}

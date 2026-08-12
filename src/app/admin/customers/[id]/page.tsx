@@ -4,7 +4,7 @@ import { formatDate, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { RESERVATION_STATUSES } from "@/lib/constants";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Mail, Phone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
   if (!customer) notFound();
 
   const totalSpent = customer.reservations.reduce((s, r) => s + (r.payment?.status === "PAID" ? r.payment.amount : 0), 0);
-  const variantMap: Record<string, any> = { yellow: "yellow", green: "green", red: "red", gray: "gray", orange: "orange" };
+  const variantMap: Record<string, "yellow" | "green" | "red" | "gray" | "orange"> = { yellow: "yellow", green: "green", red: "red", gray: "gray", orange: "orange" };
 
   return (
     <div>

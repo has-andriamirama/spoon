@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Plus, Trash2, ImageIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { GALLERY_CATEGORIES } from "@/lib/constants";
 import type { GalleryImage } from "@/types";

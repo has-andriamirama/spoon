@@ -5,6 +5,7 @@ import { UtensilsCrossed, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function AdminLoginPage() {
   const [form, setForm] = useState({ username: "", password: "" });
@@ -19,7 +20,7 @@ export default function AdminLoginPage() {
       if (!res.ok) throw new Error(data.error || "Identifiants incorrects");
       toast.success("Connexion réussie");
       router.push(data.mustChangePassword ? "/admin/account" : "/admin/dashboard");
-    } catch (err: any) { toast.error(err.message); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 

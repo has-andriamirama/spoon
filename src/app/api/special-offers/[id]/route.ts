@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
 		const body = await request.json();
-		const { dishIds, userIds, ...data } = body;
+		const { dishIds, ...data } = body;
 		if (data.startDate) data.startDate = new Date(data.startDate);
 		if (data.endDate) data.endDate = new Date(data.endDate);
 
 		const offer = await prisma.specialOffer.update({
-			where: { id: params.id },
+			where: { id: id },
 			data: {
 				...data,
 				...(dishIds !== undefined && {
@@ -23,9 +24,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 	}
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
-		await prisma.specialOffer.delete({ where: { id: params.id } });
+		await prisma.specialOffer.delete({ where: { id: id } });
 		return NextResponse.json({ message: "Offre supprimée" });
 	} catch {
 		return NextResponse.json({ error: "Erreur interne" }, { status: 500 });

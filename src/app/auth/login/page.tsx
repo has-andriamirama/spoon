@@ -7,6 +7,7 @@ import { UtensilsCrossed, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 function LoginForm() {
 	const router = useRouter();
@@ -23,7 +24,7 @@ function LoginForm() {
 			if (res?.error) throw new Error("Email ou mot de passe incorrect");
 			toast.success("Connexion réussie !");
 			router.push(callbackUrl);
-		} catch (err: any) { toast.error(err.message); }
+		} catch (error: unknown) { toast.error(getErrorMessage(error)); }
 		finally { setLoading(false); }
 	};
 

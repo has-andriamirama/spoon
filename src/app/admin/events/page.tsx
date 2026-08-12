@@ -8,7 +8,7 @@ export const metadata = { title: "Événements" };
 
 export default async function AdminEventsPage() {
   const events = await prisma.eventRequest.findMany({ orderBy: { createdAt: "desc" } });
-  const statusColors: Record<string, any> = { NEW: "yellow", IN_PROGRESS: "blue", ACCEPTED: "green", DECLINED: "red" };
+  const statusColors: Record<string, "yellow" | "blue" | "green" | "red"> = { NEW: "yellow", IN_PROGRESS: "blue", ACCEPTED: "green", DECLINED: "red" };
   const statusLabels: Record<string, string> = { NEW: "Nouveau", IN_PROGRESS: "En cours", ACCEPTED: "Accepté", DECLINED: "Refusé" };
 
   return (

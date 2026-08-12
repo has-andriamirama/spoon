@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function RefundForm({ paymentId, maxAmount }: { paymentId: string; maxAmount: number }) {
   const [amount, setAmount] = useState(maxAmount.toString());
@@ -23,7 +24,7 @@ export default function RefundForm({ paymentId, maxAmount }: { paymentId: string
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success("Remboursement initié !");
       router.push("/admin/payments");
-    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 

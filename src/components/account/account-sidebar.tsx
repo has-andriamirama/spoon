@@ -15,7 +15,7 @@ const LINKS = [
 export default function AccountSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const user = session?.user as any;
+  const user = session?.user;
 
   return (
     <div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">

@@ -18,7 +18,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
   if (!payment) notFound();
 
   const pStatus = PAYMENT_STATUSES[payment.status];
-  const variantMap: Record<string, any> = { gray: "gray", yellow: "yellow", green: "green", blue: "blue", red: "red" };
+  const variantMap: Record<string, "gray" | "yellow" | "green" | "blue" | "red"> = { gray: "gray", yellow: "yellow", green: "green", blue: "blue", red: "red" };
 
   return (
     <div>
@@ -38,7 +38,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between gap-4">
                 <dt className="text-xs text-[#5A5249]">{label}</dt>
-                <dd className="text-sm text-[#F5F0EB]">{value as any}</dd>
+                <dd className="text-sm text-[#F5F0EB]">{value}</dd>
               </div>
             ))}
           </dl>

@@ -18,7 +18,7 @@ export default async function AdminReservationDetailPage({ params }: { params: P
   if (!reservation) notFound();
 
   const status = RESERVATION_STATUSES[reservation.status];
-  const variantMap: Record<string, any> = { yellow: "yellow", green: "green", red: "red", gray: "gray", orange: "orange" };
+  const variantMap: Record<string, "yellow" | "green" | "red" | "gray" | "orange"> = { yellow: "yellow", green: "green", red: "red", gray: "gray", orange: "orange" };
 
   return (
     <div>

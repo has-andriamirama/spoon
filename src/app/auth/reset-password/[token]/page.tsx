@@ -1,18 +1,17 @@
 "use client";
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [form, setForm] = useState({ password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +27,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setDone(true);
-    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 

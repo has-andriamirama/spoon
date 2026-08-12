@@ -14,13 +14,13 @@ export default async function ReservationDetailPage({ params }: { params: Promis
   const session = await getServerSession(authOptions);
   if (!session) redirect("/auth/login");
   const reservation = await prisma.reservation.findFirst({
-    where: { id, userId: (session.user as any).id },
+    where: { id, userId: session.user.id },
     include: { payment: true, invoice: true },
   });
   if (!reservation) notFound();
 
   const status = RESERVATION_STATUSES[reservation.status];
-  const variantMap: Record<string, any> = { yellow: "yellow", green: "green", red: "red", gray: "gray", orange: "orange" };
+  const variantMap: Record<string, "yellow" | "green" | "red" | "gray" | "orange"> = { yellow: "yellow", green: "green", red: "red", gray: "gray", orange: "orange" };
 
   const canCancel = ["PENDING", "CONFIRMED"].includes(reservation.status) && new Date(reservation.date) > new Date(Date.now() + 48 * 60 * 60 * 1000);
 

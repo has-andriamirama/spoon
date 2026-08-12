@@ -6,10 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import toast from "react-hot-toast";
-import type { Dish, MenuCategory } from "@/types";
+import { getErrorMessage } from "@/lib/utils";
+import type { Dish, MenuCategory, SpecialOfferWithDetails } from "@/types";
 
 interface Props {
-  offer: any;
+  offer: SpecialOfferWithDetails | null;
   dishes: (Dish & { category: MenuCategory })[];
 }
 
@@ -29,7 +30,7 @@ export default function SpecialOfferForm({ offer, dishes }: Props) {
     startDate: offer?.startDate ? offer.startDate.toISOString().split("T")[0] : "",
     endDate: offer?.endDate ? offer.endDate.toISOString().split("T")[0] : "",
     isActive: offer?.isActive ?? true,
-    dishIds: offer?.items?.map((i: any) => i.dish.id) || [] as string[],
+    dishIds: offer?.items?.map(i => i.dish.id) ?? [],
   });
 
   const toggleDish = (id: string) => setForm(p => ({ ...p, dishIds: p.dishIds.includes(id) ? p.dishIds.filter(d => d !== id) : [...p.dishIds, id] }));
@@ -44,11 +45,12 @@ export default function SpecialOfferForm({ offer, dishes }: Props) {
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success(offer ? "Offre modifiée !" : "Offre créée !");
       router.push("/admin/special-offers");
-    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 
-  const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
+    setForm(previous => ({ ...previous, [key]: value }));
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">

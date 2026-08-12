@@ -4,10 +4,11 @@ import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { data: session, update } = useSession();
-  const user = session?.user as any;
+  const user = session?.user;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ firstName: user?.firstName || "", lastName: user?.lastName || "", phone: user?.phone || "" });
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -34,7 +35,7 @@ export default function ProfilePage() {
       if (!res.ok) throw new Error((await res.json()).error);
       toast.success("Mot de passe modifié !");
       setPwForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setPwLoading(false); }
   };
 

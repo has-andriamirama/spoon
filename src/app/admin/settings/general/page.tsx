@@ -14,7 +14,8 @@ export default function AdminSettingsGeneralPage() {
     fetch("/api/settings").then(r => r.json()).then(d => { if (d.data) setForm(d.data); }).finally(() => setFetching(false));
   }, []);
 
-  const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
+    setForm(previous => ({ ...previous, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);

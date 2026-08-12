@@ -11,7 +11,7 @@ export function useAdminNotifications() {
 		const pusher = getPusherClient();
 		const channel = pusher.subscribe("admin-notifications");
 
-		channel.bind("new-notification", (data: any) => {
+		channel.bind("new-notification", (data: { title: string }) => {
 			toast(data.title, { icon: "🔔", duration: 5000 });
 			queryClient.invalidateQueries({ queryKey: ["reservations"] });
 			queryClient.invalidateQueries({ queryKey: ["stats"] });

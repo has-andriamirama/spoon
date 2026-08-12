@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { registerSchema } from "@/lib/validations";
-import { slugify } from "@/lib/utils";
 import { randomBytes } from "crypto";
 import { sendEmailVerification } from "@/services/email.service";
 

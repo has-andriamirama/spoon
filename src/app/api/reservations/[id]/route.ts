@@ -4,12 +4,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendCancellationEmail } from "@/services/email.service";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
 		const session = await getServerSession(authOptions);
-		const userId = (session?.user as any)?.id;
+		const userId = session?.user?.id;
 		const reservation = await prisma.reservation.findFirst({
-			where: { id: params.id, ...(userId ? { userId } : {}) },
+			where: { id: id, ...(userId ? { userId } : {}) },
 			include: { payment: true, invoice: true },
 		});
 		if (!reservation) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
@@ -17,15 +18,16 @@ export async function GET(request: Request, { params }: { params: { id: string }
 	} catch { return NextResponse.json({ error: "Erreur interne" }, { status: 500 }); }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
 		const body = await request.json();
 		const { status, cancellationReason, notes } = body;
 
-		const reservation = await prisma.reservation.findUnique({ where: { id: params.id } });
+		const reservation = await prisma.reservation.findUnique({ where: { id: id } });
 		if (!reservation) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
 
-		const updateData: any = {};
+		const updateData: { status?: "PENDING" | "CONFIRMED" | "CANCELLED_BY_CUSTOMER" | "CANCELLED_BY_ADMIN" | "COMPLETED" | "NO_SHOW"; confirmedAt?: Date; cancelledAt?: Date; cancellationReason?: string | null; completedAt?: Date; notes?: string } = {};
 		if (status) {
 			updateData.status = status;
 			if (status === "CONFIRMED") updateData.confirmedAt = new Date();
@@ -44,7 +46,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 		}
 		if (notes !== undefined) updateData.notes = notes;
 
-		const updated = await prisma.reservation.update({ where: { id: params.id }, data: updateData });
+		const updated = await prisma.reservation.update({ where: { id: id }, data: updateData });
 		return NextResponse.json({ data: updated });
 	} catch (error) {
 		console.error(error);
@@ -52,9 +54,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 	}
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
-		await prisma.reservation.delete({ where: { id: params.id } });
+		await prisma.reservation.delete({ where: { id: id } });
 		return NextResponse.json({ message: "Réservation supprimée" });
 	} catch { return NextResponse.json({ error: "Erreur interne" }, { status: 500 }); }
 }

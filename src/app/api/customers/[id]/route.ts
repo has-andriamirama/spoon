@@ -3,14 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
 		const session = await getServerSession(authOptions);
-		if (!session || (session.user as any).id !== params.id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+		if (!session || session.user.id !== id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 		const body = await request.json();
 		const { firstName, lastName, phone } = body;
 		const user = await prisma.user.update({
-			where: { id: params.id },
+			where: { id: id },
 			data: { firstName, lastName, phone }
 		});
 		return NextResponse.json({
@@ -25,15 +26,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 	} catch { return NextResponse.json({ error: "Erreur interne" }, { status: 500 }); }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	try {
 		const session = await getServerSession(authOptions);
-		if (!session || (session.user as any).id !== params.id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+		if (!session || session.user.id !== id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 		// RGPD: anonymize instead of hard delete
 		await prisma.user.update({
-			where: { id: params.id },
+			where: { id: id },
 			data: {
-				email: `deleted_${params.id}@deleted.invalid`,
+				email: `deleted_${id}@deleted.invalid`,
 				firstName: "Supprimé",
 				lastName: "",
 				phone: null,

@@ -14,7 +14,7 @@ export default async function AccountReservationsPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/auth/login");
   const reservations = await prisma.reservation.findMany({
-    where: { userId: (session.user as any).id },
+    where: { userId: session.user.id },
     include: { payment: true },
     orderBy: { date: "desc" },
   });

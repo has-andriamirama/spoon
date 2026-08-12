@@ -1,16 +1,5 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/admin-sidebar";
 import AdminHeader from "@/components/admin/admin-header";
-
-function getAdminSession() {
-  try {
-    const cookieStore = cookies();
-    const sessionCookie = cookieStore.get("admin-session");
-    if (!sessionCookie) return null;
-    return JSON.parse(sessionCookie.value);
-  } catch { return null; }
-}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   // Login page has its own layout

@@ -71,7 +71,7 @@ export default function PublicHeader() {
                   className="flex items-center gap-2 text-sm text-[#9A8F84] hover:text-[#F5F0EB] transition-colors"
                 >
                   <User size={16} />
-                  <span>{(session.user as any).firstName}</span>
+                  <span>{session.user.firstName}</span>
                 </Link>
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}

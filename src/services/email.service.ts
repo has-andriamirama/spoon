@@ -1,6 +1,5 @@
 import { resend, FROM_EMAIL } from "@/lib/resend";
 import { formatDate, formatPrice } from "@/lib/utils";
-import type { Reservation } from "@/types";
 
 export async function sendReservationConfirmation(reservation: {
 	id: string;

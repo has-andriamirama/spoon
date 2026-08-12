@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function AdminAccountPage() {
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -22,7 +23,7 @@ export default function AdminAccountPage() {
       if (!res.ok) throw new Error(data.error);
       toast.success("Mot de passe modifié !");
       router.push("/admin/dashboard");
-    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    } catch (error: unknown) { toast.error(getErrorMessage(error)); }
     finally { setLoading(false); }
   };
 
