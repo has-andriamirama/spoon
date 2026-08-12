@@ -13,7 +13,8 @@ export async function GET(request: Request) {
 		const session = await getServerSession(authOptions);
 		const userId = session?.user?.id;
 		const where: { userId?: string; status?: string } = userId ? { userId } : {};
-		if (searchParams.get("status")) where.status = searchParams.get("status");
+		const status = searchParams.get("status");
+		if (status) where.status = status;
 		const reservations = await prisma.reservation.findMany({
 			where,
 			include: { payment: true },
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
 		}
 
 		return NextResponse.json({ data: reservation }, { status: 201 });
-	} catch {
+	} catch (error) {
 		console.error(error);
 		return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 });
 	}
