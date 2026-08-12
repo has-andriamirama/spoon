@@ -34,6 +34,7 @@ export const authOptions: NextAuthOptions = {
           lastName: user.lastName,
           role: user.role,
           avatarUrl: user.avatarUrl,
+          phone: user.phone,
         };
       },
     }),
@@ -46,6 +47,7 @@ export const authOptions: NextAuthOptions = {
         token.lastName = user.lastName;
         token.role = user.role;
         token.avatarUrl = user.avatarUrl;
+        token.phone = user.phone;
       }
       return token;
     },
@@ -56,6 +58,7 @@ export const authOptions: NextAuthOptions = {
         session.user.lastName = token.lastName;
         session.user.role = token.role;
         session.user.avatarUrl = token.avatarUrl;
+        session.user.phone = token.phone;
       }
       return session;
     },
