@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ReservationStatus } from "../../../../generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -12,9 +13,11 @@ export async function GET(request: Request) {
 		const { searchParams } = new URL(request.url);
 		const session = await getServerSession(authOptions);
 		const userId = session?.user?.id;
-		const where: { userId?: string; status?: string } = userId ? { userId } : {};
+		const where: { userId?: string; status?: ReservationStatus } = userId ? { userId } : {};
 		const status = searchParams.get("status");
-		if (status) where.status = status;
+		if (status && Object.values(ReservationStatus).includes(status as ReservationStatus)) {
+			where.status = status as ReservationStatus;
+		}
 		const reservations = await prisma.reservation.findMany({
 			where,
 			include: { payment: true },
