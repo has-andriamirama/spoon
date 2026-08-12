@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/utils";
-import type { Dish, MenuCategory, SpecialOfferWithDetails } from "@/types";
+import type { Dish, MenuCategory, OfferType, OfferTarget, SpecialOfferWithDetails } from "@/types";
 
 interface Props {
   offer: SpecialOfferWithDetails | null;
@@ -17,12 +17,26 @@ interface Props {
 export default function SpecialOfferForm({ offer, dishes }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string;
+    description: string;
+    type: OfferType;
+    value: string;
+    target: OfferTarget;
+    promoCode: string;
+    minCovers: string;
+    isFirstOnly: boolean;
+    isPublic: boolean;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    dishIds: string[];
+  }>({
     title: offer?.title || "",
     description: offer?.description || "",
-    type: offer?.type || "PERCENTAGE",
+    type: offer?.type ?? "PERCENTAGE",
     value: offer?.value?.toString() || "10",
-    target: offer?.target || "ALL",
+    target: offer?.target ?? "ALL",
     promoCode: offer?.promoCode || "",
     minCovers: offer?.minCovers?.toString() || "",
     isFirstOnly: offer?.isFirstOnly || false,
@@ -59,7 +73,16 @@ export default function SpecialOfferForm({ offer, dishes }: Props) {
         <Input label="Titre *" value={form.title} onChange={e => set("title", e.target.value)} required />
         <Textarea label="Description" value={form.description} onChange={e => set("description", e.target.value)} rows={2} />
         <div className="grid grid-cols-2 gap-4">
-          <Select label="Type de remise *" value={form.type} onChange={e => set("type", e.target.value)} options={[{ value: "PERCENTAGE", label: "Pourcentage (%)" }, { value: "FIXED_AMOUNT", label: "Montant fixe (€)" }, { value: "FREE_ITEM", label: "Article offert" }]} />
+          <Select
+            label="Type de remise *"
+            value={form.type}
+            onChange={e => set("type", e.target.value as OfferType)}
+            options={[
+              { value: "PERCENTAGE", label: "Pourcentage (%)" },
+              { value: "FIXED_AMOUNT", label: "Montant fixe (€)" },
+              { value: "FREE_ITEM", label: "Article offert" },
+            ]}
+          />
           <Input label={form.type === "PERCENTAGE" ? "Valeur (%) *" : "Valeur (€) *"} type="number" step="0.01" min="0" value={form.value} onChange={e => set("value", e.target.value)} required />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -70,7 +93,15 @@ export default function SpecialOfferForm({ offer, dishes }: Props) {
           <Input label="Code promo (optionnel)" value={form.promoCode} onChange={e => set("promoCode", e.target.value)} placeholder="SPOON10" />
           <Input label="Couverts minimum" type="number" min="1" value={form.minCovers} onChange={e => set("minCovers", e.target.value)} placeholder="2" />
         </div>
-        <Select label="Cible" value={form.target} onChange={e => set("target", e.target.value)} options={[{ value: "ALL", label: "Tous les visiteurs" }, { value: "REGISTERED", label: "Clients inscrits uniquement" }]} />
+        <Select
+          label="Cible"
+          value={form.target}
+          onChange={e => set("target", e.target.value as OfferTarget)}
+          options={[
+            { value: "ALL", label: "Tous les visiteurs" },
+            { value: "REGISTERED", label: "Clients inscrits uniquement" },
+          ]}
+        />
         <div className="flex flex-wrap gap-5 pt-1">
           <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.isActive} onChange={e => set("isActive", e.target.checked)} className="w-4 h-4 accent-[#C8973A]" /><span className="text-sm text-[#F5F0EB]">Offre active</span></label>
           <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.isPublic} onChange={e => set("isPublic", e.target.checked)} className="w-4 h-4 accent-[#C8973A]" /><span className="text-sm text-[#F5F0EB]">Visible sur le site</span></label>
