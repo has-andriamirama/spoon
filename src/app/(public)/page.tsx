@@ -12,12 +12,8 @@ async function getFeaturedDishes() {
   });
 }
 
-async function getSettings() {
-  return prisma.restaurantSettings.findFirst();
-}
-
 export default async function HomePage() {
-  const [featuredDishes, settings] = await Promise.all([getFeaturedDishes(), getSettings()]);
+  const featuredDishes = await getFeaturedDishes();
 
   return (
     <div className="min-h-screen">

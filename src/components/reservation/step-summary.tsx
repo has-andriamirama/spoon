@@ -10,10 +10,9 @@ import toast from "react-hot-toast";
 interface Props {
   data: ReservationFormData;
   onPrev: () => void;
-  onConfirmed: (id: string) => void;
 }
 
-export default function StepSummary({ data, onPrev, onConfirmed }: Props) {
+export default function StepSummary({ data, onPrev }: Props) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -37,7 +36,6 @@ export default function StepSummary({ data, onPrev, onConfirmed }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Erreur lors de la réservation");
-      onConfirmed(json.data.id);
       router.push(`/reservation/confirmation?id=${json.data.id}`);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Une erreur est survenue."));

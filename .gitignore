@@ -5,3 +5,6 @@ node_modules/
 out/
 .vercel/
 *.log
+
+# Prisma generated client
+generated/

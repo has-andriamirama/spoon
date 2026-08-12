@@ -35,7 +35,6 @@ const defaultData: ReservationFormData = {
 export default function ReservationStepper() {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<ReservationFormData>(defaultData);
-  const [reservationId, setReservationId] = useState<string | null>(null);
 
   const updateData = (updates: Partial<ReservationFormData>) => setData(prev => ({ ...prev, ...updates }));
   const next = () => setStep(s => Math.min(s + 1, 4));
@@ -72,7 +71,7 @@ export default function ReservationStepper() {
         {step === 1 && <StepDateTime data={data} updateData={updateData} onNext={next} />}
         {step === 2 && <StepPersonalInfo data={data} updateData={updateData} onNext={next} onPrev={prev} />}
         {step === 3 && <StepOptions data={data} updateData={updateData} onNext={next} onPrev={prev} />}
-        {step === 4 && <StepSummary data={data} onPrev={prev} onConfirmed={setReservationId} />}
+        {step === 4 && <StepSummary data={data} onPrev={prev} />}
       </div>
     </div>
   );

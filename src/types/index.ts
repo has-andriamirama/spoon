@@ -4,7 +4,7 @@ import type {
 	RestaurantSettings, ScheduleDay, ClosedDay,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
 	OfferType, OfferTarget, GalleryCategory, EventStatus,
-} from "@prisma/client";
+} from "../../generated/prisma/client";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 
