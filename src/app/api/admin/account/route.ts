@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 
 export async function PATCH(request: Request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const sessionCookie = cookieStore.get("admin-session");
 		if (!sessionCookie) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 		const session = JSON.parse(sessionCookie.value);
