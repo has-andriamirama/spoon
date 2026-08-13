@@ -27,7 +27,6 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		// ─── Checkout Session complété (paiement via Stripe Checkout) ────────────
 		if (event.type === "checkout.session.completed") {
 			const session = event.data.object as Stripe.Checkout.Session;
 			const { reservationId } = session.metadata ?? {};
@@ -40,7 +39,6 @@ export async function POST(request: Request) {
 				typeof session.payment_intent === "string" ? session.payment_intent : null;
 			const amount = (session.amount_total ?? 0) / 100;
 
-			// Mise à jour du paiement (on passe du cs_xxx vers le pi_xxx réel)
 			await prisma.payment.update({
 				where: { reservationId },
 				data: {
@@ -50,7 +48,6 @@ export async function POST(request: Request) {
 				},
 			});
 
-			// Confirmation de la réservation
 			await prisma.reservation.update({
 				where: { id: reservationId },
 				data: { status: "CONFIRMED", confirmedAt: new Date() },
@@ -61,7 +58,6 @@ export async function POST(request: Request) {
 			});
 
 			if (reservation) {
-				// Email de confirmation de réservation
 				await sendReservationConfirmation({
 					id: reservation.id,
 					guestFirstName: reservation.guestFirstName,
@@ -73,7 +69,6 @@ export async function POST(request: Request) {
 					notes: reservation.notes,
 				});
 
-				// Email de confirmation de paiement + facture
 				const invoice = await generateInvoice(reservationId);
 				await sendPaymentConfirmation({
 					guestFirstName: reservation.guestFirstName,
@@ -84,7 +79,6 @@ export async function POST(request: Request) {
 					invoiceNumber: invoice.invoiceNumber,
 				});
 
-				// Notification admin
 				await createAdminNotification({
 					type: "payment_received",
 					title: "Paiement reçu",
@@ -94,16 +88,14 @@ export async function POST(request: Request) {
 			}
 		}
 
-		// ─── Session expirée (le client n'a pas finalisé dans les 30 min) ────────
 		if (event.type === "checkout.session.expired") {
 			const session = event.data.object as Stripe.Checkout.Session;
 			const { reservationId } = session.metadata ?? {};
 			if (reservationId) {
-				// Annulation de la réservation et du paiement
 				await prisma.reservation.update({
 					where: { id: reservationId },
-					data: { status: "CANCELLED" },
-				}).catch(() => {}); // Ignore si la réservation n'existe plus
+					data: { status: "CANCELLED_BY_CUSTOMER", cancelledAt: new Date() },
+				}).catch(() => {});
 
 				await prisma.payment.update({
 					where: { reservationId },
@@ -112,7 +104,6 @@ export async function POST(request: Request) {
 			}
 		}
 
-		// ─── Payment Intent réussi (fallback pour intégrations directes) ─────────
 		if (event.type === "payment_intent.succeeded") {
 			const paymentIntent = event.data.object as Stripe.PaymentIntent;
 			const { reservationId } = paymentIntent.metadata;
@@ -159,7 +150,6 @@ export async function POST(request: Request) {
 			}
 		}
 
-		// ─── Payment Intent échoué ────────────────────────────────────────────────
 		if (event.type === "payment_intent.payment_failed") {
 			const paymentIntent = event.data.object as Stripe.PaymentIntent;
 			await prisma.payment.update({
