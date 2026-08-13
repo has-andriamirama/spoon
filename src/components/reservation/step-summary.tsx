@@ -11,7 +11,7 @@ interface Props {
 	onPrev: () => void;
 }
 
-const DEPOSIT_PER_COVER = 10; // 10 € par personne
+const DEPOSIT_PER_COVER = 10; // 10 € per person
 
 export default function StepSummary({ data, onPrev }: Props) {
 	const [loading, setLoading] = useState(false);
@@ -40,9 +40,7 @@ export default function StepSummary({ data, onPrev }: Props) {
 			const json = await res.json();
 			if (!res.ok) throw new Error(json.error || "Erreur lors de la création du paiement");
 
-			// Redirection vers Stripe Checkout
 			window.location.href = json.url;
-			// On ne remet pas loading à false car on part vers Stripe
 		} catch (error: unknown) {
 			toast.error(getErrorMessage(error, "Une erreur est survenue."));
 			setLoading(false);
@@ -72,7 +70,6 @@ export default function StepSummary({ data, onPrev }: Props) {
 				Récapitulatif de votre réservation
 			</h2>
 
-			{/* Résumé */}
 			<div className="bg-[#0A0A0A] rounded-xl border border-[#222] divide-y divide-[#1a1a1a] mb-5">
 				{rows.map(({ icon: Icon, label, value }) => (
 					<div key={label} className="flex items-center gap-4 px-5 py-3.5">
@@ -95,7 +92,6 @@ export default function StepSummary({ data, onPrev }: Props) {
 				)}
 			</div>
 
-			{/* Acompte */}
 			<div className="bg-[#C8973A]/10 border border-[#C8973A]/25 rounded-xl p-5 mb-4">
 				<div className="flex items-start gap-3">
 					<CreditCard size={18} className="text-[#C8973A] mt-0.5 shrink-0" />
@@ -111,7 +107,6 @@ export default function StepSummary({ data, onPrev }: Props) {
 				</div>
 			</div>
 
-			{/* Note acompte déduit */}
 			<div className="flex items-start gap-2.5 mb-4 px-1">
 				<ShieldCheck size={14} className="text-green-400 mt-0.5 shrink-0" />
 				<p className="text-xs text-[#9A8F84] leading-relaxed">
@@ -120,11 +115,10 @@ export default function StepSummary({ data, onPrev }: Props) {
 				</p>
 			</div>
 
-			{/* Politique d'annulation */}
 			<div className="flex items-start gap-2.5 bg-[#0A0A0A] border border-[#222] rounded-lg p-4 mb-5">
 				<Info size={14} className="text-[#5A5249] mt-0.5 shrink-0" />
 				<p className="text-xs text-[#5A5249] leading-relaxed">
-					<span className="text-[#9A8F84] font-medium">Politique d&apos;annulation :</span>{" "}
+					<span className="text-[#C8973A] font-medium">Politique d&apos;annulation :</span>{" "}
 					Annulation gratuite jusqu&apos;à 24 h avant la réservation. En cas de
 					non-présentation ou d&apos;annulation tardive, l&apos;acompte pourra être
 					conservé.

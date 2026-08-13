@@ -33,12 +33,6 @@ export default function StepOptions({ data, updateData, onNext, onPrev }: Props)
         />
       </div>
 
-      <div className="bg-[#0A0A0A] border border-[#222] rounded-lg p-4 mb-8">
-        <p className="text-xs text-[#5A5249] leading-relaxed">
-          <span className="text-[#C8973A] font-medium">Politique d'annulation :</span> Annulation gratuite jusqu'à 48h avant votre réservation. Au-delà de ce délai, l'acompte éventuel ne sera pas remboursé.
-        </p>
-      </div>
-
       <div className="flex gap-3">
         <Button variant="secondary" onClick={onPrev} className="flex-1">← Retour</Button>
         <Button onClick={onNext} className="flex-1">Voir le récapitulatif →</Button>

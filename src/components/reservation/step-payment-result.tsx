@@ -32,7 +32,6 @@ export default function StepPaymentResult({ status, reservationId }: Props) {
 		}
 	}, [reservationId, status]);
 
-	// ── Paiement réussi ────────────────────────────────────────────────────────
 	if (status === "success") {
 		return (
 			<div className="text-center py-4">
@@ -108,7 +107,6 @@ export default function StepPaymentResult({ status, reservationId }: Props) {
 		);
 	}
 
-	// ── Paiement annulé ────────────────────────────────────────────────────────
 	if (status === "canceled") {
 		return (
 			<div className="text-center py-4">
@@ -140,7 +138,6 @@ export default function StepPaymentResult({ status, reservationId }: Props) {
 		);
 	}
 
-	// ── Paiement échoué / expiré / autre ──────────────────────────────────────
 	return (
 		<div className="text-center py-4">
 			<div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
