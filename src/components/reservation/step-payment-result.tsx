@@ -1,170 +1,218 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, AlertCircle, ArrowRight, Calendar, Clock, Users, CreditCard, RotateCcw } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  ArrowRight,
+  Calendar,
+  Clock,
+  Users,
+  CreditCard,
+  RotateCcw,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 import { formatDate, formatPrice } from "@/lib/utils";
 
 interface Props {
-	status: string; // 'success' | 'canceled' | 'failed'
-	reservationId: string | null;
+  status: string; // 'success' | 'canceled'
+  reservationId: string | null;
+  sessionId: string | null;
 }
 
 interface ReservationDetails {
-	guestFirstName: string;
-	guestLastName: string;
-	date: string;
-	timeSlot: string;
-	covers: number;
-	payment: { amount: number; status: string } | null;
+  guestFirstName: string;
+  date: string;
+  timeSlot: string;
+  covers: number;
+  payment: { amount: number; status: string } | null;
 }
 
-export default function StepPaymentResult({ status, reservationId }: Props) {
-	const [reservation, setReservation] = useState<ReservationDetails | null>(null);
+type VerifyState = "idle" | "verifying" | "verified" | "error";
 
-	useEffect(() => {
-		if (reservationId && status === "success") {
-			fetch(`/api/reservations/${reservationId}`)
-				.then((r) => r.json())
-				.then((d) => {
-					if (d.data) setReservation(d.data);
-				})
-				.catch(() => {});
-		}
-	}, [reservationId, status]);
+export default function StepPaymentResult({ status, reservationId, sessionId }: Props) {
+  const [reservation, setReservation] = useState<ReservationDetails | null>(null);
+  const [verifyState, setVerifyState] = useState<VerifyState>("idle");
+  const [verifiedAmount, setVerifiedAmount] = useState<number | null>(null);
 
-	if (status === "success") {
-		return (
-			<div className="text-center py-4">
-				<div className="w-20 h-20 bg-green-500/10 border border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
-					<CheckCircle size={38} className="text-green-400" />
-				</div>
-				<h2 className="font-display text-3xl text-[#F5F0EB] mb-2">
-					Paiement accepté !
-				</h2>
-				<p className="text-[#9A8F84] text-sm mb-2 leading-relaxed">
-					Votre acompte a bien été reçu. Un email de confirmation de paiement vous a été envoyé.
-				</p>
-				<p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
-					Votre réservation sera <span className="text-[#C8973A] font-medium">confirmée par notre équipe</span> dans les plus brefs délais, et vous recevrez un second email dès validation.
-				</p>
+  useEffect(() => {
+    if (status !== "success" || !reservationId) return;
 
-				{reservation && (
-					<div className="bg-[#0A0A0A] border border-[#222] rounded-xl p-5 mb-6 text-left space-y-3">
-						<div className="flex items-center gap-3">
-							<Calendar size={15} className="text-[#C8973A] shrink-0" />
-							<div>
-								<p className="text-xs text-[#5A5249]">Date</p>
-								<p className="text-sm text-[#F5F0EB] font-medium">
-									{formatDate(reservation.date)}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							<Clock size={15} className="text-[#C8973A] shrink-0" />
-							<div>
-								<p className="text-xs text-[#5A5249]">Heure</p>
-								<p className="text-sm text-[#F5F0EB] font-medium">
-									{reservation.timeSlot}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							<Users size={15} className="text-[#C8973A] shrink-0" />
-							<div>
-								<p className="text-xs text-[#5A5249]">Couverts</p>
-								<p className="text-sm text-[#F5F0EB] font-medium">
-									{reservation.covers} personne{reservation.covers > 1 ? "s" : ""}
-								</p>
-							</div>
-						</div>
-						{reservation.payment && (
-							<div className="pt-3 border-t border-[#1a1a1a] flex items-center gap-3">
-								<CreditCard size={15} className="text-green-400 shrink-0" />
-								<div>
-									<p className="text-xs text-[#5A5249]">Acompte payé</p>
-									<p className="text-sm text-green-400 font-semibold">
-										{formatPrice(reservation.payment.amount)} — déduit de votre addition
-									</p>
-								</div>
-							</div>
-						)}
-					</div>
-				)}
+    if (sessionId) {
+      setVerifyState("verifying");
+      fetch("/api/payments/verify-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, reservationId }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.status === "verified" || d.status === "already_paid") {
+            setVerifyState("verified");
+            if (typeof d.amount === "number") setVerifiedAmount(d.amount);
+          } else {
+            setVerifyState("error");
+          }
+        })
+        .catch(() => setVerifyState("error"));
+    }
 
-				<div className="flex flex-col sm:flex-row gap-3 justify-center">
-					<Link
-						href="/"
-						className="bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2 justify-center"
-					>
-						Retour à l&apos;accueil <ArrowRight size={16} />
-					</Link>
-					<Link
-						href="/account/reservations"
-						className="border border-[#222] text-[#9A8F84] hover:text-[#F5F0EB] hover:border-[#333] font-medium px-6 py-3 rounded-lg transition-colors"
-					>
-						Mes réservations
-					</Link>
-				</div>
-			</div>
-		);
-	}
+    fetch(`/api/reservations/${reservationId}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.data) setReservation(d.data); })
+      .catch(() => {});
+  }, [status, reservationId, sessionId]);
 
-	if (status === "canceled") {
-		return (
-			<div className="text-center py-4">
-				<div className="w-20 h-20 bg-orange-500/10 border border-orange-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
-					<XCircle size={38} className="text-orange-400" />
-				</div>
-				<h2 className="font-display text-3xl text-[#F5F0EB] mb-2">
-					Paiement annulé
-				</h2>
-				<p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
-					Vous avez annulé le paiement. Votre réservation n&apos;a pas été
-					confirmée. Vous pouvez recommencer une nouvelle réservation.
-				</p>
-				<div className="flex flex-col sm:flex-row gap-3 justify-center">
-					<Link
-						href="/reservation"
-						className="bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2 justify-center"
-					>
-						<RotateCcw size={16} /> Nouvelle réservation
-					</Link>
-					<Link
-						href="/"
-						className="border border-[#222] text-[#9A8F84] hover:text-[#F5F0EB] hover:border-[#333] font-medium px-6 py-3 rounded-lg transition-colors"
-					>
-						Retour à l&apos;accueil
-					</Link>
-				</div>
-			</div>
-		);
-	}
+  if (status === "success") {
+    return (
+      <div className="text-center py-4">
+        <div className="w-20 h-20 bg-green-500/10 border border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
+          <CheckCircle size={38} className="text-green-400" />
+        </div>
 
-	return (
-		<div className="text-center py-4">
-			<div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
-				<AlertCircle size={38} className="text-red-400" />
-			</div>
-			<h2 className="font-display text-3xl text-[#F5F0EB] mb-2">
-				Paiement échoué
-			</h2>
-			<p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
-				Une erreur est survenue lors du traitement de votre paiement. Votre réservation est en attente. Vous pouvez relancer le paiement depuis votre espace client ou contacter notre équipe.
-			</p>
-			<div className="flex flex-col sm:flex-row gap-3 justify-center">
-				<Link
-					href="/account/reservations"
-					className="bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2 justify-center"
-				>
-					<RotateCcw size={16} /> Mes réservations
-				</Link>
-				<Link
-					href="/contact"
-					className="border border-[#222] text-[#9A8F84] hover:text-[#F5F0EB] hover:border-[#333] font-medium px-6 py-3 rounded-lg transition-colors"
-				>
-					Nous contacter
-				</Link>
-			</div>
-		</div>
-	);
+        <h2 className="font-display text-3xl text-[#F5F0EB] mb-2">
+          Paiement accepté !
+        </h2>
+        <p className="text-[#9A8F84] text-sm mb-2 leading-relaxed">
+          Votre acompte a bien été reçu. Un email de confirmation de paiement vous a été envoyé.
+        </p>
+        <p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
+          Votre réservation sera{" "}
+          <span className="text-[#C8973A] font-medium">
+            confirmée par notre équipe
+          </span>{" "}
+          dans les plus brefs délais, et vous recevrez un second email dès validation.
+        </p>
+
+        {sessionId && verifyState === "verifying" && (
+          <div className="flex items-center justify-center gap-2 text-xs text-[#5A5249] mb-4">
+            <Loader2 size={12} className="animate-spin" />
+            Enregistrement du paiement...
+          </div>
+        )}
+
+        {reservation && (
+          <div className="bg-[#0A0A0A] border border-[#222] rounded-xl p-5 mb-6 text-left space-y-3">
+            <div className="flex items-center gap-3">
+              <Calendar size={15} className="text-[#C8973A] shrink-0" />
+              <div>
+                <p className="text-xs text-[#5A5249]">Date</p>
+                <p className="text-sm text-[#F5F0EB] font-medium">
+                  {formatDate(reservation.date)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Clock size={15} className="text-[#C8973A] shrink-0" />
+              <div>
+                <p className="text-xs text-[#5A5249]">Heure</p>
+                <p className="text-sm text-[#F5F0EB] font-medium">
+                  {reservation.timeSlot}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Users size={15} className="text-[#C8973A] shrink-0" />
+              <div>
+                <p className="text-xs text-[#5A5249]">Couverts</p>
+                <p className="text-sm text-[#F5F0EB] font-medium">
+                  {reservation.covers} personne{reservation.covers > 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+
+            {(verifiedAmount !== null || reservation.payment) && (
+              <div className="pt-3 border-t border-[#1a1a1a] flex items-center gap-3">
+                <CreditCard size={15} className="text-green-400 shrink-0" />
+                <div>
+                  <p className="text-xs text-[#5A5249]">Acompte payé</p>
+                  <p className="text-sm text-green-400 font-semibold">
+                    {formatPrice(verifiedAmount ?? reservation.payment?.amount ?? 0)}{" "}
+                    — déduit de votre addition
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link
+            href="/"
+            className="bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2 justify-center"
+          >
+            Retour à l&apos;accueil <ArrowRight size={16} />
+          </Link>
+          <Link
+            href="/account/reservations"
+            className="border border-[#222] text-[#9A8F84] hover:text-[#F5F0EB] hover:border-[#333] font-medium px-6 py-3 rounded-lg transition-colors"
+          >
+            Mes réservations
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "canceled") {
+    return (
+      <div className="text-center py-4">
+        <div className="w-20 h-20 bg-orange-500/10 border border-orange-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
+          <XCircle size={38} className="text-orange-400" />
+        </div>
+        <h2 className="font-display text-3xl text-[#F5F0EB] mb-2">
+          Paiement annulé
+        </h2>
+        <p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
+          Vous avez annulé le paiement. Votre réservation n&apos;a pas été
+          confirmée. Vous pouvez recommencer une nouvelle réservation.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link
+            href="/reservation"
+            className="bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2 justify-center"
+          >
+            <RotateCcw size={16} /> Nouvelle réservation
+          </Link>
+          <Link
+            href="/"
+            className="border border-[#222] text-[#9A8F84] hover:text-[#F5F0EB] hover:border-[#333] font-medium px-6 py-3 rounded-lg transition-colors"
+          >
+            Retour à l&apos;accueil
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-center py-4">
+      <div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-5">
+        <AlertCircle size={38} className="text-red-400" />
+      </div>
+      <h2 className="font-display text-3xl text-[#F5F0EB] mb-2">
+        Paiement échoué
+      </h2>
+      <p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
+        Une erreur est survenue lors du traitement de votre paiement. Votre
+        réservation est en attente. Vous pouvez relancer le paiement depuis votre
+        espace client ou contacter notre équipe.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Link
+          href="/account/reservations"
+          className="bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2 justify-center"
+        >
+          <RotateCcw size={16} /> Mes réservations
+        </Link>
+        <Link
+          href="/contact"
+          className="border border-[#222] text-[#9A8F84] hover:text-[#F5F0EB] hover:border-[#333] font-medium px-6 py-3 rounded-lg transition-colors"
+        >
+          Nous contacter
+        </Link>
+      </div>
+    </div>
+  );
 }

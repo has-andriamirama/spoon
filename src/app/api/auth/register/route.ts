@@ -16,7 +16,9 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const existing = await prisma.user.findUnique({ where: { email: data.data.email } });
+		const existing = await prisma.user.findUnique({
+			where: { email: data.data.email },
+		});
 		if (existing) {
 			return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
 		}
@@ -40,37 +42,38 @@ export async function POST(request: Request) {
 
 		if (guestReservations.length > 0) {
 			const reservationIds = guestReservations.map((r) => r.id);
-
 			await prisma.reservation.updateMany({
 				where: { id: { in: reservationIds } },
 				data: { userId: user.id },
 			});
-
 			await prisma.invoice.updateMany({
-				where: {
-					reservationId: { in: reservationIds },
-					userId: null,
-				},
+				where: { reservationId: { in: reservationIds }, userId: null },
 				data: { userId: user.id },
 			});
 		}
 
-		// Email verification token
-		const token = randomBytes(32).toString("hex");
-		await prisma.emailVerificationToken.create({
-			data: {
-				userId: user.id,
-				token,
-				expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-			},
-		});
-
-		const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`;
-		await sendEmailVerification({ firstName: user.firstName, email: user.email, verifyUrl });
+		try {
+			const token = randomBytes(32).toString("hex");
+			await prisma.emailVerificationToken.create({
+				data: {
+					userId: user.id,
+					token,
+					expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+				},
+			});
+			const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`;
+			sendEmailVerification({
+				firstName: user.firstName,
+				email: user.email,
+				verifyUrl,
+			});
+		} catch (emailErr) {
+			console.error("[register] Erreur envoi email de vérification:", emailErr);
+		}
 
 		return NextResponse.json({ data: { id: user.id } }, { status: 201 });
 	} catch (error) {
-		console.error(error);
+		console.error("[register] Erreur:", error);
 		return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 });
 	}
 }

@@ -1,6 +1,22 @@
 import { resend, FROM_EMAIL } from "@/lib/resend";
 import { formatDate, formatPrice } from "@/lib/utils";
 
+async function send(
+	payload: Parameters<typeof resend.emails.send>[0]
+): Promise<boolean> {
+	try {
+		const result = await resend.emails.send(payload);
+		if (result.error) {
+			console.error("[Email] Erreur Resend:", result.error);
+			return false;
+		}
+		return true;
+	} catch (err) {
+		console.error("[Email] Exception lors de l'envoi:", err);
+		return false;
+	}
+}
+
 export async function sendReservationConfirmation(reservation: {
 	id: string;
 	guestFirstName: string;
@@ -10,8 +26,8 @@ export async function sendReservationConfirmation(reservation: {
 	timeSlot: string;
 	covers: number;
 	notes?: string | null;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: reservation.guestEmail,
 		subject: `Confirmation de votre réservation chez Spoon`,
@@ -23,7 +39,7 @@ export async function sendReservationConfirmation(reservation: {
 				</div>
 				<h2 style="font-size: 20px; margin-bottom: 24px;">Votre réservation est confirmée ✓</h2>
 				<p>Bonjour ${reservation.guestFirstName},</p>
-				<p>Nous avons bien reçu votre demande de réservation et nous avons hâte de vous accueillir.</p>
+				<p>Nous avons bien validé votre réservation et nous avons hâte de vous accueillir.</p>
 				<div style="background: #141414; border: 1px solid #222; border-radius: 8px; padding: 24px; margin: 24px 0;">
 					<h3 style="color: #C8973A; margin: 0 0 16px;">Détails de votre réservation</h3>
 					<p style="margin: 8px 0;"><strong>Date :</strong> ${formatDate(reservation.date)}</p>
@@ -52,8 +68,8 @@ export async function sendReservationReminder(reservation: {
 	date: Date;
 	timeSlot: string;
 	covers: number;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: reservation.guestEmail,
 		subject: `Rappel : votre réservation chez Spoon demain`,
@@ -81,8 +97,8 @@ export async function sendCancellationEmail(reservation: {
 	date: Date;
 	timeSlot: string;
 	cancellationReason?: string | null;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: reservation.guestEmail,
 		subject: `Annulation de votre réservation chez Spoon`,
@@ -94,7 +110,7 @@ export async function sendCancellationEmail(reservation: {
 				<p>Votre réservation du <strong>${formatDate(reservation.date)} à ${reservation.timeSlot}</strong> a été annulée.</p>
 				${reservation.cancellationReason ? `<p>Motif : ${reservation.cancellationReason}</p>` : ""}
 				<p>Nous espérons vous accueillir prochainement chez Spoon.</p>
-				<p style="color: #9A8F84; font-size: 14px;">Pour réserver à nouveau : <a href="https://spoon.re/reservation" style="color: #C8973A;">spoon.re/reservation</a></p>
+				<p style="color: #9A8F84; font-size: 14px;">Pour réserver à nouveau : <a href="${process.env.NEXTAUTH_URL}/reservation" style="color: #C8973A;">${process.env.NEXTAUTH_URL}/reservation</a></p>
 			</div>
 		`,
 	});
@@ -107,23 +123,24 @@ export async function sendPaymentConfirmation(data: {
 	date: Date;
 	timeSlot: string;
 	invoiceNumber: string;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: data.guestEmail,
 		subject: `Paiement reçu — Réservation Spoon`,
 		html: `
 			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0A; color: #F5F0EB; padding: 40px; border-radius: 12px;">
 				<h1 style="font-size: 28px; color: #C8973A; text-align: center;">Spoon</h1>
-				<h2 style="font-size: 20px; margin-top: 32px;">Paiement confirmé ✓</h2>
+				<h2 style="font-size: 20px; margin-top: 32px;">Paiement reçu ✓</h2>
 				<p>Bonjour ${data.guestFirstName},</p>
-				<p>Votre paiement de <strong>${formatPrice(data.amount)}</strong> a bien été reçu.</p>
+				<p>Votre acompte de <strong>${formatPrice(data.amount)}</strong> a bien été reçu.</p>
 				<div style="background: #141414; border: 1px solid #222; border-radius: 8px; padding: 24px; margin: 24px 0;">
 					<p style="margin: 8px 0;"><strong>Montant :</strong> ${formatPrice(data.amount)}</p>
 					<p style="margin: 8px 0;"><strong>Réservation :</strong> ${formatDate(data.date)} à ${data.timeSlot}</p>
 					<p style="margin: 8px 0;"><strong>N° Facture :</strong> ${data.invoiceNumber}</p>
 				</div>
-				<p>Votre réservation est maintenant confirmée. À bientôt chez Spoon !</p>
+				<p>Votre réservation est en cours de validation par notre équipe. Vous recevrez un email de confirmation dès qu'elle sera acceptée.</p>
+				<p style="color: #9A8F84; font-size: 14px;">L'acompte sera déduit de votre addition le jour de votre venue.</p>
 			</div>
 		`,
 	});
@@ -133,8 +150,8 @@ export async function sendRefundConfirmation(data: {
 	guestFirstName: string;
 	guestEmail: string;
 	amount: number;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: data.guestEmail,
 		subject: `Remboursement effectué — Spoon`,
@@ -155,8 +172,8 @@ export async function sendPasswordReset(data: {
 	firstName: string;
 	email: string;
 	resetUrl: string;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: data.email,
 		subject: `Réinitialisation de votre mot de passe — Spoon`,
@@ -167,7 +184,9 @@ export async function sendPasswordReset(data: {
 				<p>Bonjour ${data.firstName},</p>
 				<p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
 				<div style="text-align: center; margin: 32px 0;">
-					<a href="${data.resetUrl}" style="background: #C8973A; color: #0A0A0A; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">Réinitialiser mon mot de passe</a>
+					<a href="${data.resetUrl}" style="background: #C8973A; color: #0A0A0A; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
+						Réinitialiser mon mot de passe
+					</a>
 				</div>
 				<p style="color: #9A8F84; font-size: 14px;">Ce lien expirera dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
 			</div>
@@ -179,8 +198,8 @@ export async function sendEmailVerification(data: {
 	firstName: string;
 	email: string;
 	verifyUrl: string;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: data.email,
 		subject: `Confirmez votre email — Spoon`,
@@ -189,11 +208,13 @@ export async function sendEmailVerification(data: {
 				<h1 style="font-size: 28px; color: #C8973A; text-align: center;">Spoon</h1>
 				<h2 style="font-size: 20px; margin-top: 32px;">Bienvenue chez Spoon !</h2>
 				<p>Bonjour ${data.firstName},</p>
-				<p>Merci de vous être inscrit. Confirmez votre adresse email pour activer votre compte.</p>
+				<p>Merci de vous être inscrit. Cliquez sur le bouton ci-dessous pour confirmer votre adresse email et activer votre compte.</p>
 				<div style="text-align: center; margin: 32px 0;">
-					<a href="${data.verifyUrl}" style="background: #C8973A; color: #0A0A0A; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">Confirmer mon email</a>
+					<a href="${data.verifyUrl}" style="background: #C8973A; color: #0A0A0A; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
+						Confirmer mon email
+					</a>
 				</div>
-				<p style="color: #9A8F84; font-size: 14px;">Ce lien expirera dans 24 heures.</p>
+				<p style="color: #9A8F84; font-size: 14px;">Ce lien expirera dans 24 heures. Si vous n'avez pas créé de compte, ignorez cet email.</p>
 			</div>
 		`,
 	});
@@ -206,8 +227,8 @@ export async function sendAdminNewReservationAlert(reservation: {
 	timeSlot: string;
 	covers: number;
 	adminEmail: string;
-}): Promise<void> {
-	await resend.emails.send({
+}): Promise<boolean> {
+	return send({
 		from: FROM_EMAIL,
 		to: reservation.adminEmail,
 		subject: `Nouvelle réservation — ${reservation.guestFirstName} ${reservation.guestLastName}`,
