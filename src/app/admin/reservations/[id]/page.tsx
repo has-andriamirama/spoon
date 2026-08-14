@@ -60,7 +60,6 @@ export default async function AdminReservationDetailPage({ params }: { params: P
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<div className="lg:col-span-2 space-y-6">
-					{/* ── Informations ── */}
 					<div className="bg-[#141414] border border-[#222] rounded-xl p-6">
 						<h2 className="font-display text-xl text-[#F5F0EB] mb-4">Informations</h2>
 						<dl className="grid grid-cols-2 gap-x-8 gap-y-4">
@@ -92,7 +91,6 @@ export default async function AdminReservationDetailPage({ params }: { params: P
 						)}
 					</div>
 
-					{/* ── Payment ── */}
 					{reservation.payment && paymentStatusInfo && (
 						<div className="bg-[#141414] border border-[#222] rounded-xl p-6">
 							<h2 className="font-display text-xl text-[#F5F0EB] mb-4">Paiement</h2>
