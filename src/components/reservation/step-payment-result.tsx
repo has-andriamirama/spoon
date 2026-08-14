@@ -39,11 +39,13 @@ export default function StepPaymentResult({ status, reservationId }: Props) {
 					<CheckCircle size={38} className="text-green-400" />
 				</div>
 				<h2 className="font-display text-3xl text-[#F5F0EB] mb-2">
-					Paiement réussi !
+					Paiement accepté !
 				</h2>
+				<p className="text-[#9A8F84] text-sm mb-2 leading-relaxed">
+					Votre acompte a bien été reçu. Un email de confirmation de paiement vous a été envoyé.
+				</p>
 				<p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
-					Votre réservation est confirmée. Un email de confirmation a été envoyé
-					à votre adresse.
+					Votre réservation sera <span className="text-[#C8973A] font-medium">confirmée par notre équipe</span> dans les plus brefs délais, et vous recevrez un second email dès validation.
 				</p>
 
 				{reservation && (
@@ -147,15 +149,14 @@ export default function StepPaymentResult({ status, reservationId }: Props) {
 				Paiement échoué
 			</h2>
 			<p className="text-[#9A8F84] text-sm mb-6 leading-relaxed">
-				Une erreur est survenue lors du traitement de votre paiement. Veuillez
-				réessayer ou contacter notre équipe.
+				Une erreur est survenue lors du traitement de votre paiement. Votre réservation est en attente. Vous pouvez relancer le paiement depuis votre espace client ou contacter notre équipe.
 			</p>
 			<div className="flex flex-col sm:flex-row gap-3 justify-center">
 				<Link
-					href="/reservation"
+					href="/account/reservations"
 					className="bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold px-6 py-3 rounded-lg transition-colors inline-flex items-center gap-2 justify-center"
 				>
-					<RotateCcw size={16} /> Réessayer
+					<RotateCcw size={16} /> Mes réservations
 				</Link>
 				<Link
 					href="/contact"

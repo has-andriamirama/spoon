@@ -9,20 +9,60 @@ export async function POST(request: Request) {
 	try {
 		const body = await request.json();
 		const data = registerSchema.safeParse(body);
-		if (!data.success) return NextResponse.json({ error: "Données invalides", details: data.error.flatten() }, { status: 400 });
+		if (!data.success) {
+			return NextResponse.json(
+				{ error: "Données invalides", details: data.error.flatten() },
+				{ status: 400 }
+			);
+		}
 
 		const existing = await prisma.user.findUnique({ where: { email: data.data.email } });
-		if (existing) return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
+		if (existing) {
+			return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
+		}
 
 		const passwordHash = await bcrypt.hash(data.data.password, 12);
+
 		const user = await prisma.user.create({
-			data: { email: data.data.email, passwordHash, firstName: data.data.firstName, lastName: data.data.lastName, phone: data.data.phone },
+			data: {
+				email: data.data.email,
+				passwordHash,
+				firstName: data.data.firstName,
+				lastName: data.data.lastName,
+				phone: data.data.phone,
+			},
 		});
+
+		const guestReservations = await prisma.reservation.findMany({
+			where: { guestEmail: data.data.email, userId: null },
+			select: { id: true },
+		});
+
+		if (guestReservations.length > 0) {
+			const reservationIds = guestReservations.map((r) => r.id);
+
+			await prisma.reservation.updateMany({
+				where: { id: { in: reservationIds } },
+				data: { userId: user.id },
+			});
+
+			await prisma.invoice.updateMany({
+				where: {
+					reservationId: { in: reservationIds },
+					userId: null,
+				},
+				data: { userId: user.id },
+			});
+		}
 
 		// Email verification token
 		const token = randomBytes(32).toString("hex");
 		await prisma.emailVerificationToken.create({
-			data: { userId: user.id, token, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+			data: {
+				userId: user.id,
+				token,
+				expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+			},
 		});
 
 		const verifyUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${token}`;

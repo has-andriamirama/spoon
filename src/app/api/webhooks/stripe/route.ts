@@ -27,6 +27,7 @@ export async function POST(request: Request) {
 	}
 
 	try {
+		// ── Paiement par Checkout Session réussi ─────────────────────────────────
 		if (event.type === "checkout.session.completed") {
 			const session = event.data.object as Stripe.Checkout.Session;
 			const { reservationId } = session.metadata ?? {};
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
 				typeof session.payment_intent === "string" ? session.payment_intent : null;
 			const amount = (session.amount_total ?? 0) / 100;
 
+			// Mise à jour du paiement → PAID
 			await prisma.payment.update({
 				where: { reservationId },
 				data: {
@@ -48,28 +50,18 @@ export async function POST(request: Request) {
 				},
 			});
 
-			await prisma.reservation.update({
-				where: { id: reservationId },
-				data: { status: "CONFIRMED", confirmedAt: new Date() },
-			});
+			// ⚠️ La réservation reste en PENDING : c'est l'admin qui confirme manuellement
+			// (pas d'update de reservation.status ici)
 
 			const reservation = await prisma.reservation.findUnique({
 				where: { id: reservationId },
 			});
 
 			if (reservation) {
-				await sendReservationConfirmation({
-					id: reservation.id,
-					guestFirstName: reservation.guestFirstName,
-					guestLastName: reservation.guestLastName,
-					guestEmail: reservation.guestEmail,
-					date: reservation.date,
-					timeSlot: reservation.timeSlot,
-					covers: reservation.covers,
-					notes: reservation.notes,
-				});
-
+				// Génération de la facture dès réception du paiement
 				const invoice = await generateInvoice(reservationId);
+
+				// Email de confirmation de paiement au client
 				await sendPaymentConfirmation({
 					guestFirstName: reservation.guestFirstName,
 					guestEmail: reservation.guestEmail,
@@ -79,31 +71,48 @@ export async function POST(request: Request) {
 					invoiceNumber: invoice.invoiceNumber,
 				});
 
+				// Notification admin : paiement reçu, en attente de confirmation
 				await createAdminNotification({
 					type: "payment_received",
-					title: "Paiement reçu",
-					message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${formatPrice(amount)}`,
+					title: "Paiement reçu — à confirmer",
+					message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${formatPrice(amount)} · En attente de votre confirmation`,
 					link: `/admin/reservations/${reservationId}`,
 				});
 			}
 		}
 
+		// ── Session Checkout expirée sans paiement ────────────────────────────────
 		if (event.type === "checkout.session.expired") {
 			const session = event.data.object as Stripe.Checkout.Session;
 			const { reservationId } = session.metadata ?? {};
 			if (reservationId) {
-				await prisma.reservation.update({
-					where: { id: reservationId },
-					data: { status: "CANCELLED_BY_CUSTOMER", cancelledAt: new Date() },
-				}).catch(() => {});
-
+				// La réservation reste en PENDING : le client peut relancer le paiement
+				// On marque uniquement le paiement comme échoué
 				await prisma.payment.update({
 					where: { reservationId },
-					data: { status: "FAILED", failureReason: "Session de paiement expirée" },
+					data: {
+						status: "FAILED",
+						failureReason: "Session de paiement expirée",
+					},
 				}).catch(() => {});
+
+				// Notification admin
+				const reservation = await prisma.reservation.findUnique({
+					where: { id: reservationId },
+				}).catch(() => null);
+
+				if (reservation) {
+					await createAdminNotification({
+						type: "payment_failed",
+						title: "Paiement échoué",
+						message: `${reservation.guestFirstName} ${reservation.guestLastName} — Session expirée`,
+						link: `/admin/reservations/${reservationId}`,
+					});
+				}
 			}
 		}
 
+		// ── Paiement par PaymentIntent réussi ────────────────────────────────────
 		if (event.type === "payment_intent.succeeded") {
 			const paymentIntent = event.data.object as Stripe.PaymentIntent;
 			const { reservationId } = paymentIntent.metadata;
@@ -123,10 +132,8 @@ export async function POST(request: Request) {
 				},
 			}).catch(() => {});
 
-			await prisma.reservation.update({
-				where: { id: reservationId },
-				data: { status: "CONFIRMED", confirmedAt: new Date() },
-			}).catch(() => {});
+			// ⚠️ Pas d'auto-confirmation : la réservation reste en PENDING
+			// c'est l'admin qui confirme manuellement
 
 			const reservation = await prisma.reservation.findUnique({
 				where: { id: reservationId },
@@ -143,13 +150,14 @@ export async function POST(request: Request) {
 				});
 				await createAdminNotification({
 					type: "payment_received",
-					title: "Paiement reçu",
-					message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${formatPrice(amount)}`,
+					title: "Paiement reçu — à confirmer",
+					message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${formatPrice(amount)} · En attente de votre confirmation`,
 					link: `/admin/reservations/${reservationId}`,
 				});
 			}
 		}
 
+		// ── Échec de paiement (PaymentIntent) ────────────────────────────────────
 		if (event.type === "payment_intent.payment_failed") {
 			const paymentIntent = event.data.object as Stripe.PaymentIntent;
 			await prisma.payment.update({

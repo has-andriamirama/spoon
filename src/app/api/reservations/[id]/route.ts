@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { sendCancellationEmail } from "@/services/email.service";
+import {
+	sendCancellationEmail,
+	sendReservationConfirmation,
+} from "@/services/email.service";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
@@ -27,10 +30,37 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 		const reservation = await prisma.reservation.findUnique({ where: { id: id } });
 		if (!reservation) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
 
-		const updateData: { status?: "PENDING" | "CONFIRMED" | "CANCELLED_BY_CUSTOMER" | "CANCELLED_BY_ADMIN" | "COMPLETED" | "NO_SHOW"; confirmedAt?: Date; cancelledAt?: Date; cancellationReason?: string | null; completedAt?: Date; notes?: string } = {};
+		const updateData: {
+			status?: "PENDING" | "CONFIRMED" | "CANCELLED_BY_CUSTOMER" | "CANCELLED_BY_ADMIN" | "COMPLETED" | "NO_SHOW";
+			confirmedAt?: Date;
+			cancelledAt?: Date;
+			cancellationReason?: string | null;
+			completedAt?: Date;
+			notes?: string;
+		} = {};
+
 		if (status) {
 			updateData.status = status;
-			if (status === "CONFIRMED") updateData.confirmedAt = new Date();
+
+			if (status === "CONFIRMED") {
+				updateData.confirmedAt = new Date();
+
+				// Envoi de l'email de confirmation au client quand l'admin confirme
+				await sendReservationConfirmation({
+					id: reservation.id,
+					guestFirstName: reservation.guestFirstName,
+					guestLastName: reservation.guestLastName,
+					guestEmail: reservation.guestEmail,
+					date: reservation.date,
+					timeSlot: reservation.timeSlot,
+					covers: reservation.covers,
+					notes: reservation.notes,
+				}).catch((err) => {
+					// Ne pas bloquer la mise à jour si l'email échoue
+					console.error("Erreur envoi email confirmation:", err);
+				});
+			}
+
 			if (["CANCELLED_BY_CUSTOMER", "CANCELLED_BY_ADMIN"].includes(status)) {
 				updateData.cancelledAt = new Date();
 				updateData.cancellationReason = cancellationReason || null;
@@ -39,11 +69,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 					guestEmail: reservation.guestEmail,
 					date: reservation.date,
 					timeSlot: reservation.timeSlot,
-					cancellationReason
+					cancellationReason,
 				});
 			}
+
 			if (status === "COMPLETED") updateData.completedAt = new Date();
 		}
+
 		if (notes !== undefined) updateData.notes = notes;
 
 		const updated = await prisma.reservation.update({ where: { id: id }, data: updateData });
