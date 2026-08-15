@@ -26,7 +26,8 @@ export async function GET() {
 			return NextResponse.json({ success: true, cancelled: 0 });
 		}
 
-		const reason = "Annulation automatique : réservation non confirmée dans les délais impartis.";
+		const reason =
+			"Annulation automatique : réservation non confirmée dans les délais impartis.";
 
 		for (const reservation of expired) {
 			await prisma.reservation.update({

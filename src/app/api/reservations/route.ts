@@ -6,7 +6,9 @@ import { authOptions } from "@/lib/auth";
 import { createReservationSchema } from "@/lib/validations";
 import { checkSlotAvailability } from "@/services/availability.service";
 import { sendReservationConfirmation, sendAdminNewReservationAlert } from "@/services/email.service";
-import { createAdminNotification } from "@/services/notification.service";
+import { createAdminNotification, broadcastReservationUpdate } from "@/services/notification.service";
+
+const AUTO_CONFIRM_DEADLINE_HOURS = 24;
 
 export async function GET(request: Request) {
 	try {
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
 			where,
 			include: { payment: true },
 			orderBy: { date: "desc" },
-			take: 100
+			take: 100,
 		});
 		return NextResponse.json({ data: reservations });
 	} catch {
@@ -34,27 +36,42 @@ export async function POST(request: Request) {
 	try {
 		const body = await request.json();
 		const parsed = createReservationSchema.safeParse(body);
-		if (!parsed.success) return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
+		if (!parsed.success) {
+			return NextResponse.json(
+				{ error: "Données invalides", details: parsed.error.flatten() },
+				{ status: 400 }
+			);
+		}
 
 		const { date, timeSlot, covers } = parsed.data;
 		const available = await checkSlotAvailability(date, timeSlot, covers);
-		if (!available) return NextResponse.json({ error: "Ce créneau n'est plus disponible. Veuillez choisir un autre." }, { status: 409 });
+		if (!available) {
+			return NextResponse.json(
+				{ error: "Ce créneau n'est plus disponible. Veuillez choisir un autre." },
+				{ status: 409 }
+			);
+		}
 
 		const session = await getServerSession(authOptions);
 		const settings = await prisma.restaurantSettings.findFirst();
+		const isAutoConfirm = settings?.autoConfirmReservations ?? false;
+
+		const autoConfirmDeadline = isAutoConfirm
+			? null
+			: new Date(Date.now() + AUTO_CONFIRM_DEADLINE_HOURS * 60 * 60 * 1000);
 
 		const reservation = await prisma.reservation.create({
 			data: {
 				...parsed.data,
 				date: new Date(date),
 				userId: session?.user?.id || null,
-				status: settings?.autoConfirmReservations ? "CONFIRMED" : "PENDING",
-				confirmedAt: settings?.autoConfirmReservations ? new Date() : null,
+				status: isAutoConfirm ? "CONFIRMED" : "PENDING",
+				confirmedAt: isAutoConfirm ? new Date() : null,
+				autoConfirmDeadline,
 			},
 		});
 
-		// Send confirmation email
-		await sendReservationConfirmation({
+		sendReservationConfirmation({
 			id: reservation.id,
 			guestFirstName: reservation.guestFirstName,
 			guestLastName: reservation.guestLastName,
@@ -62,26 +79,26 @@ export async function POST(request: Request) {
 			date: reservation.date,
 			timeSlot: reservation.timeSlot,
 			covers: reservation.covers,
-			notes: reservation.notes
+			notes: reservation.notes,
 		});
 
-		// Admin notification
 		await createAdminNotification({
 			type: "new_reservation",
 			title: "Nouvelle réservation",
 			message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${timeSlot} (${covers} couvert${covers > 1 ? "s" : ""})`,
-			link: `/admin/reservations/${reservation.id}`
+			link: `/admin/reservations/${reservation.id}`,
 		});
 
-		// Admin email if configured
+		await broadcastReservationUpdate(reservation.id, reservation.userId);
+
 		if (settings?.email) {
-			await sendAdminNewReservationAlert({
+			sendAdminNewReservationAlert({
 				guestFirstName: reservation.guestFirstName,
 				guestLastName: reservation.guestLastName,
 				date: reservation.date,
 				timeSlot: reservation.timeSlot,
 				covers: reservation.covers,
-				adminEmail: settings.email
+				adminEmail: settings.email,
 			});
 		}
 
