@@ -6,7 +6,6 @@ export default function PublicFooter() {
 		<footer className="bg-[#141414] border-t border-[#222] mt-20">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-					{/* Brand */}
 					<div className="lg:col-span-1">
 						<div className="flex items-center gap-2 mb-4">
 							<div className="w-8 h-8 bg-[#C8973A] rounded-full flex items-center justify-center">
@@ -27,7 +26,6 @@ export default function PublicFooter() {
 						</div>
 					</div>
 
-					{/* Navigation */}
 					<div>
 						<h3 className="text-[#F5F0EB] font-semibold text-sm uppercase tracking-wider mb-5">Navigation</h3>
 						<ul className="space-y-3">
@@ -46,7 +44,6 @@ export default function PublicFooter() {
 						</ul>
 					</div>
 
-					{/* Informations */}
 					<div>
 						<h3 className="text-[#F5F0EB] font-semibold text-sm uppercase tracking-wider mb-5">Horaires</h3>
 						<ul className="space-y-2 text-sm text-[#9A8F84]">
@@ -56,7 +53,6 @@ export default function PublicFooter() {
 						</ul>
 					</div>
 
-					{/* Contact */}
 					<div>
 						<h3 className="text-[#F5F0EB] font-semibold text-sm uppercase tracking-wider mb-5">Contact</h3>
 						<ul className="space-y-3">
