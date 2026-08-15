@@ -7,93 +7,86 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── ENUMS ───────────────────────────────────────────────────────────────────
-
 enum Role {
-  CUSTOMER
-  ADMIN
-  SUPER_ADMIN
+	CUSTOMER
+	ADMIN
+	SUPER_ADMIN
 }
 
 enum ReservationStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED_BY_CUSTOMER
-  CANCELLED_BY_ADMIN
-  COMPLETED
-  NO_SHOW
+	PENDING
+	CONFIRMED
+	CANCELLED_BY_CUSTOMER
+	CANCELLED_BY_ADMIN
+	COMPLETED
+	NO_SHOW
 }
 
 enum PaymentStatus {
-  NONE
-  PENDING
-  PAID
-  REFUNDED
-  PARTIALLY_REFUNDED
-  FAILED
+	NONE
+	PENDING
+	PAID
+	REFUNDED
+	PARTIALLY_REFUNDED
+	FAILED
 }
 
 enum PaymentType {
-  DEPOSIT
-  FULL
-  NONE
+	DEPOSIT
+	FULL
+	NONE
 }
 
 enum OfferTarget {
-  ALL
-  REGISTERED
-  SPECIFIC
+	ALL
+	REGISTERED
+	SPECIFIC
 }
 
 enum OfferType {
-  PERCENTAGE
-  FIXED_AMOUNT
-  FREE_ITEM
+	PERCENTAGE
+	FIXED_AMOUNT
+	FREE_ITEM
 }
 
 enum GalleryCategory {
-  DINING_ROOM
-  DISHES
-  EVENTS
-  TEAM
-  EXTERIOR
+	DINING_ROOM
+	DISHES
+	EVENTS
+	TEAM
+	EXTERIOR
 }
 
 enum EventStatus {
-  NEW
-  IN_PROGRESS
-  ACCEPTED
-  DECLINED
+	NEW
+	IN_PROGRESS
+	ACCEPTED
+	DECLINED
 }
 
-// ─── USER ────────────────────────────────────────────────────────────────────
-
 model User {
-  id                     String                   @id @default(cuid())
-  email                  String                   @unique
-  emailVerified          DateTime?
-  passwordHash           String
-  firstName              String
-  lastName               String
-  phone                  String?
-  avatarUrl              String?
-  avatarPublicId         String?
-  dietaryPreferences     String[]
-  role                   Role                     @default(CUSTOMER)
-  isActive               Boolean                  @default(true)
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  reservations           Reservation[]
-  invoices               Invoice[]
-  passwordResetTokens    PasswordResetToken[]
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  emailVerified           DateTime?
+  passwordHash            String
+  firstName               String
+  lastName                String
+  phone                   String?
+  avatarUrl               String?
+  avatarPublicId          String?
+  dietaryPreferences      String[]
+  role                    Role                     @default(CUSTOMER)
+  isActive                Boolean                  @default(true)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  reservations            Reservation[]
+  invoices                Invoice[]
+  passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
-  specialOfferTargets    SpecialOfferTarget[]
-
+  specialOfferTargets     SpecialOfferTarget[]
   @@index([email])
   @@map("users")
 }
-
-// ─── ADMIN ───────────────────────────────────────────────────────────────────
 
 model Admin {
   id                 String    @id @default(cuid())
@@ -104,11 +97,8 @@ model Admin {
   lastLoginAt        DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
-
   @@map("admins")
 }
-
-// ─── MENU ────────────────────────────────────────────────────────────────────
 
 model MenuCategory {
   id          String   @id @default(cuid())
@@ -121,7 +111,6 @@ model MenuCategory {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   dishes      Dish[]
-
   @@map("menu_categories")
 }
 
@@ -143,68 +132,61 @@ model Dish {
   updatedAt       DateTime           @updatedAt
   category        MenuCategory       @relation(fields: [categoryId], references: [id])
   specialOfferItems SpecialOfferItem[]
-
   @@index([categoryId])
   @@index([isAvailable])
   @@map("dishes")
 }
 
-// ─── RESERVATION ─────────────────────────────────────────────────────────────
-
 model Reservation {
-  id                 String            @id @default(cuid())
-  userId             String?
-  guestFirstName     String
-  guestLastName      String
-  guestEmail         String
-  guestPhone         String
-  date               DateTime          @db.Date
-  timeSlot           String
-  covers             Int
-  notes              String?
-  allergies          String?
-  status             ReservationStatus @default(PENDING)
-  cancellationReason String?
-  cancelledAt        DateTime?
-  confirmedAt        DateTime?
-  completedAt        DateTime?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  user               User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  payment            Payment?
-  invoice            Invoice?
-
+  id                  String            @id @default(cuid())
+  userId              String?
+  guestFirstName      String
+  guestLastName       String
+  guestEmail          String
+  guestPhone          String
+  date                DateTime          @db.Date
+  timeSlot            String
+  covers              Int
+  notes               String?
+  allergies           String?
+  status              ReservationStatus @default(PENDING)
+  cancellationReason  String?
+  cancelledAt         DateTime?
+  confirmedAt         DateTime?
+  completedAt         DateTime?
+  autoConfirmDeadline DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  user                User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  payment             Payment?
+  invoice             Invoice?
   @@index([date, status])
   @@index([userId])
   @@index([guestEmail])
+  @@index([autoConfirmDeadline])
   @@map("reservations")
 }
 
-// ─── PAYMENT ─────────────────────────────────────────────────────────────────
-
 model Payment {
-  id                     String        @id @default(cuid())
-  reservationId          String        @unique
-  stripePaymentIntentId  String?       @unique
-  stripeChargeId         String?
-  amount                 Float
-  currency               String        @default("eur")
-  type                   PaymentType   @default(DEPOSIT)
-  status                 PaymentStatus @default(NONE)
-  refundedAmount         Float?
-  stripeRefundId         String?
-  paidAt                 DateTime?
-  refundedAt             DateTime?
-  failureReason          String?
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
-  reservation            Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-
+  id                    String        @id @default(cuid())
+  reservationId         String        @unique
+  stripePaymentIntentId String?       @unique
+  stripeChargeId        String?
+  amount                Float
+  currency              String        @default("eur")
+  type                  PaymentType   @default(DEPOSIT)
+  status                PaymentStatus @default(NONE)
+  refundedAmount        Float?
+  stripeRefundId        String?
+  paidAt                DateTime?
+  refundedAt            DateTime?
+  failureReason         String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  reservation           Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   @@index([status])
   @@map("payments")
 }
-
-// ─── INVOICE ─────────────────────────────────────────────────────────────────
 
 model Invoice {
   id            String      @id @default(cuid())
@@ -222,12 +204,9 @@ model Invoice {
   updatedAt     DateTime    @updatedAt
   reservation   Reservation @relation(fields: [reservationId], references: [id])
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-
   @@index([userId])
   @@map("invoices")
 }
-
-// ─── SPECIAL OFFERS ──────────────────────────────────────────────────────────
 
 model SpecialOffer {
   id          String               @id @default(cuid())
@@ -247,7 +226,6 @@ model SpecialOffer {
   updatedAt   DateTime             @updatedAt
   items       SpecialOfferItem[]
   targets     SpecialOfferTarget[]
-
   @@map("special_offers")
 }
 
@@ -257,7 +235,6 @@ model SpecialOfferItem {
   dishId         String
   specialOffer   SpecialOffer @relation(fields: [specialOfferId], references: [id], onDelete: Cascade)
   dish           Dish         @relation(fields: [dishId], references: [id], onDelete: Cascade)
-
   @@unique([specialOfferId, dishId])
   @@map("special_offer_items")
 }
@@ -268,20 +245,16 @@ model SpecialOfferTarget {
   userId         String
   specialOffer   SpecialOffer @relation(fields: [specialOfferId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([specialOfferId, userId])
   @@map("special_offer_targets")
 }
 
-// ─── SCHEDULE ────────────────────────────────────────────────────────────────
-
 model ScheduleDay {
-  id         String   @id @default(cuid())
-  dayOfWeek  Int
-  isOpen     Boolean  @default(true)
-  slots      Json
-  updatedAt  DateTime @updatedAt
-
+  id        String   @id @default(cuid())
+  dayOfWeek Int
+  isOpen    Boolean  @default(true)
+  slots     Json
+  updatedAt DateTime @updatedAt
   @@unique([dayOfWeek])
   @@map("schedule_days")
 }
@@ -291,12 +264,9 @@ model ClosedDay {
   date      DateTime @db.Date
   reason    String?
   createdAt DateTime @default(now())
-
   @@unique([date])
   @@map("closed_days")
 }
-
-// ─── GALLERY ─────────────────────────────────────────────────────────────────
 
 model GalleryImage {
   id         String          @id @default(cuid())
@@ -307,11 +277,8 @@ model GalleryImage {
   order      Int             @default(0)
   isActive   Boolean         @default(true)
   uploadedAt DateTime        @default(now())
-
   @@map("gallery_images")
 }
-
-// ─── EVENTS ──────────────────────────────────────────────────────────────────
 
 model EventRequest {
   id         String      @id @default(cuid())
@@ -328,11 +295,8 @@ model EventRequest {
   adminNotes String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
-
   @@map("event_requests")
 }
-
-// ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
 
 model AdminNotification {
   id        String   @id @default(cuid())
@@ -342,11 +306,8 @@ model AdminNotification {
   link      String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
-
   @@map("admin_notifications")
 }
-
-// ─── AUTH TOKENS ─────────────────────────────────────────────────────────────
 
 model PasswordResetToken {
   id        String    @id @default(cuid())
@@ -356,7 +317,6 @@ model PasswordResetToken {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@map("password_reset_tokens")
 }
 
@@ -368,11 +328,8 @@ model EmailVerificationToken {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@map("email_verification_tokens")
 }
-
-// ─── SETTINGS ────────────────────────────────────────────────────────────────
 
 model RestaurantSettings {
   id                      String   @id @default(cuid())
@@ -389,12 +346,11 @@ model RestaurantSettings {
   instagramUrl            String?
   depositRequired         Boolean  @default(true)
   depositAmountPerCover   Float    @default(20.0)
-  freeCancellationHours   Int      @default(48)
+  freeCancellationHours   Int      @default(24)   // ← 24h (était 48)
   maxCoversPerSlot        Int      @default(40)
   minBookingNoticeHours   Int      @default(2)
   maxBookingAdvanceDays   Int      @default(60)
   autoConfirmReservations Boolean  @default(false)
   updatedAt               DateTime @updatedAt
-
   @@map("restaurant_settings")
 }

@@ -2,51 +2,58 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import {
-	sendCancellationEmail,
-	sendReservationConfirmation,
-} from "@/services/email.service";
+import { stripe } from "@/lib/stripe";
+import { sendCancellationEmail, sendReservationConfirmation } from "@/services/email.service";
+import { broadcastReservationUpdate } from "@/services/notification.service";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+	request: Request,
+	{ params }: { params: Promise<{ id: string }> }
+) {
 	const { id } = await params;
 	try {
 		const session = await getServerSession(authOptions);
 		const userId = session?.user?.id;
 		const reservation = await prisma.reservation.findFirst({
-			where: { id: id, ...(userId ? { userId } : {}) },
+			where: { id, ...(userId ? { userId } : {}) },
 			include: { payment: true, invoice: true },
 		});
-		if (!reservation) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+		if (!reservation) {
+			return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+		}
 		return NextResponse.json({ data: reservation });
-	} catch { return NextResponse.json({ error: "Erreur interne" }, { status: 500 }); }
+	} catch {
+		return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
+	}
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+	request: Request,
+	{ params }: { params: Promise<{ id: string }> }
+) {
 	const { id } = await params;
 	try {
 		const body = await request.json();
 		const { status, cancellationReason, notes } = body;
 
-		const reservation = await prisma.reservation.findUnique({ where: { id: id } });
-		if (!reservation) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+		const reservation = await prisma.reservation.findUnique({
+			where: { id },
+			include: { payment: true },
+		});
+		if (!reservation) {
+			return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+		}
 
-		const updateData: {
-			status?: "PENDING" | "CONFIRMED" | "CANCELLED_BY_CUSTOMER" | "CANCELLED_BY_ADMIN" | "COMPLETED" | "NO_SHOW";
-			confirmedAt?: Date;
-			cancelledAt?: Date;
-			cancellationReason?: string | null;
-			completedAt?: Date;
-			notes?: string;
-		} = {};
+		const updateData: Record<string, unknown> = {};
 
 		if (status) {
 			updateData.status = status;
 
 			if (status === "CONFIRMED") {
 				updateData.confirmedAt = new Date();
+				updateData.autoConfirmDeadline = null;
 
-				// Envoi de l'email de confirmation au client quand l'admin confirme
-				await sendReservationConfirmation({
+				sendReservationConfirmation({
 					id: reservation.id,
 					guestFirstName: reservation.guestFirstName,
 					guestLastName: reservation.guestLastName,
@@ -55,16 +62,46 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 					timeSlot: reservation.timeSlot,
 					covers: reservation.covers,
 					notes: reservation.notes,
-				}).catch((err) => {
-					// Ne pas bloquer la mise à jour si l'email échoue
-					console.error("Erreur envoi email confirmation:", err);
 				});
 			}
 
 			if (["CANCELLED_BY_CUSTOMER", "CANCELLED_BY_ADMIN"].includes(status)) {
 				updateData.cancelledAt = new Date();
 				updateData.cancellationReason = cancellationReason || null;
-				await sendCancellationEmail({
+
+				const payment = reservation.payment;
+
+				if (payment?.status === "PAID" && payment.stripePaymentIntentId) {
+					const settings = await prisma.restaurantSettings.findFirst();
+					const freeCancelHours = settings?.freeCancellationHours ?? 24; // 24h
+
+					const reservationDate = new Date(reservation.date);
+					const refundDeadline = new Date(
+						reservationDate.getTime() - freeCancelHours * 60 * 60 * 1000
+					);
+					const isEligible = new Date() < refundDeadline;
+
+					if (isEligible) {
+						try {
+							const refund = await stripe.refunds.create({
+								payment_intent: payment.stripePaymentIntentId,
+							});
+							await prisma.payment.update({
+								where: { reservationId: id },
+								data: {
+									status: "REFUNDED",
+									refundedAmount: payment.amount,
+									stripeRefundId: refund.id,
+									refundedAt: new Date(),
+								},
+							});
+						} catch (refundErr) {
+							console.error("[Refund] Erreur Stripe:", refundErr);
+						}
+					}
+				}
+
+				sendCancellationEmail({
 					guestFirstName: reservation.guestFirstName,
 					guestEmail: reservation.guestEmail,
 					date: reservation.date,
@@ -78,7 +115,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 		if (notes !== undefined) updateData.notes = notes;
 
-		const updated = await prisma.reservation.update({ where: { id: id }, data: updateData });
+		const updated = await prisma.reservation.update({ where: { id }, data: updateData });
+
+		await broadcastReservationUpdate(id, updated.userId);
+
 		return NextResponse.json({ data: updated });
 	} catch (error) {
 		console.error(error);
@@ -86,10 +126,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 	}
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+	request: Request,
+	{ params }: { params: Promise<{ id: string }> }
+) {
 	const { id } = await params;
 	try {
-		await prisma.reservation.delete({ where: { id: id } });
+		await prisma.reservation.delete({ where: { id } });
 		return NextResponse.json({ message: "Réservation supprimée" });
-	} catch { return NextResponse.json({ error: "Erreur interne" }, { status: 500 }); }
+	} catch {
+		return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
+	}
 }
