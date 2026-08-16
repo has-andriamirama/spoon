@@ -112,6 +112,7 @@ export default async function AdminReservationsPage({
 							<tbody className="divide-y divide-[#1a1a1a]">
 								{reservations.map((r) => {
 									const st = RESERVATION_STATUSES[r.status];
+									const pst = PAYMENT_STATUSES[r.payment ? r.payment.status : NONE];
 									return (
 										<tr key={r.id} className="hover:bg-[#1a1a1a] transition-colors">
 											<td className="px-5 py-4">
@@ -129,11 +130,9 @@ export default async function AdminReservationsPage({
 												<Badge variant={variantMap[st.color]}>{st.label}</Badge>
 											</td>
 											<td className="px-5 py-4">
-												{r.payment ? {
-													const pst = PAYMENT_STATUSES[r.payment.status];
-													(
-														<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
-												)} : "—"}
+												{r.payment ? (
+													<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
+												) : "—"}
 											</td>
 											<td className="px-5 py-4">
 												<Link
