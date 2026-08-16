@@ -43,9 +43,8 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Cette réservation est annulée" }, { status: 400 });
 		}
 
-		const settings = await prisma.restaurantSettings.findFirst();
-		const depositPerCover = settings?.depositAmountPerCover ?? 20;
-		const depositAmount = reservation.covers * depositPerCover;
+		const depositAmount = reservation.payment.amount;
+
 		const formattedDate = formatDate(reservation.date, "EEEE d MMMM yyyy");
 
 		const checkoutSession = await stripe.checkout.sessions.create({
@@ -59,9 +58,9 @@ export async function POST(request: Request) {
 							name: "Acompte de réservation — Spoon",
 							description: `${reservation.covers} couvert${reservation.covers > 1 ? "s" : ""} · ${formattedDate} à ${reservation.timeSlot} · Déduit de votre addition`,
 						},
-						unit_amount: Math.round(depositPerCover * 100),
+						unit_amount: Math.round(depositAmount * 100),
 					},
-					quantity: reservation.covers,
+					quantity: 1,
 				},
 			],
 			metadata: { reservationId: reservation.id, guestEmail: reservation.guestEmail },
@@ -77,7 +76,6 @@ export async function POST(request: Request) {
 				stripePaymentIntentId: checkoutSession.id,
 				status: "PENDING",
 				failureReason: null,
-				amount: depositAmount,
 			},
 		});
 
@@ -91,6 +89,9 @@ export async function POST(request: Request) {
 		return NextResponse.json({ url: checkoutSession.url });
 	} catch (error) {
 		console.error("[retry-checkout]", error);
-		return NextResponse.json({ error: "Erreur lors de la relance du paiement" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Erreur lors de la relance du paiement" },
+			{ status: 500 }
+		);
 	}
 }
