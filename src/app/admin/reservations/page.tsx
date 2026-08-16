@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { formatDate, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { RESERVATION_STATUSES } from "@/lib/constants";
+import { RESERVATION_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import AdminReservationsRealtimeUpdater from "./realtime-updater";
@@ -112,6 +112,7 @@ export default async function AdminReservationsPage({
 							<tbody className="divide-y divide-[#1a1a1a]">
 								{reservations.map((r) => {
 									const st = RESERVATION_STATUSES[r.status];
+									const pst = PAYMENT_STATUSES[r.payment.status];
 									return (
 										<tr key={r.id} className="hover:bg-[#1a1a1a] transition-colors">
 											<td className="px-5 py-4">
@@ -128,15 +129,9 @@ export default async function AdminReservationsPage({
 											<td className="px-5 py-4">
 												<Badge variant={variantMap[st.color]}>{st.label}</Badge>
 											</td>
-											<td className="px-5 py-4 text-sm text-[#9A8F84]">
+											<td className="px-5 py-4">
 												{r.payment ? (
-													r.payment.status === "PAID" ? (
-														<span className="text-green-400">{formatPrice(r.payment.amount)}</span>
-													) : (
-														<span className={r.payment.status === "FAILED" ? "text-red-400" : ""}>
-															{r.payment.status}
-														</span>
-													)
+													<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
 												) : "—"}
 											</td>
 											<td className="px-5 py-4">

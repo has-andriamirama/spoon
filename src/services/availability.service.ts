@@ -6,7 +6,6 @@ export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
 	const date = new Date(dateStr);
 	const dayOfWeek = date.getDay();
 
-	// Check closed day exception
 	const closedDay = await prisma.closedDay.findFirst({
 		where: {
 			date: {
@@ -17,13 +16,11 @@ export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
 	});
 	if (closedDay) return [];
 
-	// Get regular schedule
 	const scheduleDay = await prisma.scheduleDay.findUnique({ where: { dayOfWeek } });
 	if (!scheduleDay || !scheduleDay.isOpen) return [];
 
 	const slots = scheduleDay.slots as ScheduleSlot[];
 
-	// Get existing bookings
 	const existingReservations = await prisma.reservation.findMany({
 		where: {
 			date: { gte: startOfDay(date), lte: endOfDay(date) },
