@@ -30,7 +30,7 @@ export function ImageUploader({
 	maxImages = 8,
 	label = "Images",
 	countLabel,
-	emptyText = 'Aucune image — cliquez sur « + » pour en ajouter',
+	emptyText = "Aucune image — cliquez sur « + » pour en ajouter",
 	primaryLabel = "Principale",
 	emptyHelperText = "L'image principale apparaît en premier dans les aperçus.",
 	pendingHelperText,
