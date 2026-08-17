@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatPrice } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
 import Link from "next/link";

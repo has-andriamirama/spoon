@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Flame, Image as ImageIcon, Leaf, Wheat } from "lucide-react";
+import { Flame, Leaf, Wheat } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import type { MenuCategory, Dish, Image as DishImage } from "@/types";
 import { ALLERGENS, DIETARY_TAGS } from "@/lib/constants";

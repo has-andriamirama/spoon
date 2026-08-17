@@ -8,11 +8,14 @@ import { Select } from "@/components/ui/select";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { GALLERY_CATEGORIES } from "@/lib/constants";
 import { deleteFromCDN, uploadFileToCDN } from "@/lib/client/cloudinary-upload";
-import type { GalleryImage, ImageInput } from "@/types";
+import type { GalleryCategory, GalleryImage, ImageInput } from "@/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/utils";
 
 const UPLOAD_FOLDER = "spoon/gallery";
+
+const isGalleryCategory = (value: string): value is GalleryCategory =>
+	GALLERY_CATEGORIES.some((category) => category.id === value);
 
 interface GalleryFormProps {
 	initialImage?: GalleryImage | null;
@@ -23,7 +26,7 @@ interface GalleryFormProps {
 export default function GalleryForm({ initialImage = null, onSaved, onCancel }: GalleryFormProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
-	const [form, setForm] = useState({
+	const [form, setForm] = useState<{ category: GalleryCategory; caption: string }>({
 		category: initialImage?.category ?? "DISHES",
 		caption: initialImage?.caption ?? "",
 	});
@@ -47,7 +50,7 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 		event.preventDefault();
 
 		if (images.length !== 1) {
-			toast.error("Ajoutez une image avant d’enregistrer.");
+			toast.error("Ajoutez une image avant d'enregistrer.");
 			return;
 		}
 
@@ -59,12 +62,12 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 			let publicId = images[0].publicId;
 
 			if (images[0].file) {
-				toast.loading("Upload de l’image…", { id: "gallery-upload-toast" });
+				toast.loading("Upload de l'image...", { id: "gallery-upload-toast" });
 				const result = await uploadFileToCDN(images[0].file, UPLOAD_FOLDER);
 
 				if (!result) {
 					toast.dismiss("gallery-upload-toast");
-					throw new Error("Échec de l’upload de l’image.");
+					throw new Error("Échec de l'upload de l'image.");
 				}
 
 				uploadedPublicId = result.publicId;
@@ -91,7 +94,7 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 				const errorBody = await response.json().catch(() => ({}));
 				throw new Error(
 					(errorBody as { error?: string }).error ||
-					"Erreur lors de l’enregistrement de l’image."
+					"Erreur lors de l'enregistrement de l'image."
 				);
 			}
 
@@ -124,7 +127,7 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-6 flex flex-col gap-5">
 				<div>
 					<p className="font-display text-xl text-[#F5F0EB]">
-						{initialImage ? "Modifier l’image" : "Ajouter une image"}
+						{initialImage ? "Modifier l'image" : "Ajouter une image"}
 					</p>
 					<p className="text-xs text-[#5A5249] mt-1">
 						Choisissez une catégorie et ajoutez la photo qui doit apparaître dans la galerie.
@@ -134,7 +137,15 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 				<Select
 					label="Catégorie *"
 					value={form.category}
-					onChange={(event) => setForm((previous) => ({ ...previous, category: event.target.value }))}
+					onChange={(event) => {
+						const value = event.target.value;
+						if (!isGalleryCategory(value)) return;
+
+						setForm((previous) => ({
+							...previous,
+							category: value,
+						}));
+					}}
 					options={GALLERY_CATEGORIES.map((category) => ({
 						value: category.id,
 						label: category.label,
@@ -173,7 +184,7 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 						Annuler
 					</Button>
 					<Button type="submit" loading={loading} className="flex-1">
-						{loading ? "Enregistrement..." : initialImage ? "Enregistrer les modifications" : "Ajouter l’image"}
+						{loading ? "Enregistrement..." : initialImage ? "Enregistrer les modifications" : "Ajouter l'image"}
 					</Button>
 				</div>
 			</div>
