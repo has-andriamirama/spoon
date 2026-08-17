@@ -150,7 +150,7 @@ export default function MenuClientPage({ categories, dishes }: Props) {
 										{imageCount > 1 && (
 											<div className="absolute bottom-2 right-2">
 												<span className="bg-black/60 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-													<ImageIcon className="w-5 h-5" /> {imageCount}
+													<ImageIcon className="w-2 h-2" /> {imageCount}
 												</span>
 											</div>
 										)}
