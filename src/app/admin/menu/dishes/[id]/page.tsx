@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import DishForm from "./dish-form";
+import DishForm from "../dish-form";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -31,9 +31,9 @@ export default async function AdminDishPage({
 		<div>
 			<div className="flex items-center gap-3 mb-8">
 				<Link
-					href="/admin/menu"
+					href="/admin/menu/dishes"
 					className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[#222] bg-[#141414] text-[#9A8F84] hover:text-[#F5F0EB] hover:border-[#C8973A]/40 transition-colors shrink-0"
-					aria-label="Retour au menu"
+					aria-label="Retour aux plats"
 				>
 					<ArrowLeft size={17} />
 				</Link>

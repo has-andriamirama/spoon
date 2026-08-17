@@ -35,7 +35,7 @@ const NAV = [
 	{
 		section: "Menu",
 		items: [
-			{ href: "/admin/menu", label: "Plats", icon: UtensilsCrossed },
+			{ href: "/admin/menu/dishes", label: "Plats", icon: UtensilsCrossed },
 			{ href: "/admin/menu/categories", label: "Catégories", icon: FolderTree },
 			{ href: "/admin/special-offers", label: "Offres spéciales", icon: Tag },
 		],
@@ -108,7 +108,7 @@ function SidebarContent({
 							</p>
 						)}
 						{items.map(({ href, label, icon: Icon }) => {
-							const active = pathname.startsWith(href);
+							const active = pathname === href || pathname.startsWith(`${href}/`);
 							return (
 								<Link
 									key={href}

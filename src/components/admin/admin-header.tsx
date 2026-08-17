@@ -10,6 +10,8 @@ import { useAdminSidebar } from "./admin-layout-client";
 const TITLES: Record<string, string> = {
 	"/admin/dashboard": "Dashboard",
 	"/admin/reservations": "Réservations",
+	"/admin/menu/dishes": "Plats",
+	"/admin/menu/categories": "Catégories",
 	"/admin/menu": "Menu",
 	"/admin/special-offers": "Offres spéciales",
 	"/admin/customers": "Clients",
@@ -29,7 +31,9 @@ export default function AdminHeader() {
 	const [notifCount, setNotifCount] = useState(0);
 
 	const title =
-		Object.entries(TITLES).find(([k]) => pathname.startsWith(k))?.[1] ||
+		Object.entries(TITLES)
+			.sort(([a], [b]) => b.length - a.length)
+			.find(([k]) => pathname === k || pathname.startsWith(`${k}/`))?.[1] ||
 		"Administration";
 
 	useEffect(() => {

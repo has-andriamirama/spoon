@@ -157,7 +157,7 @@ export default function DishForm({ dish, categories }: Props) {
 			}
 
 			toast.success(dish ? "Plat modifié !" : "Plat créé !");
-			router.push("/admin/menu");
+			router.push("/admin/menu/dishes");
 			router.refresh();
 
 		} catch (error: unknown) {
@@ -176,7 +176,7 @@ export default function DishForm({ dish, categories }: Props) {
 			});
 			if (!res.ok) throw new Error((await res.json()).error);
 			toast.success("Plat supprimé");
-			router.push("/admin/menu");
+			router.push("/admin/menu/dishes");
 			router.refresh();
 		} catch {
 			toast.error("Erreur lors de la suppression");

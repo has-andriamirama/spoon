@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import SpecialOfferForm from "./special-offer-form";
+import SpecialOfferForm from "../special-offer-form";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
