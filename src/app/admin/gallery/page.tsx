@@ -1,143 +1,47 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
+import { prisma } from "@/lib/prisma";
+import { formatDate } from "@/lib/utils";
+import Link from "next/link";
 import Image from "next/image";
-import { Plus, Trash2, ImageIcon, X, Edit } from "lucide-react";
+import { ImageIcon, Plus } from "lucide-react";
 import { GALLERY_CATEGORIES } from "@/lib/constants";
-import type { GalleryImage } from "@/types";
-import toast from "react-hot-toast";
-import GalleryForm from "./gallery-form";
 
-export default function AdminGalleryPage() {
-	const [images, setImages] = useState<GalleryImage[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [showForm, setShowForm] = useState(false);
-	const [editingImage, setEditingImage] = useState<GalleryImage | null>(null);
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Galerie" };
 
-	useEffect(() => {
-		const loadImages = async () => {
-			try {
-				const response = await fetch("/api/gallery", { cache: "no-store" });
-				if (!response.ok) throw new Error("Impossible de charger la galerie.");
-				const data = (await response.json()) as { data?: GalleryImage[] };
-				setImages(data.data ?? []);
-			} catch (error) {
-				console.error(error);
-				toast.error("Impossible de charger la galerie.");
-			} finally {
-				setLoading(false);
-			}
-		};
+export default async function AdminGalleryPage() {
+	const images = await prisma.galleryImage.findMany({
+		where: { isActive: true },
+		orderBy: [{ category: "asc" }, { order: "asc" }, { uploadedAt: "desc" }],
+	});
 
-		void loadImages();
-	}, []);
-
-	const groupedImages = useMemo(() => {
-		return GALLERY_CATEGORIES.map((category) => ({
-			...category,
-			images: images
-				.filter((image) => image.category === category.id)
-				.sort((a, b) => a.order - b.order),
-		}));
-	}, [images]);
-
-	const openCreateForm = () => {
-		setEditingImage(null);
-		setShowForm(true);
-	};
-
-	const openEditForm = (image: GalleryImage) => {
-		setEditingImage(image);
-		setShowForm(true);
-	};
-
-	const closeForm = () => {
-		setEditingImage(null);
-		setShowForm(false);
-	};
-
-	const handleSaved = (image: GalleryImage) => {
-		setImages((previous) => {
-			const index = previous.findIndex((item) => item.id === image.id);
-			if (index === -1) return [image, ...previous];
-			const next = [...previous];
-			next[index] = image;
-			return next;
-		});
-		closeForm();
-	};
-
-	const handleDelete = async (image: GalleryImage) => {
-		if (!confirm("Supprimer cette image ?")) return;
-
-		try {
-			const response = await fetch(`/api/gallery/${image.id}`, { method: "DELETE" });
-			if (!response.ok) {
-				const body = await response.json().catch(() => ({}));
-				throw new Error((body as { error?: string }).error || "Erreur lors de la suppression.");
-			}
-
-			setImages((previous) => previous.filter((item) => item.id !== image.id));
-			toast.success("Image supprimée");
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression");
-		}
-	};
+	const categories = GALLERY_CATEGORIES.map((category) => ({
+		...category,
+		images: images.filter((image) => image.category === category.id),
+	}));
 
 	return (
 		<div>
 			<div className="flex items-center justify-between gap-4 mb-6">
 				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB]">Galerie</h1>
-					<p className="text-sm text-[#5A5249] mt-1">
-						Les images sont organisées par catégorie, comme les plats du menu.
-					</p>
+					<p className="text-sm text-[#5A5249] mt-1">Gérez les images affichées sur le site par catégorie.</p>
 				</div>
-
-				<button
-					type="button"
-					onClick={openCreateForm}
+				<Link
+					href="/admin/gallery/new"
 					className="inline-flex items-center gap-2 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold text-sm px-4 py-2 rounded-lg transition-colors shrink-0"
 				>
-					<Plus size={16} /> Ajouter
-				</button>
+					<Plus size={16} /> Nouvelle image
+				</Link>
 			</div>
 
-			{showForm && (
-				<section className="mb-8">
-					<div className="flex items-center justify-between mb-4">
-						<h2 className="font-display text-xl text-[#F5F0EB]">
-							{editingImage ? "Modifier l’image" : "Nouvelle image"}
-						</h2>
-						<button
-							type="button"
-							onClick={closeForm}
-							className="p-2 text-[#5A5249] hover:text-[#F5F0EB] transition-colors"
-							aria-label="Fermer le formulaire"
-						>
-							<X size={18} />
-						</button>
-					</div>
-					<GalleryForm
-						initialImage={editingImage}
-						onSaved={handleSaved}
-						onCancel={closeForm}
-					/>
-				</section>
-			)}
-
-			{loading ? (
-				<div className="bg-[#141414] border border-[#222] rounded-xl py-20 text-center text-sm text-[#5A5249]">
-					Chargement de la galerie…
-				</div>
-			) : images.length === 0 ? (
+			{images.length === 0 ? (
 				<div className="bg-[#141414] border border-[#222] rounded-xl py-20 text-center">
-					<ImageIcon size={48} className="text-[#333] mx-auto mb-4" />
-					<p className="text-[#5A5249]">Aucune image. Ajoutez vos premières photos !</p>
+					<ImageIcon size={40} className="text-[#333] mx-auto mb-4" />
+					<p className="text-[#5A5249]">Aucune image dans la galerie. Ajoutez votre première photo !</p>
 				</div>
 			) : (
 				<div className="space-y-8">
-					{groupedImages.map((category) => (
+					{categories.map((category) => (
 						<section key={category.id}>
 							<div className="flex items-center gap-3 mb-4">
 								<h2 className="font-display text-xl text-[#F5F0EB]">{category.label}</h2>
@@ -146,56 +50,40 @@ export default function AdminGalleryPage() {
 								</span>
 							</div>
 
-							<div className="bg-[#141414] border border-[#222] rounded-xl p-4">
-								{category.images.length === 0 ? (
-									<p className="text-center py-8 text-[#5A5249] text-sm">
-										Aucune image dans cette catégorie
-									</p>
-								) : (
-									<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-										{category.images.map((image) => (
-											<div
-												key={image.id}
-												className="group relative aspect-square bg-[#101010] rounded-xl overflow-hidden border border-[#222]"
-											>
+							{category.images.length === 0 ? (
+								<div className="bg-[#141414] border border-[#222] rounded-xl py-10 text-center">
+									<p className="text-sm text-[#5A5249]">Aucune image dans cette catégorie.</p>
+								</div>
+							) : (
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+									{category.images.map((image) => (
+										<Link
+											key={image.id}
+											href={`/admin/gallery/${image.id}`}
+											className="group bg-[#141414] border border-[#222] hover:border-[#C8973A]/30 rounded-xl overflow-hidden transition-all"
+										>
+											<div className="relative aspect-[4/3] bg-[#101010] overflow-hidden">
 												<Image
 													src={image.imageUrl}
 													alt={image.caption || category.label}
 													fill
-													sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+													sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
 													className="object-cover transition-transform duration-300 group-hover:scale-105"
 												/>
-
-												<div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-													<div className="w-full space-y-2">
-														{image.caption && (
-															<p className="text-xs text-white line-clamp-2">{image.caption}</p>
-														)}
-														<div className="flex items-center justify-end gap-2">
-															<button
-																type="button"
-																onClick={() => openEditForm(image)}
-																className="p-1.5 bg-[#C8973A]/20 hover:bg-[#C8973A]/40 rounded-lg transition-colors"
-																aria-label="Modifier l’image"
-															>
-																<Edit size={14} className="text-[#E8B04A]" />
-															</button>
-															<button
-																type="button"
-																onClick={() => handleDelete(image)}
-																className="p-1.5 bg-red-500/20 hover:bg-red-500/40 rounded-lg transition-colors"
-																aria-label="Supprimer l’image"
-															>
-																<Trash2 size={14} className="text-red-400" />
-															</button>
-														</div>
-													</div>
+											</div>
+											<div className="p-4">
+												<p className="text-sm text-[#F5F0EB] font-medium line-clamp-2 min-h-10">
+													{image.caption || "Sans légende"}
+												</p>
+												<div className="flex items-center justify-between gap-3 mt-3 text-xs text-[#5A5249]">
+													<span>{category.label}</span>
+													<span>{formatDate(image.uploadedAt, "dd/MM/yyyy")}</span>
 												</div>
 											</div>
-										))}
-									</div>
-								)}
-							</div>
+										</Link>
+									))}
+								</div>
+							)}
 						</section>
 					))}
 				</div>

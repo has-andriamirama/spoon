@@ -12,6 +12,7 @@ import {
 	FileText,
 	ImageIcon,
 	PartyPopper,
+	FolderTree,
 	Clock,
 	Bell,
 	Settings,
@@ -35,6 +36,7 @@ const NAV = [
 		section: "Menu",
 		items: [
 			{ href: "/admin/menu", label: "Plats", icon: UtensilsCrossed },
+			{ href: "/admin/menu/categories", label: "Catégories", icon: FolderTree },
 			{ href: "/admin/special-offers", label: "Offres spéciales", icon: Tag },
 		],
 	},

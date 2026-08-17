@@ -19,13 +19,12 @@ const isGalleryCategory = (value: string): value is GalleryCategory =>
 
 interface GalleryFormProps {
 	initialImage?: GalleryImage | null;
-	onSaved: (image: GalleryImage) => void;
-	onCancel: () => void;
 }
 
-export default function GalleryForm({ initialImage = null, onSaved, onCancel }: GalleryFormProps) {
+export default function GalleryForm({ initialImage = null }: GalleryFormProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
+	const [deleting, setDeleting] = useState(false);
 	const [form, setForm] = useState<{ category: GalleryCategory; caption: string }>({
 		category: initialImage?.category ?? "DISHES",
 		caption: initialImage?.caption ?? "",
@@ -42,7 +41,7 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 						isPrimary: true,
 						order: 0,
 					},
-				]
+			  ]
 			: []
 	);
 
@@ -98,16 +97,10 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 				);
 			}
 
-			const data = (await response.json()) as { data: GalleryImage };
-
 			if (images[0].file) URL.revokeObjectURL(images[0].url);
-			if (initialImage && initialImage.publicId !== publicId) {
-				await deleteFromCDN(initialImage.publicId);
-			}
-
 			toast.dismiss("gallery-upload-toast");
 			toast.success(isEditing ? "Image modifiée !" : "Image ajoutée !");
-			onSaved(data.data);
+			router.push("/admin/gallery");
 			router.refresh();
 		} catch (error: unknown) {
 			toast.dismiss("gallery-upload-toast");
@@ -122,15 +115,34 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 		}
 	};
 
+	const handleDelete = async () => {
+		if (!initialImage || !confirm("Supprimer définitivement cette image ?")) return;
+		setDeleting(true);
+
+		try {
+			const response = await fetch(`/api/gallery/${initialImage.id}`, { method: "DELETE" });
+			if (!response.ok) {
+				const body = await response.json().catch(() => ({}));
+				throw new Error((body as { error?: string }).error || "Erreur lors de la suppression.");
+			}
+
+			toast.success("Image supprimée !");
+			router.push("/admin/gallery");
+			router.refresh();
+		} catch (error: unknown) {
+			toast.error(getErrorMessage(error));
+		} finally {
+			setDeleting(false);
+		}
+	};
+
 	return (
 		<form onSubmit={handleSubmit} className="max-w-2xl">
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-6 flex flex-col gap-5">
 				<div>
-					<p className="font-display text-xl text-[#F5F0EB]">
-						{initialImage ? "Modifier l'image" : "Ajouter une image"}
-					</p>
+					<p className="font-display text-xl text-[#F5F0EB]">Informations de l'image</p>
 					<p className="text-xs text-[#5A5249] mt-1">
-						Choisissez une catégorie et ajoutez la photo qui doit apparaître dans la galerie.
+						Choisissez la catégorie et la photo à afficher dans la galerie.
 					</p>
 				</div>
 
@@ -140,16 +152,9 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 					onChange={(event) => {
 						const value = event.target.value;
 						if (!isGalleryCategory(value)) return;
-
-						setForm((previous) => ({
-							...previous,
-							category: value,
-						}));
+						setForm((previous) => ({ ...previous, category: value }));
 					}}
-					options={GALLERY_CATEGORIES.map((category) => ({
-						value: category.id,
-						label: category.label,
-					}))}
+					options={GALLERY_CATEGORIES.map((category) => ({ value: category.id, label: category.label }))}
 					required
 				/>
 
@@ -173,17 +178,28 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 					/>
 				</div>
 
-				<div className="flex gap-3 pt-2 border-t border-[#1e1e1e]">
+				<div className="flex flex-wrap gap-3 pt-2 border-t border-[#1e1e1e]">
+					{initialImage && (
+						<Button
+							type="button"
+							variant="destructive"
+							onClick={handleDelete}
+							loading={deleting}
+							disabled={loading}
+						>
+							Supprimer
+						</Button>
+					)}
 					<Button
 						type="button"
 						variant="secondary"
-						onClick={onCancel}
+						onClick={() => router.push("/admin/gallery")}
 						className="flex-1"
-						disabled={loading}
+						disabled={loading || deleting}
 					>
 						Annuler
 					</Button>
-					<Button type="submit" loading={loading} className="flex-1">
+					<Button type="submit" loading={loading} className="flex-1" disabled={deleting}>
 						{loading ? "Enregistrement..." : initialImage ? "Enregistrer les modifications" : "Ajouter l'image"}
 					</Button>
 				</div>
