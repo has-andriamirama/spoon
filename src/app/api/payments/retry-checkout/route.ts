@@ -43,8 +43,24 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Cette réservation est annulée" }, { status: 400 });
 		}
 
-		const depositAmount = reservation.payment.amount;
+		const currentIntentId = reservation.payment.stripePaymentIntentId;
+		if (currentIntentId?.startsWith("cs_")) {
+			try {
+				await stripe.checkout.sessions.expire(currentIntentId);
+				console.log(`[retry-checkout] Session ${currentIntentId} expirée manuellement`);
+			} catch (err: unknown) {
+				const isAlreadyClosed =
+					err instanceof Error &&
+					(err.message.includes("already expired") ||
+						err.message.includes("cannot be expired") ||
+						err.message.includes("No such checkout"));
+				if (!isAlreadyClosed) {
+					console.warn(`[retry-checkout] Impossible d'expirer ${currentIntentId} :`, err);
+				}
+			}
+		}
 
+		const depositAmount = reservation.payment.amount;
 		const formattedDate = formatDate(reservation.date, "EEEE d MMMM yyyy");
 
 		const checkoutSession = await stripe.checkout.sessions.create({
@@ -67,7 +83,7 @@ export async function POST(request: Request) {
 			customer_email: reservation.guestEmail,
 			success_url: `${process.env.NEXTAUTH_URL}/reservation?payment=success&id=${reservation.id}&session_id={CHECKOUT_SESSION_ID}`,
 			cancel_url: `${process.env.NEXTAUTH_URL}/account/reservations/${reservation.id}`,
-			expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+			expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes
 		});
 
 		await prisma.payment.update({
@@ -86,9 +102,13 @@ export async function POST(request: Request) {
 			},
 		});
 
+		console.log(
+			`[retry-checkout] Nouvelle session ${checkoutSession.id} créée pour réservation ${reservation.id}`
+		);
+
 		return NextResponse.json({ url: checkoutSession.url });
 	} catch (error) {
-		console.error("[retry-checkout]", error);
+		console.error("[retry-checkout] Erreur :", error);
 		return NextResponse.json(
 			{ error: "Erreur lors de la relance du paiement" },
 			{ status: 500 }
