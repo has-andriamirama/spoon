@@ -19,6 +19,50 @@ interface Props {
 	categories: MenuCategory[];
 }
 
+const UPLOAD_FOLDER = "spoon/dishes";
+
+async function uploadFileToCDN(
+	file: File
+): Promise<{ url: string; publicId: string } | null> {
+	try {
+		const sigRes = await fetch(
+			`/api/upload?folder=${encodeURIComponent(UPLOAD_FOLDER)}`
+		);
+		if (!sigRes.ok) throw new Error("Impossible d'obtenir la signature d'upload");
+
+		const { signature, timestamp, cloudName, apiKey } = await sigRes.json();
+
+		const formData = new FormData();
+		formData.append("file", file);
+		formData.append("api_key", apiKey);
+		formData.append("timestamp", String(timestamp));
+		formData.append("signature", signature);
+		formData.append("folder", UPLOAD_FOLDER);
+
+		const uploadRes = await fetch(
+			`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+			{ method: "POST", body: formData }
+		);
+		if (!uploadRes.ok) throw new Error("Upload Cloudinary échoué");
+
+		const data = await uploadRes.json();
+		return { url: data.secure_url as string, publicId: data.public_id as string };
+	} catch (err) {
+		console.error("[dish-form] uploadFileToCDN error:", err);
+		return null;
+	}
+}
+
+async function deleteFromCDN(publicId: string): Promise<void> {
+	try {
+		await fetch("/api/upload", {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ publicId }),
+		});
+	} catch {}
+}
+
 function toImageInput(img: Image, idx: number): ImageInput {
 	return {
 		id: img.id,
@@ -30,9 +74,24 @@ function toImageInput(img: Image, idx: number): ImageInput {
 	};
 }
 
+function toApiImageInput(
+	img: ImageInput,
+	order: number
+): Omit<ImageInput, "file"> {
+	return {
+		id: img.id,
+		url: img.url,
+		publicId: img.publicId,
+		alt: img.alt,
+		isPrimary: img.isPrimary,
+		order,
+	};
+}
+
 export default function DishForm({ dish, categories }: Props) {
 	const router = useRouter();
-	const [loading, setLoading] = useState(false);
+
+	const [loading,  setLoading]  = useState(false);
 	const [deleting, setDeleting] = useState(false);
 
 	const [form, setForm] = useState({
@@ -53,30 +112,94 @@ export default function DishForm({ dish, categories }: Props) {
 	const toggleArr = (key: "allergens" | "dietaryTags", val: string) => {
 		setForm((p) => ({
 			...p,
-			[key]: p[key].includes(val) ? p[key].filter((v) => v !== val) : [...p[key], val],
+			[key]: p[key].includes(val)
+				? p[key].filter((v) => v !== val)
+				: [...p[key], val],
 		}));
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setLoading(true);
+
+		const newlyUploadedPublicIds: string[] = [];
+
 		try {
+			const finalImages: ImageInput[] = [];
+			const pendingImages = images.filter((img) => img.file);
+
+			if (pendingImages.length > 0) {
+				toast.loading(
+					`Upload de ${pendingImages.length} image${pendingImages.length > 1 ? "s" : ""}…`,
+					{ id: "upload-toast" }
+				);
+			}
+
+			for (const img of images) {
+				if (img.file) {
+					const result = await uploadFileToCDN(img.file);
+
+					if (!result) {
+						toast.dismiss("upload-toast");
+						await Promise.allSettled(
+							newlyUploadedPublicIds.map(deleteFromCDN)
+						);
+						throw new Error(
+							"Échec de l'upload d'une ou plusieurs images. " +
+							"Aucune modification n'a été enregistrée."
+						);
+					}
+
+					newlyUploadedPublicIds.push(result.publicId);
+
+					URL.revokeObjectURL(img.url);
+
+					finalImages.push({
+						url: result.url,
+						publicId: result.publicId,
+						alt: img.alt,
+						isPrimary: img.isPrimary,
+						order: img.order,
+					});
+				} else {
+					finalImages.push(img);
+				}
+			}
+
+			if (pendingImages.length > 0) {
+				toast.dismiss("upload-toast");
+			}
+
 			const body = {
 				...form,
 				price: parseFloat(form.price),
-				images: images.map((img, idx) => ({ ...img, order: idx })),
+				images: finalImages.map((img, idx) => toApiImageInput(img, idx)),
 			};
-			const url    = dish ? `/api/menu/dishes/${dish.id}` : "/api/menu/dishes";
+
+			const apiUrl = dish ? `/api/menu/dishes/${dish.id}` : "/api/menu/dishes";
 			const method = dish ? "PATCH" : "POST";
-			const res    = await fetch(url, {
+
+			const res = await fetch(apiUrl, {
 				method,
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(body),
 			});
-			if (!res.ok) throw new Error((await res.json()).error);
+
+			if (!res.ok) {
+				await Promise.allSettled(
+					newlyUploadedPublicIds.map(deleteFromCDN)
+				);
+				const errBody = await res.json().catch(() => ({}));
+				throw new Error(
+					(errBody as { error?: string }).error ||
+					"Erreur lors de la sauvegarde du plat"
+				);
+			}
+
 			toast.success(dish ? "Plat modifié !" : "Plat créé !");
 			router.push("/admin/menu");
 			router.refresh();
+
 		} catch (error: unknown) {
 			toast.error(getErrorMessage(error));
 		} finally {
@@ -88,7 +211,9 @@ export default function DishForm({ dish, categories }: Props) {
 		if (!dish || !confirm("Supprimer ce plat et toutes ses images ?")) return;
 		setDeleting(true);
 		try {
-			const res = await fetch(`/api/menu/dishes/${dish.id}`, { method: "DELETE" });
+			const res = await fetch(`/api/menu/dishes/${dish.id}`, {
+				method: "DELETE",
+			});
 			if (!res.ok) throw new Error((await res.json()).error);
 			toast.success("Plat supprimé");
 			router.push("/admin/menu");
@@ -99,6 +224,16 @@ export default function DishForm({ dish, categories }: Props) {
 			setDeleting(false);
 		}
 	};
+
+	const pendingCount = images.filter((img) => img.file).length;
+
+	const submitLabel = loading
+		? pendingCount > 0
+			? `Upload en cours...`
+			: dish ? "Enregistrement..." : "Création..."
+		: dish
+			? "Enregistrer les modifications"
+			: "Créer le plat";
 
 	return (
 		<form onSubmit={handleSubmit} className="max-w-2xl">
@@ -141,7 +276,6 @@ export default function DishForm({ dish, categories }: Props) {
 					<ImageUploader
 						images={images}
 						onChange={setImages}
-						folder="spoon/dishes"
 						maxImages={8}
 					/>
 				</div>
@@ -191,7 +325,9 @@ export default function DishForm({ dish, categories }: Props) {
 						<input
 							type="checkbox"
 							checked={form.isAvailable}
-							onChange={(e) => setForm((p) => ({ ...p, isAvailable: e.target.checked }))}
+							onChange={(e) =>
+								setForm((p) => ({ ...p, isAvailable: e.target.checked }))
+							}
 							className="w-4 h-4 accent-[#C8973A]"
 						/>
 						<span className="text-sm text-[#F5F0EB]">Disponible</span>
@@ -200,7 +336,9 @@ export default function DishForm({ dish, categories }: Props) {
 						<input
 							type="checkbox"
 							checked={form.isDailySpecial}
-							onChange={(e) => setForm((p) => ({ ...p, isDailySpecial: e.target.checked }))}
+							onChange={(e) =>
+								setForm((p) => ({ ...p, isDailySpecial: e.target.checked }))
+							}
 							className="w-4 h-4 accent-[#C8973A]"
 						/>
 						<span className="text-sm text-[#F5F0EB]">Suggestion du chef</span>
@@ -209,7 +347,12 @@ export default function DishForm({ dish, categories }: Props) {
 
 				<div className="flex gap-3 pt-2 border-t border-[#1e1e1e]">
 					{dish && (
-						<Button type="button" variant="destructive" onClick={handleDelete} loading={deleting}>
+						<Button
+							type="button"
+							variant="destructive"
+							onClick={handleDelete}
+							loading={deleting}
+						>
 							Supprimer
 						</Button>
 					)}
@@ -218,11 +361,12 @@ export default function DishForm({ dish, categories }: Props) {
 						variant="secondary"
 						onClick={() => router.push("/admin/menu")}
 						className="flex-1"
+						disabled={loading}
 					>
 						Annuler
 					</Button>
 					<Button type="submit" loading={loading} className="flex-1">
-						{dish ? "Enregistrer les modifications" : "Créer le plat"}
+						{submitLabel}
 					</Button>
 				</div>
 			</div>

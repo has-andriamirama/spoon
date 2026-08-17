@@ -26,8 +26,8 @@ export default function MenuClientPage({ categories, dishes }: Props) {
 	const [selectedDish, setSelectedDish] = useState<DishWithImages | null>(null);
 
 	const filtered = dishes.filter((d) => {
-		const catMatch   = activeCategory === "all" || d.categoryId === activeCategory;
-		const dietMatch  = activeDietary.length === 0 || activeDietary.every((tag) => d.dietaryTags.includes(tag));
+		const catMatch = activeCategory === "all" || d.categoryId === activeCategory;
+		const dietMatch = activeDietary.length === 0 || activeDietary.every((tag) => d.dietaryTags.includes(tag));
 		return catMatch && dietMatch;
 	});
 
