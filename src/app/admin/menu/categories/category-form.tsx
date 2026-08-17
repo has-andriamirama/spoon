@@ -155,7 +155,7 @@ export default function CategoryForm({ category }: Props) {
 					Annuler
 				</Button>
 				<Button type="submit" loading={loading} className="flex-1" disabled={deleting}>
-					{loading ? "Enregistrement..." : category ? "Enregistrer les modifications" : "Créer la catégorie"}
+					{loading ? "Enregistrement..." : category ? "Enregistrer" : "Créer"}
 				</Button>
 			</div>
 		</form>

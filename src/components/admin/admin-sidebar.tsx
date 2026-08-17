@@ -78,7 +78,6 @@ function SidebarContent({
 
 	return (
 		<>
-			{/* Header */}
 			<div className="flex items-center justify-between p-4 border-b border-[#222] h-16 shrink-0">
 				{!collapsed && (
 					<div className="flex items-center gap-2">
@@ -90,7 +89,6 @@ function SidebarContent({
 						</span>
 					</div>
 				)}
-				{/* Close bouton (mobile) */}
 				{showCloseButton && onClose && (
 					<button
 						onClick={onClose}
@@ -101,7 +99,6 @@ function SidebarContent({
 				)}
 			</div>
 
-			{/* Navigation */}
 			<nav className="flex-1 overflow-y-auto py-4 px-2">
 				{NAV.map(({ section, items }) => (
 					<div key={section} className="mb-6">
@@ -146,7 +143,6 @@ export default function AdminSidebar() {
 
 	return (
 		<>
-			{/* ── Sidebar desktop (≥ lg) ─────────────────────────────────────────── */}
 			<aside
 				className={cn(
 					"hidden lg:flex flex-col bg-[#141414] border-r border-[#222] transition-all duration-300 shrink-0",
@@ -155,7 +151,6 @@ export default function AdminSidebar() {
 			>
 				<SidebarContent collapsed={collapsed} />
 
-				{/* Bouton collapse desktop */}
 				<div className="p-2 border-t border-[#222]">
 					<button
 						onClick={() => setCollapsed((c) => !c)}
@@ -169,7 +164,6 @@ export default function AdminSidebar() {
 				</div>
 			</aside>
 
-			{/* ── Drawer mobile (< lg) ──────────────────────────────────────────── */}
 			<aside
 				className={cn(
 					"fixed inset-y-0 left-0 z-40 flex flex-col bg-[#141414] border-r border-[#222] w-72 transition-transform duration-300 lg:hidden",
