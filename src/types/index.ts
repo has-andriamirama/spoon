@@ -1,6 +1,6 @@
 import type {
 	User, Admin, Reservation, Payment, Invoice, MenuCategory,
-	Dish, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
+	Dish, Image, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
 	RestaurantSettings, ScheduleDay, ClosedDay,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
 	OfferType, OfferTarget, GalleryCategory, EventStatus,
@@ -10,7 +10,7 @@ import type {
 
 export type {
 	User, Admin, Reservation, Payment, Invoice, MenuCategory,
-	Dish, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
+	Dish, Image, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
 	RestaurantSettings, ScheduleDay, ClosedDay,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
 	OfferType, OfferTarget, GalleryCategory, EventStatus,
@@ -28,6 +28,11 @@ export type DishWithCategory = Dish & {
 	category: MenuCategory;
 };
 
+export type DishWithImages = Dish & {
+	category: MenuCategory;
+	images: Image[];
+};
+
 export type CategoryWithDishes = MenuCategory & {
 	dishes: Dish[];
 };
@@ -40,6 +45,17 @@ export type SpecialOfferWithDetails = SpecialOffer & {
 export type UserWithStats = User & {
 	_count: { reservations: number };
 };
+
+// ─── Image input (formulaire admin) ──────────────────────────────────────────
+
+export interface ImageInput {
+	id?: string;
+	url: string;
+	publicId: string;
+	alt?: string;
+	isPrimary: boolean;
+	order: number;
+}
 
 // ─── API Response ─────────────────────────────────────────────────────────────
 

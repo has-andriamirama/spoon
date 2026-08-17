@@ -75,18 +75,28 @@ export const createCategorySchema = z.object({
 	order: z.number().int().optional(),
 });
 
+export const imageInputSchema = z.object({
+	id:        z.string().optional(),
+	url:       z.string().url("URL invalide"),
+	publicId:  z.string().min(1, "publicId requis"),
+	alt:       z.string().optional(),
+	isPrimary: z.boolean().default(false),
+	order:     z.number().int().default(0),
+});
+
 export const createDishSchema = z.object({
-	categoryId: z.string().min(1, "Catégorie requise"),
-	name: z.string().min(2, "Nom requis"),
-	description: z.string().optional(),
-	price: z.number().min(0, "Prix invalide"),
-	imageUrl: z.string().optional(),
-	imagePublicId: z.string().optional(),
-	allergens: z.array(z.string()).optional(),
-	dietaryTags: z.array(z.string()).optional(),
-	isAvailable: z.boolean().optional(),
+	categoryId:     z.string().min(1, "Catégorie requise"),
+	name:           z.string().min(2, "Nom requis"),
+	description:    z.string().optional(),
+	price:          z.number().min(0, "Prix invalide"),
+	imageUrl:       z.string().optional(),
+	imagePublicId:  z.string().optional(),
+	images:         z.array(imageInputSchema).optional(),
+	allergens:      z.array(z.string()).optional(),
+	dietaryTags:    z.array(z.string()).optional(),
+	isAvailable:    z.boolean().optional(),
 	isDailySpecial: z.boolean().optional(),
-	order: z.number().int().optional(),
+	order:          z.number().int().optional(),
 });
 
 // ─── Contact ──────────────────────────────────────────────────────────────────

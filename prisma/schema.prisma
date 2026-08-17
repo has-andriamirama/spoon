@@ -114,6 +114,22 @@ model MenuCategory {
 	@@map("menu_categories")
 }
 
+model Image {
+	id        String   @id @default(cuid())
+	url       String
+	publicId  String
+	alt       String?
+	isPrimary Boolean  @default(false)
+	order     Int      @default(0)
+	createdAt DateTime @default(now())
+
+	dishId    String?
+	dish      Dish?    @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+	@@index([dishId])
+	@@map("images")
+}
+
 model Dish {
 	id              String             @id @default(cuid())
 	categoryId      String
@@ -131,6 +147,7 @@ model Dish {
 	createdAt       DateTime           @default(now())
 	updatedAt       DateTime           @updatedAt
 	category        MenuCategory       @relation(fields: [categoryId], references: [id])
+	images          Image[]
 	specialOfferItems SpecialOfferItem[]
 	@@index([categoryId])
 	@@index([isAvailable])
@@ -346,7 +363,7 @@ model RestaurantSettings {
 	instagramUrl            String?
 	depositRequired         Boolean  @default(true)
 	depositAmountPerCover   Float    @default(20.0)
-	freeCancellationHours   Int      @default(24)   // ← 24h (était 48)
+	freeCancellationHours   Int      @default(24)
 	maxCoversPerSlot        Int      @default(40)
 	minBookingNoticeHours   Int      @default(2)
 	maxBookingAdvanceDays   Int      @default(60)
