@@ -9,17 +9,35 @@ import type { ImageInput } from "@/types";
 
 export type { ImageInput };
 
-interface Props {
+interface ImageUploaderProps {
 	images: ImageInput[];
 	onChange: (images: ImageInput[]) => void;
 	maxImages?: number;
+	label?: string;
+	countLabel?: string;
+	emptyText?: string;
+	primaryLabel?: string;
+	emptyHelperText?: string;
+	pendingHelperText?: string;
+	allowPrimary?: boolean;
+	accept?: string;
+	className?: string;
 }
 
 export function ImageUploader({
 	images,
 	onChange,
 	maxImages = 8,
-}: Props) {
+	label = "Images",
+	countLabel,
+	emptyText = 'Aucune image — cliquez sur « + » pour en ajouter',
+	primaryLabel = "Principale",
+	emptyHelperText = "L'image principale apparaît en premier dans les aperçus.",
+	pendingHelperText,
+	allowPrimary = true,
+	accept = "image/*",
+	className,
+}: ImageUploaderProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,7 +46,7 @@ export function ImageUploader({
 
 		const slots = maxImages - images.length;
 		if (slots <= 0) {
-			toast.error(`Maximum ${maxImages} images atteint`);
+			toast.error(`Maximum ${maxImages} image${maxImages > 1 ? "s" : ""} atteint${maxImages > 1 ? "" : "e"}`);
 			if (fileInputRef.current) fileInputRef.current.value = "";
 			return;
 		}
@@ -41,105 +59,125 @@ export function ImageUploader({
 			});
 		}
 
-		const newImages: ImageInput[] = filesToProcess.map((file, i) => ({
+		const newImages: ImageInput[] = filesToProcess.map((file, index) => ({
 			url: URL.createObjectURL(file),
 			publicId: "",
-			isPrimary: images.length === 0 && i === 0,
-			order: images.length + i,
+			isPrimary: allowPrimary && images.length === 0 && index === 0,
+			order: images.length + index,
 			file,
 		}));
 
 		const updated = [...images, ...newImages];
-		if (!updated.some((img) => img.isPrimary)) updated[0].isPrimary = true;
-		onChange(updated.map((img, idx) => ({ ...img, order: idx })));
+
+		if (allowPrimary && !updated.some((img) => img.isPrimary) && updated.length > 0) {
+			updated[0].isPrimary = true;
+		}
+
+		onChange(updated.map((img, index) => ({ ...img, order: index })));
 
 		if (fileInputRef.current) fileInputRef.current.value = "";
 	};
 
 	const handleRemove = (index: number) => {
-		const img = images[index];
+		const image = images[index];
 
-		if (img.file) {
-			URL.revokeObjectURL(img.url);
+		if (image?.file) {
+			URL.revokeObjectURL(image.url);
 		}
-		
-		const updated = images.filter((_, i) => i !== index);
-		if (img.isPrimary && updated.length > 0) {
+
+		const updated = images.filter((_, imageIndex) => imageIndex !== index);
+
+		if (allowPrimary && image?.isPrimary && updated.length > 0) {
 			updated[0].isPrimary = true;
 		}
-		onChange(updated.map((img, idx) => ({ ...img, order: idx })));
+
+		onChange(updated.map((img, imageIndex) => ({ ...img, order: imageIndex })));
 	};
 
 	const handleSetPrimary = (index: number) => {
-		onChange(images.map((img, i) => ({ ...img, isPrimary: i === index })));
+		if (!allowPrimary) return;
+		onChange(images.map((img, imageIndex) => ({ ...img, isPrimary: imageIndex === index })));
 	};
 
-	const pendingCount = images.filter((img) => img.file).length;
-	const canAddMore   = images.length < maxImages;
+	const pendingCount = images.filter((img) => !!img.file).length;
+	const canAddMore = images.length < maxImages;
 
 	return (
-		<div className="space-y-3">
+		<div className={cn("space-y-3", className)}>
 			<div className="flex items-baseline gap-2">
-				<p className="text-sm font-medium text-[#F5F0EB]">Images du plat</p>
+				<p className="text-sm font-medium text-[#F5F0EB]">{label}</p>
 				<span className="text-xs text-[#5A5249]">
-					{images.length}/{maxImages} · Cliquer pour définir comme principale
+					{countLabel ?? `${images.length}/${maxImages}`}
+					{allowPrimary && " · Cliquer pour définir comme principale"}
 				</span>
 			</div>
 
 			<div className="flex flex-wrap gap-3">
-				{images.map((img, idx) => {
+				{images.map((img, index) => {
 					const isPending = !!img.file;
+					const canSelectPrimary = allowPrimary && images.length > 1;
 
 					return (
 						<div
-							key={img.id ?? `${isPending ? "pending" : img.publicId}-${idx}`}
-							title={
-								img.isPrimary
-									? "Image principale"
-									: "Cliquer pour définir comme principale"
+							key={img.id ?? `${isPending ? "pending" : img.publicId || "image"}-${index}`}
+						title={
+								allowPrimary
+									? img.isPrimary
+										? "Image principale"
+										: "Cliquer pour définir comme principale"
+									: undefined
 							}
-							onClick={() => handleSetPrimary(idx)}
 							className={cn(
-								"relative w-24 h-24 rounded-lg overflow-hidden cursor-pointer group transition-all select-none",
-								img.isPrimary
+								"relative w-24 h-24 rounded-lg overflow-hidden group transition-all select-none",
+								allowPrimary && canSelectPrimary ? "cursor-pointer" : "cursor-default",
+								allowPrimary && img.isPrimary
 									? "ring-2 ring-[#C8973A] ring-offset-2 ring-offset-[#141414]"
 									: "ring-1 ring-[#2a2a2a] hover:ring-[#444]"
 							)}
 						>
+							{canSelectPrimary ? (
+								<button
+									type="button"
+									onClick={() => handleSetPrimary(index)}
+									className="absolute inset-0 z-[1]"
+									aria-label={img.isPrimary ? "Image principale" : "Définir comme image principale"}
+								/>
+							) : null}
+
 							<Image
 								src={img.url}
-								alt={img.alt || `Photo ${idx + 1}`}
+								alt={img.alt || `Photo ${index + 1}`}
 								fill
 								sizes="96px"
 								className="object-cover"
 								unoptimized={isPending}
 							/>
 
-							{img.isPrimary && (
-								<div className="absolute bottom-0 inset-x-0 bg-[#C8973A] text-[#0A0A0A] text-[9px] font-bold text-center py-[3px] uppercase tracking-wide">
-									Principale
+							{allowPrimary && img.isPrimary && (
+								<div className="absolute bottom-0 inset-x-0 z-[2] bg-[#C8973A] text-[#0A0A0A] text-[9px] font-bold text-center py-[3px] uppercase tracking-wide">
+									{primaryLabel}
 								</div>
 							)}
 
 							<button
 								type="button"
 								title="Supprimer"
-								onClick={(e) => {
-									e.stopPropagation();
-									handleRemove(idx);
+								onClick={(event) => {
+									event.stopPropagation();
+									handleRemove(index);
 								}}
 								className={cn(
-									"absolute top-1.5 right-1.5 w-5 h-5 rounded-full",
+									"absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full",
 									"bg-black/60 hover:bg-red-500 text-white",
-									"flex items-center justify-center z-10",
-									"opacity-0 group-hover:opacity-100 transition-opacity"
+									"flex items-center justify-center",
+									"opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
 								)}
 							>
 								<X size={11} strokeWidth={2.5} />
 							</button>
 
-							{!img.isPrimary && (
-								<div className="absolute inset-0 bg-[#C8973A]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+							{allowPrimary && !img.isPrimary && canSelectPrimary && (
+								<div className="absolute inset-0 z-0 bg-[#C8973A]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
 							)}
 						</div>
 					);
@@ -164,9 +202,7 @@ export function ImageUploader({
 				{images.length === 0 && (
 					<div className="flex items-center gap-3 text-[#3a3a3a]">
 						<ImageIcon size={14} />
-						<span className="text-xs">
-							Aucune image — cliquez sur « + » pour en ajouter
-						</span>
+						<span className="text-xs">{emptyText}</span>
 					</div>
 				)}
 			</div>
@@ -174,24 +210,20 @@ export function ImageUploader({
 			{pendingCount > 0 && (
 				<p className="text-xs text-blue-400/70 flex items-center gap-1.5">
 					<CloudUpload size={11} />
-					{pendingCount} nouvelle{pendingCount > 1 ? "s" : ""} image
-					{pendingCount > 1 ? "s" : ""} sera
-					{pendingCount > 1 ? "ont" : ""} uploadée
-					{pendingCount > 1 ? "s" : ""} lors de la validation du formulaire
+					{pendingHelperText ??
+						`${pendingCount} nouvelle${pendingCount > 1 ? "s" : ""} image${pendingCount > 1 ? "s" : ""} sera${pendingCount > 1 ? "ont" : "a"} uploadée${pendingCount > 1 ? "s" : ""} lors de la validation du formulaire.`}
 				</p>
 			)}
 
-			{images.length > 0 && pendingCount === 0 && (
-				<p className="text-xs text-[#3a3a3a]">
-					✦ L&apos;image principale apparaît dans la liste du menu et les aperçus
-				</p>
+			{images.length > 0 && pendingCount === 0 && emptyHelperText && (
+				<p className="text-xs text-[#3a3a3a]">✦ {emptyHelperText}</p>
 			)}
 
 			<input
 				ref={fileInputRef}
 				type="file"
-				accept="image/*"
-				multiple
+				accept={accept}
+				multiple={maxImages > 1}
 				className="hidden"
 				onChange={handleFileChange}
 			/>

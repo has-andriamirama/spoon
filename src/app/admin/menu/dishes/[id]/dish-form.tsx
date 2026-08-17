@@ -21,47 +21,7 @@ interface Props {
 
 const UPLOAD_FOLDER = "spoon/dishes";
 
-async function uploadFileToCDN(
-	file: File
-): Promise<{ url: string; publicId: string } | null> {
-	try {
-		const sigRes = await fetch(
-			`/api/upload?folder=${encodeURIComponent(UPLOAD_FOLDER)}`
-		);
-		if (!sigRes.ok) throw new Error("Impossible d'obtenir la signature d'upload");
-
-		const { signature, timestamp, cloudName, apiKey } = await sigRes.json();
-
-		const formData = new FormData();
-		formData.append("file", file);
-		formData.append("api_key", apiKey);
-		formData.append("timestamp", String(timestamp));
-		formData.append("signature", signature);
-		formData.append("folder", UPLOAD_FOLDER);
-
-		const uploadRes = await fetch(
-			`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-			{ method: "POST", body: formData }
-		);
-		if (!uploadRes.ok) throw new Error("Upload Cloudinary échoué");
-
-		const data = await uploadRes.json();
-		return { url: data.secure_url as string, publicId: data.public_id as string };
-	} catch (err) {
-		console.error("[dish-form] uploadFileToCDN error:", err);
-		return null;
-	}
-}
-
-async function deleteFromCDN(publicId: string): Promise<void> {
-	try {
-		await fetch("/api/upload", {
-			method: "DELETE",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ publicId }),
-		});
-	} catch {}
-}
+import { uploadFileToCDN, deleteFromCDN } from "@/lib/client/cloudinary-upload";
 
 function toImageInput(img: Image, idx: number): ImageInput {
 	return {
@@ -137,7 +97,7 @@ export default function DishForm({ dish, categories }: Props) {
 
 			for (const img of images) {
 				if (img.file) {
-					const result = await uploadFileToCDN(img.file);
+					const result = await uploadFileToCDN(img.file, UPLOAD_FOLDER);
 
 					if (!result) {
 						toast.dismiss("upload-toast");
