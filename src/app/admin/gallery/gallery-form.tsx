@@ -8,11 +8,14 @@ import { Select } from "@/components/ui/select";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { GALLERY_CATEGORIES } from "@/lib/constants";
 import { deleteFromCDN, uploadFileToCDN } from "@/lib/client/cloudinary-upload";
-import type { GalleryImage, ImageInput } from "@/types";
+import type { GalleryCategory, GalleryImage, ImageInput } from "@/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/utils";
 
 const UPLOAD_FOLDER = "spoon/gallery";
+
+const isGalleryCategory = (value: string): value is GalleryCategory =>
+	GALLERY_CATEGORIES.some((category) => category.id === value);
 
 interface GalleryFormProps {
 	initialImage?: GalleryImage | null;
@@ -23,7 +26,7 @@ interface GalleryFormProps {
 export default function GalleryForm({ initialImage = null, onSaved, onCancel }: GalleryFormProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
-	const [form, setForm] = useState({
+	const [form, setForm] = useState<{ category: GalleryCategory; caption: string }>({
 		category: initialImage?.category ?? "DISHES",
 		caption: initialImage?.caption ?? "",
 	});
@@ -134,7 +137,15 @@ export default function GalleryForm({ initialImage = null, onSaved, onCancel }: 
 				<Select
 					label="Catégorie *"
 					value={form.category}
-					onChange={(event) => setForm((previous) => ({ ...previous, category: event.target.value }))}
+					onChange={(event) => {
+						const value = event.target.value;
+						if (!isGalleryCategory(value)) return;
+
+						setForm((previous) => ({
+							...previous,
+							category: value,
+						}));
+					}}
 					options={GALLERY_CATEGORIES.map((category) => ({
 						value: category.id,
 						label: category.label,
