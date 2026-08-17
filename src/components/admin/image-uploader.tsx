@@ -121,20 +121,6 @@ export function ImageUploader({
 								</div>
 							)}
 
-							{isPending && !img.isPrimary && (
-								<div className="absolute bottom-0 inset-x-0 bg-blue-600/80 text-white text-[9px] font-semibold text-center py-[3px] uppercase tracking-wide flex items-center justify-center gap-1">
-									<CloudUpload size={8} />
-									Nouveau
-								</div>
-							)}
-
-							{isPending && img.isPrimary && (
-								<div className="absolute bottom-0 inset-x-0 bg-[#C8973A] text-[#0A0A0A] text-[9px] font-bold text-center py-[3px] uppercase tracking-wide flex items-center justify-center gap-1">
-									<CloudUpload size={8} />
-									Principale · Nouveau
-								</div>
-							)}
-
 							<button
 								type="button"
 								title="Supprimer"
