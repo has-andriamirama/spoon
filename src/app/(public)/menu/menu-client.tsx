@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Flame, Image, Leaf, Wheat } from "lucide-react";
+import { Flame, Image as ImageIcon, Leaf, Wheat } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import type { MenuCategory, Dish, Image as DishImage } from "@/types";
 import { ALLERGENS, DIETARY_TAGS } from "@/lib/constants";
@@ -150,7 +150,7 @@ export default function MenuClientPage({ categories, dishes }: Props) {
 										{imageCount > 1 && (
 											<div className="absolute bottom-2 right-2">
 												<span className="bg-black/60 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-													<Image className="w-5 h-5" /> {imageCount}
+													<ImageIcon className="w-5 h-5" /> {imageCount}
 												</span>
 											</div>
 										)}
