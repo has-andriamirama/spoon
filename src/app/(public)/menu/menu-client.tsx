@@ -120,18 +120,19 @@ export default function MenuClientPage({ categories, dishes }: Props) {
 
 							return (
 								<button
+									type="button"
 									key={dish.id}
 									onClick={() => setSelectedDish(dish)}
-									className="group text-left bg-[#141414] border border-[#222] rounded-xl overflow-hidden hover:border-[#C8973A]/30 transition-all hover:shadow-lg hover:shadow-[#C8973A]/5 active:scale-[0.98]"
+									className="group flex h-full w-full flex-col text-left bg-[#141414] border border-[#222] rounded-xl overflow-hidden hover:border-[#C8973A]/30 transition-all hover:shadow-lg hover:shadow-[#C8973A]/5 active:scale-[0.98]"
 								>
-									<div className="aspect-[4/3] relative overflow-hidden bg-[#1a1a1a]">
+									<div className="aspect-[4/3] shrink-0 relative overflow-hidden bg-[#1a1a1a]">
 										{primaryUrl ? (
 											<Image
 												src={primaryUrl}
 												alt={dish.name}
 												fill
 												sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-												className="object-cover group-hover:scale-105 transition-transform duration-500"
+												className="object-cover scale-[1.04] group-hover:scale-105 transition-transform duration-500"
 											/>
 										) : (
 											<div className="absolute inset-0 flex items-center justify-center text-[#333]">
@@ -140,7 +141,7 @@ export default function MenuClientPage({ categories, dishes }: Props) {
 										)}
 
 										{dish.isDailySpecial && (
-											<div className="absolute top-2 left-2">
+											<div className="absolute top-2 left-2 z-10">
 												<span className="bg-[#C8973A] text-[#0A0A0A] text-xs font-bold px-2 py-0.5 rounded-full">
 													✦ Spécialité
 												</span>
@@ -148,7 +149,7 @@ export default function MenuClientPage({ categories, dishes }: Props) {
 										)}
 
 										{imageCount > 1 && (
-											<div className="absolute bottom-2 right-2">
+											<div className="absolute bottom-2 right-2 z-10">
 												<span className="bg-black/60 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
 													{imageCount}
 												</span>
@@ -156,19 +157,19 @@ export default function MenuClientPage({ categories, dishes }: Props) {
 										)}
 									</div>
 
-									<div className="p-4">
-										<div className="flex items-start justify-between gap-2 mb-1">
-											<h3 className="font-display text-base text-[#F5F0EB] font-semibold leading-tight">
+									<div className="flex flex-1 flex-col p-4">
+										<div className="flex min-h-[1.25rem] items-start justify-between gap-2 mb-1">
+											<h3 className="font-display text-base text-[#F5F0EB] font-semibold leading-tight line-clamp-1">
 												{dish.name}
 											</h3>
 											<span className="text-[#C8973A] font-semibold text-sm shrink-0">
 												{formatPrice(dish.price)}
 											</span>
 										</div>
-										<p className="text-xs text-[#9A8F84] leading-relaxed line-clamp-2 mb-3">
+										<p className="min-h-[2.25rem] text-xs text-[#9A8F84] leading-relaxed line-clamp-2 mb-3">
 											{dish.description}
 										</p>
-										<div className="flex items-center gap-1.5 flex-wrap">
+										<div className="mt-auto min-h-[1.5rem] flex items-center gap-1.5 flex-wrap">
 											{dish.dietaryTags.slice(0, 2).map((tag) => {
 												const t = DIETARY_TAGS.find((dt) => dt.id === tag);
 												return t ? (
