@@ -28,7 +28,7 @@ export default async function AdminReservationsPage({
 
 	const reservations = await prisma.reservation.findMany({
 		where,
-		include: { payment: true, tables: { include: { table: true } } },
+		include: { payment: true },
 		orderBy: [{ date: "desc" }, { timeSlot: "asc" }],
 		take: 100,
 	});
@@ -126,7 +126,6 @@ export default async function AdminReservationsPage({
 											</td>
 											<td className="px-5 py-4 text-sm text-[#9A8F84]">{r.timeSlot}</td>
 											<td className="px-5 py-4 text-sm text-[#9A8F84]">{r.covers}</td>
-											<td className="px-5 py-4 text-sm text-[#9A8F84]">{r.tables.length ? r.tables.map((x) => x.table.number).join(", ") : "Non attribuée"}</td>
 											<td className="px-5 py-4">
 												<Badge variant={variantMap[st.color]}>{st.label}</Badge>
 											</td>

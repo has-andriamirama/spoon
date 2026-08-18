@@ -10,7 +10,6 @@ import {
 	Users,
 	CreditCard,
 	FileText,
-	ReceiptText,
 	ImageIcon,
 	PartyPopper,
 	FolderTree,
@@ -30,9 +29,7 @@ const NAV = [
 		section: "Principal",
 		items: [
 			{ href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-			{ href: "/admin/tables", label: "Tables", icon: UtensilsCrossed },
 			{ href: "/admin/reservations", label: "Réservations", icon: Calendar },
-			{ href: "/admin/orders", label: "Commandes", icon: ReceiptText },
 		],
 	},
 	{

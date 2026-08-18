@@ -64,36 +64,6 @@ enum EventStatus {
 	DECLINED
 }
 
-enum TableOperationalStatus {
-	AVAILABLE
-	CLEANING
-	OUT_OF_SERVICE
-}
-
-enum TableZone {
-	SALLE
-	TERRASSE
-	BAR
-	AUTRE
-}
-
-enum OrderStatus {
-	OPEN
-	SUBMITTED
-	PREPARING
-	READY
-	SERVED
-	PAID
-	CANCELLED
-}
-
-enum OrderPaymentMethod {
-	CASH
-	CARD
-	CHEQUE
-	OTHER
-}
-
 model User {
 	id                      String                   @id @default(cuid())
 	email                   String                   @unique
@@ -179,7 +149,6 @@ model Dish {
 	category        MenuCategory       @relation(fields: [categoryId], references: [id])
 	images          Image[]
 	specialOfferItems SpecialOfferItem[]
-	orderItems      OrderItem[]
 	@@index([categoryId])
 	@@index([isAvailable])
 	@@map("dishes")
@@ -208,127 +177,11 @@ model Reservation {
 	user                User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 	payment             Payment?
 	invoice             Invoice?
-	tables              ReservationTable[]
-	orders              Order[]
 	@@index([date, status])
 	@@index([userId])
 	@@index([guestEmail])
 	@@index([autoConfirmDeadline])
 	@@map("reservations")
-}
-
-model RestaurantTable {
-	id            String                  @id @default(cuid())
-	number        String                  @unique
-	name          String?
-	capacity      Int
-	zone          TableZone               @default(SALLE)
-	status        TableOperationalStatus  @default(AVAILABLE)
-	notes         String?
-	isActive      Boolean                 @default(true)
-	createdAt     DateTime                @default(now())
-	updatedAt     DateTime                @updatedAt
-	reservations  ReservationTable[]
-	orders        OrderTable[]
-
-	@@index([isActive, status])
-	@@index([zone])
-	@@map("restaurant_tables")
-}
-
-model ReservationTable {
-	id           String         @id @default(cuid())
-	reservationId String
-	tableId      String
-	assignedAt   DateTime       @default(now())
-	releasedAt   DateTime?
-	reservation  Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-	table        RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
-
-	@@unique([reservationId, tableId])
-	@@index([reservationId, releasedAt])
-	@@index([tableId, releasedAt])
-	@@map("reservation_tables")
-}
-
-model Order {
-	id               String        @id @default(cuid())
-	reservationId    String?
-	guestFirstName   String?
-	guestLastName    String?
-	guestPhone       String?
-	covers           Int           @default(1)
-	status           OrderStatus   @default(OPEN)
-	notes            String?
-	subtotal         Float         @default(0)
-	discountAmount   Float         @default(0)
-	totalAmount      Float         @default(0)
-	depositApplied  Float         @default(0)
-	paidAmount      Float         @default(0)
-	dueAmount        Float         @default(0)
-	openedAt         DateTime      @default(now())
-	servedAt         DateTime?
-	paidAt           DateTime?
-	cancelledAt      DateTime?
-	createdAt        DateTime      @default(now())
-	updatedAt        DateTime      @updatedAt
-	reservation      Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
-	items            OrderItem[]
-	tables           OrderTable[]
-	payments         OrderPayment[]
-
-	@@index([status, openedAt])
-	@@index([reservationId])
-	@@map("orders")
-}
-
-model OrderTable {
-	id        String         @id @default(cuid())
-	orderId   String
-	tableId   String
-	assignedAt DateTime      @default(now())
-	releasedAt DateTime?
-	order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-	table     RestaurantTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
-
-	@@unique([orderId, tableId])
-	@@index([tableId, releasedAt])
-	@@index([orderId, releasedAt])
-	@@map("order_tables")
-}
-
-model OrderItem {
-	id          String   @id @default(cuid())
-	orderId     String
-	dishId      String?
-	name        String
-	unitPrice   Float
-	quantity    Int
-	lineTotal   Float
-	notes       String?
-	createdAt   DateTime @default(now())
-	updatedAt   DateTime @updatedAt
-	order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-	dish        Dish?   @relation(fields: [dishId], references: [id], onDelete: SetNull)
-
-	@@index([orderId])
-	@@index([dishId])
-	@@map("order_items")
-}
-
-model OrderPayment {
-	id          String              @id @default(cuid())
-	orderId     String
-	amount      Float
-	method      OrderPaymentMethod
-	reference   String?
-	note        String?
-	paidAt      DateTime            @default(now())
-	createdAt   DateTime            @default(now())
-	order       Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-	@@index([orderId, paidAt])
-	@@map("order_payments")
 }
 
 model Payment {
@@ -512,8 +365,6 @@ model RestaurantSettings {
 	depositAmountPerCover   Float    @default(20.0)
 	freeCancellationHours   Int      @default(24)
 	maxCoversPerSlot        Int      @default(40)
-	reservationDurationMinutes Int    @default(120)
-	reservationGraceBeforeMinutes Int @default(30)
 	minBookingNoticeHours   Int      @default(2)
 	maxBookingAdvanceDays   Int      @default(60)
 	autoConfirmReservations Boolean  @default(false)

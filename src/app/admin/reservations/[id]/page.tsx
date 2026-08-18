@@ -4,9 +4,8 @@ import { formatDate, formatDateTime, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
 import Link from "next/link";
-import { ArrowLeft, Receipt } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import AdminReservationActions from "./reservation-actions";
-import ReservationTables from "./reservation-tables";
 
 export const dynamic = "force-dynamic";
 
@@ -21,19 +20,14 @@ const colorVariantMap: Record<string, "yellow" | "green" | "red" | "gray" | "ora
 
 export default async function AdminReservationDetailPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
-	const [reservation, restaurantTables] = await Promise.all([
-		prisma.reservation.findUnique({
-			where: { id },
-			include: {
-				payment: true,
-				invoice: true,
-				user: { select: { id: true, firstName: true, lastName: true, email: true } },
-				tables: { where: { releasedAt: null }, include: { table: true } },
-				orders: { where: { status: { not: "CANCELLED" } }, select: { id: true, status: true, totalAmount: true, depositApplied: true, dueAmount: true } },
-			},
-		}),
-		prisma.restaurantTable.findMany({ where: { isActive: true }, orderBy: [{ zone: "asc" }, { number: "asc" }] }),
-	]);
+	const reservation = await prisma.reservation.findUnique({
+		where: { id },
+		include: {
+			payment: true,
+			invoice: true,
+			user: { select: { id: true, firstName: true, lastName: true, email: true } },
+		},
+	});
 	if (!reservation) notFound();
 
 	const status = RESERVATION_STATUSES[reservation.status];
@@ -97,15 +91,6 @@ export default async function AdminReservationDetailPage({ params }: { params: P
 						)}
 					</div>
 
-					<ReservationTables reservationId={reservation.id} covers={reservation.covers} initialAssignedIds={reservation.tables.map((x) => x.tableId)} initialTables={restaurantTables.map((table) => ({ id: table.id, number: table.number, capacity: table.capacity, zone: table.zone, status: table.status }))} active={["PENDING", "CONFIRMED"].includes(reservation.status)} />
-
-					{reservation.orders.length > 0 && (
-						<div className="bg-[#141414] border border-[#222] rounded-xl p-6">
-							<div className="flex items-center justify-between gap-3 mb-4"><h2 className="font-display text-xl text-[#F5F0EB]">Addition(s) sur place</h2><Receipt size={18} className="text-[#C8973A]" /></div>
-							{reservation.orders.map((order) => <Link key={order.id} href={`/admin/orders/${order.id}`} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-[#0A0A0A] border border-[#222] hover:border-[#C8973A]/30 mb-2"><span className="text-sm text-[#F5F0EB]">#{order.id.slice(-8).toUpperCase()} · {order.status}</span><span className="text-sm text-[#C8973A]">{formatPrice(order.dueAmount)} restant</span></Link>)}
-							</div>
-					) }
-
 					{reservation.payment && paymentStatusInfo && (
 						<div className="bg-[#141414] border border-[#222] rounded-xl p-6">
 							<h2 className="font-display text-xl text-[#F5F0EB] mb-4">Paiement</h2>
@@ -150,7 +135,6 @@ export default async function AdminReservationDetailPage({ params }: { params: P
 				</div>
 
 				<div className="space-y-6">
-					{["PENDING", "CONFIRMED"].includes(reservation.status) && <Link href={`/admin/orders/new?reservationId=${reservation.id}`} className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] font-semibold text-sm px-4 py-2.5"><Receipt size={16} /> Ouvrir une addition</Link>}
 					<AdminReservationActions
 						reservation={{ id: reservation.id, status: reservation.status, payment: reservation.payment }}
 					/>

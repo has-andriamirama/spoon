@@ -3,7 +3,6 @@ import type {
 	Dish, Image, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
 	RestaurantSettings, ScheduleDay, ClosedDay,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
-	TableOperationalStatus, TableZone, OrderStatus, OrderPaymentMethod, RestaurantTable, ReservationTable, Order, OrderTable, OrderItem, OrderPayment,
 	OfferType, OfferTarget, GalleryCategory, EventStatus,
 } from "../../generated/prisma/client";
 
@@ -14,7 +13,6 @@ export type {
 	Dish, Image, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
 	RestaurantSettings, ScheduleDay, ClosedDay,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
-	TableOperationalStatus, TableZone, OrderStatus, OrderPaymentMethod, RestaurantTable, ReservationTable, Order, OrderTable, OrderItem, OrderPayment,
 	OfferType, OfferTarget, GalleryCategory, EventStatus,
 };
 

@@ -124,13 +124,7 @@ export async function PATCH(
 
     if (notes !== undefined) updateData.notes = notes;
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const updatedReservation = await tx.reservation.update({ where: { id }, data: updateData });
-      if (["NO_SHOW", "CANCELLED_BY_CUSTOMER", "CANCELLED_BY_ADMIN", "COMPLETED"].includes(String(status))) {
-        await tx.reservationTable.updateMany({ where: { reservationId: id, releasedAt: null }, data: { releasedAt: new Date() } });
-      }
-      return updatedReservation;
-    });
+    const updated = await prisma.reservation.update({ where: { id }, data: updateData });
 
     // Diffusion temps réel vers admin + client
     await broadcastReservationUpdate(id, updated.userId);
