@@ -22,4 +22,4 @@ export const resend = {
 };
 
 export const FROM_EMAIL =
-	process.env.RESEND_FROM_EMAIL || "Spoon Restaurant <noreply@spoon.re>";
+	process.env.RESEND_FROM_EMAIL || "Spoon Restaurant <onboarding@resend.dev>";

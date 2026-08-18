@@ -11,6 +11,7 @@ import CancelReservationButton from "./cancel-button";
 import RetryPaymentButton from "./retry-payment-button";
 import ReactivateReservationButton from "./reactivate-button";
 import AccountReservationsRealtimeUpdater from "../realtime-updater";
+import PaymentReturnHandler from "./payment-return-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ export default async function ReservationDetailPage({
 	return (
 		<div>
 			<AccountReservationsRealtimeUpdater userId={session.user.id} />
+			<PaymentReturnHandler reservationId={reservation.id} />
 
 			<Link
 				href="/account/reservations"

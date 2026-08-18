@@ -81,8 +81,8 @@ export async function POST(request: Request) {
 			],
 			metadata: { reservationId: reservation.id, guestEmail: reservation.guestEmail },
 			customer_email: reservation.guestEmail,
-			success_url: `${process.env.NEXTAUTH_URL}/reservation?payment=success&id=${reservation.id}&session_id={CHECKOUT_SESSION_ID}`,
-			cancel_url: `${process.env.NEXTAUTH_URL}/account/reservations/${reservation.id}`,
+			success_url: `${process.env.NEXTAUTH_URL}/account/reservations/${reservation.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+			cancel_url: `${process.env.NEXTAUTH_URL}/account/reservations/${reservation.id}?payment=canceled`,
 			expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes
 		});
 
