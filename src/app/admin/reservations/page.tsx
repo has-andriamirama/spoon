@@ -28,7 +28,7 @@ export default async function AdminReservationsPage({
 
 	const reservations = await prisma.reservation.findMany({
 		where,
-		include: { payment: true },
+		include: { payment: true, tables: { include: { table: true } } },
 		orderBy: [{ date: "desc" }, { timeSlot: "asc" }],
 		take: 100,
 	});

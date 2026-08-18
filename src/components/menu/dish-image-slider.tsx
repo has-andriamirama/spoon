@@ -67,7 +67,11 @@ export function DishImageSlider({ images, dishName, className }: Props) {
 		if (touchStartX.current === null) return;
 		const diff = touchStartX.current - e.changedTouches[0].clientX;
 		if (Math.abs(diff) > 40) {
-			diff > 0 ? next() : prev();
+			if (diff > 0) {
+				next();
+			} else {
+				prev();
+			}
 		}
 		touchStartX.current = null;
 	};
@@ -80,7 +84,7 @@ export function DishImageSlider({ images, dishName, className }: Props) {
 				onTouchEnd={handleTouchEnd}
 			>
 				<div
-					className="flex h-full transition-transform duration-500 ease-[cubic-bezier(.25,.46,.45,.94)]"
+					className="flex h-full transition-transform duration-500 ease-[cubic-bezier(.25\,.46\,.45\,.94)]"
 					style={{
 						width: `${total * 100}%`,
 						transform: `translateX(-${(current / total) * 100}%)`,

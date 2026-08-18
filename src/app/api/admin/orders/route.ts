@@ -3,16 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
 import { ACTIVE_ORDER_STATUSES, roundMoney } from "@/lib/order-service";
 
-async function getDepositAvailable(reservationId: string, excludeOrderId?: string) {
-  const reservation = await prisma.reservation.findUnique({
-    where: { id: reservationId },
-    include: { payment: true, orders: { where: { status: { not: "CANCELLED" } }, select: { id: true, depositApplied: true } } },
-  });
-  if (!reservation?.payment || reservation.payment.type !== "DEPOSIT" || reservation.payment.status !== "PAID") return 0;
-  const used = reservation.orders.filter((x) => x.id !== excludeOrderId).reduce((sum, x) => sum + x.depositApplied, 0);
-  return Math.max(0, roundMoney(reservation.payment.amount - used));
-}
-
 export async function GET(request: Request) {
   if (!await getAdminSession()) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   try {
@@ -95,10 +85,6 @@ export async function POST(request: Request) {
 
       await tx.orderTable.createMany({ data: resolvedTableIds.map((tableId: string) => ({ orderId: order.id, tableId })) });
 
-      const payment = reservation?.payment;
-      const availableDeposit = reservationId && payment?.type === "DEPOSIT" && payment.status === "PAID" ? payment.amount : 0;
-      const depositApplied = roundMoney(Math.min(0, availableDeposit));
-      await tx.order.update({ where: { id: order.id }, data: { depositApplied, dueAmount: 0 } });
       return order.id;
     });
 
