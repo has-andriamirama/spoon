@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 export default function AdminSettingsGeneralPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [form, setForm] = useState({ name: "", tagline: "", description: "", phone: "", email: "", address: "", googleMapsUrl: "", facebookUrl: "", instagramUrl: "", depositRequired: true, depositAmountPerCover: 20, freeCancellationHours: 48, maxCoversPerSlot: 40, minBookingNoticeHours: 2, maxBookingAdvanceDays: 60, autoConfirmReservations: false });
+  const [form, setForm] = useState({ name: "", tagline: "", description: "", phone: "", email: "", address: "", googleMapsUrl: "", facebookUrl: "", instagramUrl: "", depositRequired: true, depositAmountPerCover: 20, freeCancellationHours: 48, maxCoversPerSlot: 40, reservationDurationMinutes: 120, reservationGraceBeforeMinutes: 30, minBookingNoticeHours: 2, maxBookingAdvanceDays: 60, autoConfirmReservations: false });
 
   useEffect(() => {
     fetch("/api/settings").then(r => r.json()).then(d => { if (d.data) setForm(d.data); }).finally(() => setFetching(false));
@@ -50,6 +50,8 @@ export default function AdminSettingsGeneralPage() {
           <h2 className="font-display text-xl text-[#F5F0EB]">Règles de réservation</h2>
           <div className="grid grid-cols-2 gap-4">
             <Input label="Max couverts / créneau" type="number" min="1" value={form.maxCoversPerSlot} onChange={e => set("maxCoversPerSlot", parseInt(e.target.value))} />
+            <Input label="Durée moyenne d'une table (min)" type="number" min="30" value={form.reservationDurationMinutes} onChange={e => set("reservationDurationMinutes", parseInt(e.target.value))} />
+            <Input label="Marge avant arrivée (min)" type="number" min="0" value={form.reservationGraceBeforeMinutes} onChange={e => set("reservationGraceBeforeMinutes", parseInt(e.target.value))} />
             <Input label="Délai min. réservation (h)" type="number" min="0" value={form.minBookingNoticeHours} onChange={e => set("minBookingNoticeHours", parseInt(e.target.value))} />
             <Input label="Réservation max à l'avance (j)" type="number" min="1" value={form.maxBookingAdvanceDays} onChange={e => set("maxBookingAdvanceDays", parseInt(e.target.value))} />
             <Input label="Annulation gratuite jusqu'à (h)" type="number" min="0" value={form.freeCancellationHours} onChange={e => set("freeCancellationHours", parseInt(e.target.value))} />

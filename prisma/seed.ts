@@ -44,6 +44,8 @@ async function main() {
 				depositAmountPerCover: 20,
 				freeCancellationHours: 48,
 				maxCoversPerSlot: 40,
+				reservationDurationMinutes: 120,
+				reservationGraceBeforeMinutes: 30,
 				minBookingNoticeHours: 2,
 				maxBookingAdvanceDays: 60,
 				autoConfirmReservations: false,
@@ -121,6 +123,28 @@ async function main() {
 			await prisma.dish.create({ data: dish });
 		}
 		console.log("Dishes created");
+	}
+
+
+	// Restaurant tables
+	const existingTables = await prisma.restaurantTable.count();
+	if (existingTables === 0) {
+		const tables = [
+			{ number: "T01", capacity: 2, zone: "SALLE" },
+			{ number: "T02", capacity: 2, zone: "SALLE" },
+			{ number: "T03", capacity: 4, zone: "SALLE" },
+			{ number: "T04", capacity: 4, zone: "SALLE" },
+			{ number: "T05", capacity: 4, zone: "SALLE" },
+			{ number: "T06", capacity: 6, zone: "SALLE" },
+			{ number: "T07", capacity: 6, zone: "SALLE" },
+			{ number: "T08", capacity: 8, zone: "SALLE" },
+			{ number: "T09", capacity: 2, zone: "TERRASSE" },
+			{ number: "T10", capacity: 4, zone: "TERRASSE" },
+			{ number: "T11", capacity: 4, zone: "TERRASSE" },
+			{ number: "T12", capacity: 2, zone: "BAR" },
+		];
+		for (const table of tables) await prisma.restaurantTable.create({ data: { ...table, zone: table.zone as never } });
+		console.log("Restaurant tables created");
 	}
 
 	console.log("Seed complete!");
