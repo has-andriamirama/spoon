@@ -1,21 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-	Clock,
-	CheckCircle2,
-	Users,
-	TableProperties,
-	Lock,
-	AlertTriangle,
-	RefreshCw,
-	ChevronRight,
-	X,
-	Ban,
-	Eye,
-	Zap,
-	XCircle,
-} from "lucide-react";
+import { Clock, CheckCircle2, Users, TableProperties, Lock, AlertTriangle, RefreshCw, ChevronRight, X, Ban, Eye, Zap, XCircle } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { getPusherClient } from "@/lib/pusher-client";
 import { formatDate } from "@/lib/utils";
@@ -33,7 +19,7 @@ const ZONES = ["SALLE", "TERRASSE", "BAR", "PRIVE"] as const;
 const ZONE_LABELS: Record<string, { label: string; short: string }> = {
 	SALLE:    { label: "Salle — intérieur", short: "Salle" },
 	TERRASSE: { label: "Terrasse",          short: "Terrasse" },
-	BAR:      { label: "Bar",              short: "Bar" },
+	BAR:      { label: "Bar",               short: "Bar" },
 	PRIVE:    { label: "Espace privé",      short: "Privé" },
 };
 
@@ -469,7 +455,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 					)}
 				</div>
 
-				<div className="space-y-3">
+				<div className="space-y-2">
 					<div className="flex items-baseline gap-2 min-h-[20px]">
 						<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
 							Plan de salle
@@ -588,7 +574,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						})}
 					</div>
 
-					{/* Légende */}
 					<div className="flex items-center gap-4 flex-wrap pt-1">
 						{[
 							{ dot: "bg-green-500",                        label: "Libre" },
@@ -604,7 +589,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						))}
 					</div>
 
-					{/* Infobulle table */}
 					{tableTooltip && (
 						<div className="flex items-center gap-2 text-xs text-[#9A8F84] bg-[#141414] border border-[#222] rounded-xl px-3 py-2">
 							<Eye size={12} className="text-[#C8973A] shrink-0" />
@@ -620,7 +604,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				</div>
 			</div>
 
-			{/* ── Modal : confirmation de réservation ──────────────────────── */}
 			<Modal
 				open={isModalOpen}
 				onClose={closeConfirmModal}
@@ -631,7 +614,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				{modalResa && (
 					<div className="space-y-5">
 
-						{/* Résumé client */}
 						<div className="bg-[#0A0A0A] rounded-xl border border-[#1e1e1e] p-4">
 							<div className="flex items-start justify-between gap-3 mb-2">
 								<div>
@@ -664,7 +646,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							)}
 						</div>
 
-						{/* Sélection de table */}
 						<div>
 							<p className="text-xs font-medium text-[#5A5249] mb-2">
 								Choisir une table libre (minimum {modalResa.covers} couverts)
@@ -705,7 +686,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							)}
 						</div>
 
-						{/* Notes admin */}
 						<div>
 							<label className="text-xs text-[#5A5249] block mb-1.5">
 								Notes internes (facultatif, non visibles par le client)
@@ -719,7 +699,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							/>
 						</div>
 
-						{/* Actions */}
 						<div className="flex items-center justify-end gap-3 pt-1 border-t border-[#1e1e1e]">
 							<button
 								onClick={closeConfirmModal}
@@ -740,7 +719,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				)}
 			</Modal>
 
-			{/* ── Modal : blocage / déblocage de table ─────────────────────── */}
 			<Modal
 				open={!!blocageModal}
 				onClose={closeBlocageModal}
