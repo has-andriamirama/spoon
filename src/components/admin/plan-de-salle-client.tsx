@@ -28,8 +28,6 @@ import type {
 	PlanDeSalleData,
 } from "@/types";
 
-// ─── Zones ────────────────────────────────────────────────────────────────────
-
 const ZONES = ["SALLE", "TERRASSE", "BAR", "PRIVE"] as const;
 
 const ZONE_LABELS: Record<string, { label: string; short: string }> = {
@@ -38,8 +36,6 @@ const ZONE_LABELS: Record<string, { label: string; short: string }> = {
 	BAR:      { label: "Bar",              short: "Bar" },
 	PRIVE:    { label: "Espace privé",      short: "Privé" },
 };
-
-// ─── Styles des tables par statut ─────────────────────────────────────────────
 
 const TABLE_STYLES: Record<string, { card: string; num: string; sub: string; dot: string; icon: string }> = {
 	LIBRE: {
@@ -79,20 +75,14 @@ const TABLE_STYLES: Record<string, { card: string; num: string; sub: string; dot
 	},
 };
 
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 interface Props {
 	initialData: PlanDeSalleData;
 	date: string;
 }
 
-// ─── Composant principal ──────────────────────────────────────────────────────
-
 export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const [data, setData]                   = useState<PlanDeSalleData>(initialData);
-	// Réservation survolée (hover) → surligne les tables compatibles sans ouvrir le modal
 	const [hoveredResa, setHoveredResa]     = useState<ReservationForPlan | null>(null);
-	// Réservation active dans le modal d'assignation
 	const [modalResa, setModalResa]         = useState<ReservationForPlan | null>(null);
 	const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 	const [adminNotes, setAdminNotes]       = useState("");
@@ -101,8 +91,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const [tableTooltip, setTableTooltip]  = useState<string | null>(null);
 	const [loading, setLoading]            = useState<string | null>(null);
 	const [refreshing, setRefreshing]      = useState(false);
-
-	// ── Refresh ───────────────────────────────────────────────────────────────
 
 	const refetch = useCallback(async () => {
 		setRefreshing(true);
@@ -113,8 +101,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			setRefreshing(false);
 		}
 	}, [date]);
-
-	// ── Pusher ────────────────────────────────────────────────────────────────
 
 	useEffect(() => {
 		const pusher  = getPusherClient();
@@ -127,8 +113,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			pusher.unsubscribe("admin-reservations");
 		};
 	}, [refetch]);
-
-	// ── Actions ───────────────────────────────────────────────────────────────
 
 	const handleConfirm = async () => {
 		if (!modalResa || !selectedTableId) {
@@ -219,8 +203,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		}
 	};
 
-	// ── Helpers modal ─────────────────────────────────────────────────────────
-
 	const closeConfirmModal = () => {
 		setModalResa(null);
 		setSelectedTableId(null);
@@ -232,19 +214,13 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		setBlocageMotif("");
 	};
 
-	/**
-	 * Ouvre le modal d'assignation pour une réservation.
-	 * Appelé UNIQUEMENT par le bouton "Assigner une table" (pas par le hover).
-	 */
 	const openAssignModal = (resa: ReservationForPlan) => {
-		setHoveredResa(null); // stopper le highlight hover
+		setHoveredResa(null);
 		setSelectedTableId(null);
 		setAdminNotes("");
 		setModalResa(resa);
 		setTableTooltip(`Sélectionnez une table libre (≥ ${resa.covers} cv) pour assigner`);
 	};
-
-	// ── Clic sur une table dans le plan ───────────────────────────────────────
 
 	const onTableClick = (t: TableWithStatus) => {
 		if (!t.isActif || t.status === "INACTIVE") return;
@@ -263,9 +239,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
-		// Table LIBRE
 		if (modalResa) {
-			// Modal ouverte : sélectionner la table si compatible
 			if (t.capaciteMax >= modalResa.covers) {
 				setSelectedTableId(t.id);
 				setTableTooltip(`Table ${t.numero} sélectionnée — confirmez dans le panneau`);
@@ -282,8 +256,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		);
 	};
 
-	// ── Données dérivées ──────────────────────────────────────────────────────
-
 	const { tables, pending, confirmed, noShow, stats } = data;
 
 	const tablesByZone = ZONES.reduce((acc, zone) => {
@@ -291,11 +263,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		return acc;
 	}, {} as Record<string, TableWithStatus[]>);
 
-	/**
-	 * Réservation "active" pour le calcul des highlights :
-	 * - Si un modal est ouvert → on utilise modalResa (sélection)
-	 * - Sinon, si une carte est survolée → on utilise hoveredResa (preview)
-	 */
 	const activeResa    = modalResa ?? hoveredResa;
 	const isModalOpen   = !!modalResa;
 
@@ -303,12 +270,9 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		? tables.filter((t) => t.status === "LIBRE" && t.isActif && t.capaciteMax >= modalResa.covers)
 		: [];
 
-	// ── Render ────────────────────────────────────────────────────────────────
-
 	return (
 		<div className="space-y-5">
 
-			{/* ── Stats ──────────────────────────────────────────────────────── */}
 			<div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
 				{(
 					[
@@ -332,7 +296,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				))}
 			</div>
 
-			{/* ── Barre de contrôle ─────────────────────────────────────────── */}
 			<div className="flex items-center justify-between">
 				<p className="text-xs text-[#5A5249]">
 					{stats.libres} table{stats.libres > 1 ? "s" : ""} libre{stats.libres > 1 ? "s" : ""} ·{" "}
@@ -348,13 +311,10 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				</button>
 			</div>
 
-			{/* ── Layout principal ───────────────────────────────────────────── */}
 			<div className="grid grid-cols-1 xl:grid-cols-[260px_1fr] gap-4 items-start">
 
-				{/* ── Colonne gauche : listes ───────────────────────────────── */}
 				<div className="space-y-5">
 
-					{/* EN ATTENTE */}
 					<div>
 						<div className="flex items-center gap-2 mb-2.5">
 							<span className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
@@ -376,12 +336,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 								{pending.map((r) => {
 									const isHovered = hoveredResa?.id === r.id;
 									return (
-										/*
-										 * La carte est un <div> non-cliquable globalement.
-										 * - onMouseEnter : surligne les tables compatibles dans le plan
-										 * - onMouseLeave : retire le surlignage
-										 * - Le seul clic "actif" est le bouton jaune "Assigner une table"
-										 */
 										<div
 											key={r.id}
 											onMouseEnter={() => setHoveredResa(r)}
@@ -393,7 +347,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 													: "bg-[#141414] border-[#222] hover:border-[#2a2a2a]"
 											)}
 										>
-											{/* Ligne 1 : nom + badge table si déjà assignée */}
 											<div className="flex items-start justify-between gap-2 mb-1.5">
 												<span className="text-sm font-medium text-[#F5F0EB] leading-tight">
 													{r.guestFirstName} {r.guestLastName}
@@ -405,7 +358,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 												)}
 											</div>
 
-											{/* Ligne 2 : couverts / heure / occasion */}
 											<div className="flex items-center gap-3 text-[11px] text-[#5A5249]">
 												<span className="flex items-center gap-1">
 													<Users size={10} /> {r.covers} cv
@@ -418,25 +370,17 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 												)}
 											</div>
 
-											{/* Notes / allergies */}
 											{(r.notes || r.allergies) && (
 												<p className="text-[10px] text-yellow-600/60 mt-1.5 truncate">
 													⚠ {r.notes || r.allergies}
 												</p>
 											)}
 
-											{/* Pied de carte : date + bouton d'assignation */}
 											<div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[#1e1e1e]">
 												<span className="text-[10px] text-[#2a2a2a]">
 													{formatDate(r.date, "dd/MM")}
 												</span>
 
-												{/*
-												 * ─── SEUL POINT D'ENTRÉE vers le modal ─────────────
-												 * Un simple survol de la carte suffit pour voir les
-												 * tables compatibles clignoter dans le plan.
-												 * Il faut CLIQUER ici pour ouvrir le modal d'assignation.
-												 */}
 												<button
 													onClick={() => openAssignModal(r)}
 													className="flex items-center gap-0.5 text-[10px] text-yellow-600 hover:text-yellow-400 transition-colors font-medium"
@@ -453,7 +397,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						)}
 					</div>
 
-					{/* CONFIRMÉES */}
 					{confirmed.length > 0 && (
 						<div>
 							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest mb-2.5">
@@ -499,7 +442,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						</div>
 					)}
 
-					{/* NO-SHOW */}
 					{noShow.length > 0 && (
 						<div>
 							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest mb-2.5">
@@ -527,9 +469,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 					)}
 				</div>
 
-				{/* ── Colonne droite : plan de salle ───────────────────────── */}
 				<div className="space-y-3">
-					{/* En-tête du plan avec indication contextuelle */}
 					<div className="flex items-baseline gap-2 min-h-[20px]">
 						<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
 							Plan de salle
@@ -550,7 +490,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						)}
 					</div>
 
-					{/* Zones */}
 					<div className="space-y-2">
 						{ZONES.map((zone) => {
 							const zoneTables = tablesByZone[zone] || [];
@@ -575,21 +514,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 											const s = TABLE_STYLES[t.status] || TABLE_STYLES.LIBRE;
 											const isSelected  = selectedTableId === t.id;
 
-											/*
-											 * Logique de highlight :
-											 * activeResa = modalResa ?? hoveredResa
-											 *
-											 * isCompatible → table libre avec capacité suffisante
-											 * isIncompatible → table libre mais capacité insuffisante
-											 *
-											 * Quand le modal EST ouvert (isModalOpen) :
-											 *   - ring-2 [#C8973A] si sélectionnée
-											 *   - ring-1 vert discret si compatible non sélectionnée
-											 *
-											 * Quand le modal N'EST PAS ouvert mais hoveredResa existe :
-											 *   - animate-pulse-subtle + border verte vive si compatible
-											 *   - opacity réduite si incompatible
-											 */
 											const isCompatible =
 												activeResa !== null &&
 												t.status === "LIBRE" &&
@@ -617,19 +541,15 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 														"w-[68px] h-[58px] rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all duration-150",
 														s.card,
 
-														// Table sélectionnée dans le modal
 														isSelected &&
 															"ring-2 ring-[#C8973A] ring-offset-1 ring-offset-[#141414] border-[#C8973A]",
 
-														// Compatible + modal ouvert (sélection)
 														isCompatible && isModalOpen && !isSelected &&
 															"ring-1 ring-green-500/60 border-green-600",
 
-														// Compatible + hover seulement (pas de modal) → pulsation
 														isCompatible && !isModalOpen &&
-															"animate-pulse-subtle ring-2 ring-green-400/70 border-green-400 bg-green-900/60",
+															"animate-pulse-subtle ring-1 ring-green-400/70 border-green-400 bg-green-900/60",
 
-														// Incompatible → estompé
 														isIncompatible && "opacity-20",
 													)}
 												>
@@ -638,7 +558,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 															"w-1.5 h-1.5 rounded-full",
 															s.dot,
 															t.status === "EN_ATTENTE" && "animate-pulse",
-															// Dot vert vif quand pulsation hover
 															isCompatible && !isModalOpen && "bg-green-300"
 														)}
 													/>
