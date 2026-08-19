@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay } from "date-fns";
 import type { TableWithStatus, TableStatus, ReservationForPlan } from "@/types";
-import type { Table, TableBlocage, Reservation, ZoneTable } from "../../../../../../generated/prisma/client";
+import type { Table, TableBlocage, Reservation, ZoneTable } from "../../../../../generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
