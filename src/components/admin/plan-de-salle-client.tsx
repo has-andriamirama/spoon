@@ -548,7 +548,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 															"ring-1 ring-green-500/60 border-green-600",
 
 														isCompatible && !isModalOpen &&
-															"animate-pulse-subtle ring-2 ring-green-400/70 ring-offset-1 border-green-400 bg-green-900/60",
+															"animate-pulse-subtle border-green-400 bg-green-900/60",
 
 														isIncompatible && "opacity-20",
 													)}
