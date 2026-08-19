@@ -20,6 +20,8 @@ import {
 	ChevronRight,
 	X,
 	UtensilsCrossed as Logo,
+	TableProperties,
+	LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminSidebar } from "./admin-layout-client";
@@ -29,7 +31,14 @@ const NAV = [
 		section: "Principal",
 		items: [
 			{ href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-			{ href: "/admin/reservations", label: "Réservations", icon: Calendar },
+		],
+	},
+	{
+		section: "Réservations",
+		items: [
+			{ href: "/admin/reservations/plan", label: "Plan de salle", icon: LayoutGrid },
+			{ href: "/admin/reservations", label: "Liste & filtres", icon: Calendar },
+			{ href: "/admin/tables", label: "Gérer les tables", icon: TableProperties },
 		],
 	},
 	{
@@ -108,7 +117,10 @@ function SidebarContent({
 							</p>
 						)}
 						{items.map(({ href, label, icon: Icon }) => {
-							const active = pathname === href || pathname.startsWith(`${href}/`);
+							const active =
+								href === "/admin/reservations"
+									? pathname === href
+									: pathname === href || pathname.startsWith(`${href}/`);
 							return (
 								<Link
 									key={href}

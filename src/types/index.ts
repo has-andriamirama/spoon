@@ -1,9 +1,9 @@
 import type {
 	User, Admin, Reservation, Payment, Invoice, MenuCategory,
 	Dish, Image, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
-	RestaurantSettings, ScheduleDay, ClosedDay,
+	RestaurantSettings, ScheduleDay, ClosedDay, Table, TableBlocage,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
-	OfferType, OfferTarget, GalleryCategory, EventStatus,
+	OfferType, OfferTarget, GalleryCategory, EventStatus, ZoneTable,
 } from "../../generated/prisma/client";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
@@ -11,9 +11,9 @@ import type {
 export type {
 	User, Admin, Reservation, Payment, Invoice, MenuCategory,
 	Dish, Image, SpecialOffer, GalleryImage, EventRequest, AdminNotification,
-	RestaurantSettings, ScheduleDay, ClosedDay,
+	RestaurantSettings, ScheduleDay, ClosedDay, Table, TableBlocage,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
-	OfferType, OfferTarget, GalleryCategory, EventStatus,
+	OfferType, OfferTarget, GalleryCategory, EventStatus, ZoneTable,
 };
 
 // ─── Extended types ───────────────────────────────────────────────────────────
@@ -102,4 +102,46 @@ export type DashboardStats = {
 export type ScheduleSlot = {
 	time: string;
 	maxCovers: number;
+};
+
+// ─── Plan de salle ────────────────────────────────────────────────────────────
+
+export type TableStatus = "LIBRE" | "CONFIRMEE" | "EN_ATTENTE" | "BLOQUEE" | "INACTIVE";
+
+export type TableWithStatus = Table & {
+	status: TableStatus;
+	reservation?: {
+		id: string;
+		guestNom: string;
+		heure: string;
+		covers: number;
+		status: ReservationStatus;
+		occasion: string | null;
+	} | null;
+	blocage?: {
+		id: string;
+		motif: string | null;
+		heureDebut: string;
+		heureFin: string;
+	} | null;
+};
+
+export type ReservationForPlan = Reservation & {
+	table: Table | null;
+	user: Pick<User, "id" | "firstName" | "lastName" | "email"> | null;
+};
+
+export type PlanDeSalleData = {
+	tables: TableWithStatus[];
+	pending: ReservationForPlan[];
+	confirmed: ReservationForPlan[];
+	noShow: ReservationForPlan[];
+	stats: {
+		pending: number;
+		confirmed: number;
+		libres: number;
+		bloquees: number;
+		noShow: number;
+		totalCovers: number;
+	};
 };

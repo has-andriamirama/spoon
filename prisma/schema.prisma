@@ -64,6 +64,13 @@ enum EventStatus {
 	DECLINED
 }
 
+enum ZoneTable {
+	SALLE
+	TERRASSE
+	BAR
+	PRIVE
+}
+
 model User {
 	id                      String                   @id @default(cuid())
 	email                   String                   @unique
@@ -174,14 +181,58 @@ model Reservation {
 	autoConfirmDeadline DateTime?
 	createdAt           DateTime          @default(now())
 	updatedAt           DateTime          @updatedAt
+
+	tableId             String?
+	table               Table?            @relation(fields: [tableId], references: [id], onDelete: SetNull)
+	tableAssignedAt     DateTime?
+
+	occasion            String?
+
+	adminNotes          String?
+
 	user                User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 	payment             Payment?
 	invoice             Invoice?
+
 	@@index([date, status])
 	@@index([userId])
 	@@index([guestEmail])
 	@@index([autoConfirmDeadline])
+	@@index([tableId])
 	@@map("reservations")
+}
+
+model Table {
+	id           String         @id @default(cuid())
+	numero       Int            @unique
+	capaciteMin  Int            @default(1)
+	capaciteMax  Int
+	zone         ZoneTable      @default(SALLE)
+	description  String?
+	positionX    Float?         @default(0)
+	positionY    Float?         @default(0)
+	isActif      Boolean        @default(true)
+	createdAt    DateTime       @default(now())
+	updatedAt    DateTime       @updatedAt
+
+	reservations Reservation[]
+	blocages     TableBlocage[]
+
+	@@map("tables")
+}
+
+model TableBlocage {
+	id         String   @id @default(cuid())
+	tableId    String
+	table      Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+	date       DateTime @db.Date
+	heureDebut String
+	heureFin   String
+	motif      String?
+	createdAt  DateTime @default(now())
+
+	@@index([tableId, date])
+	@@map("table_blocages")
 }
 
 model Payment {
