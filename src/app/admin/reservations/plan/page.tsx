@@ -4,6 +4,7 @@ import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, List, TableProperties } from "lucide-react";
 import PlanDeSalleClient from "@/components/admin/plan-de-salle-client";
+import PlanDatePicker from "@/components/admin/plan-date-picker";
 import type {
 	TableWithStatus,
 	TableStatus,
@@ -148,7 +149,6 @@ export default async function PlanDeSallePage({
 	};
 
 	const dateLabel = format(targetDate, "EEEE d MMMM yyyy", { locale: fr });
-
 	const noTables = tables.length === 0;
 
 	return (
@@ -159,8 +159,8 @@ export default async function PlanDeSallePage({
 					<p className="text-sm text-[#5A5249] mt-0.5 capitalize">{dateLabel}</p>
 				</div>
 
-				<div className="flex items-center gap-3">
-					<div className="flex items-center gap-1 bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
+				<div className="flex items-center gap-3 flex-wrap">
+					<div className="flex items-center gap-0 bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 						<Link
 							href={`/admin/reservations/plan?date=${datePrev}`}
 							className="p-2.5 text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#1e1e1e] transition-colors"
@@ -169,7 +169,7 @@ export default async function PlanDeSallePage({
 						</Link>
 						<Link
 							href={`/admin/reservations/plan?date=${today}`}
-							className="px-3 py-2 text-xs text-[#9A8F84] hover:text-[#C8973A] transition-colors font-medium"
+							className="px-3 py-2 text-xs text-[#9A8F84] hover:text-[#C8973A] transition-colors font-medium border-x border-[#222]"
 						>
 							Aujourd'hui
 						</Link>
@@ -181,21 +181,9 @@ export default async function PlanDeSallePage({
 						</Link>
 					</div>
 
-					<form>
-						<input
-							type="date"
-							name="date"
-							defaultValue={dateStr}
-							onChange={(e) => {
-								if (e.target.value) {
-									window.location.href = `/admin/reservations/plan?date=${e.target.value}`;
-								}
-							}}
-							className="h-9 px-3 rounded-xl bg-[#141414] border border-[#222] text-sm text-[#F5F0EB] focus:border-[#C8973A] focus:outline-none cursor-pointer"
-						/>
-					</form>
+					<PlanDatePicker value={dateStr} />
 
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-3">
 						<Link
 							href="/admin/reservations"
 							className="flex items-center gap-1.5 text-xs text-[#5A5249] hover:text-[#C8973A] transition-colors"
