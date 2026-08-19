@@ -576,11 +576,11 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 
 					<div className="flex items-center gap-4 flex-wrap pt-1">
 						{[
-							{ dot: "bg-green-500",                        label: "Libre" },
-							{ dot: "bg-blue-400",                         label: "Confirmée" },
-							{ dot: "bg-yellow-400 animate-pulse",         label: "En attente" },
-							{ dot: "bg-[#2a2a2a]",                        label: "Bloquée" },
-							{ dot: "bg-green-300 animate-pulse-subtle",   label: "Compatible (hover)" },
+							{ dot: "bg-green-500",                      label: "Libre" },
+							{ dot: "bg-blue-400",                       label: "Confirmée" },
+							{ dot: "bg-yellow-400 animate-pulse",       label: "En attente" },
+							{ dot: "bg-[#2a2a2a]",                      label: "Bloquée" },
+							{ dot: "bg-green-300 animate-pulse-subtle", label: "Compatible" },
 						].map(({ dot, label }) => (
 							<div key={label} className="flex items-center gap-1.5">
 								<div className={cn("w-1.5 h-1.5 rounded-full", dot)} />
