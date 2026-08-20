@@ -75,7 +75,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		}
 	}, [order.id]);
 
-	// Add dishes
 	const addItem = useCallback(async (dishId: string) => {
 		const notes = itemNote?.dishId === dishId ? itemNote.value : undefined;
 		setLoading(`add-${dishId}`);

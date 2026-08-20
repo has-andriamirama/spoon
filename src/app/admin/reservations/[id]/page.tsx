@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import AdminReservationActions from "./reservation-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -135,9 +134,6 @@ export default async function AdminReservationDetailPage({ params }: { params: P
 				</div>
 
 				<div className="space-y-6">
-					<AdminReservationActions
-						reservation={{ id: reservation.id, status: reservation.status, payment: reservation.payment }}
-					/>
 					{reservation.user && (
 						<div className="bg-[#141414] border border-[#222] rounded-xl p-5">
 							<h3 className="font-display text-base text-[#F5F0EB] mb-3">Compte client</h3>
