@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
 	RefreshCw, Clock, CheckCircle2, TableProperties, Users, Lock,
-	AlertTriangle, ChevronRight, Eye, Zap, X, Ban, XCircle,
+	AlertTriangle, ChevronRight, Eye, Zap, Ban, XCircle,
 	UtensilsCrossed, ConciergeBell, Receipt, Loader2, Plus, Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -86,7 +86,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const [modalResa,       setModalResa]        = useState<ReservationForPlan | null>(null);
 	const [selectedTableId, setSelectedTableId]  = useState<string | null>(null);
 	const [adminNotes,      setAdminNotes]       = useState("");
-	const [tableTooltip,    setTableTooltip]     = useState<string | null>(null);
 	const [blocageModal,    setBlocageModal]      = useState<TableWithStatus | null>(null);
 	const [blocageMotif,    setBlocageMotif]      = useState("");
 
@@ -210,7 +209,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		setSelectedTableId(null);
 		setAdminNotes("");
 		setModalResa(resa);
-		setTableTooltip(`Sélectionnez une table libre (≥ ${resa.covers} cv) pour assigner`);
 	};
 
 	const handleWalkin = async () => {
@@ -313,22 +311,12 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		}
 
 		if (t.status === "EN_ATTENTE") {
-			if (t.reservation) {
-				setTableTooltip(
-					`T${t.numero} · ${t.reservation.guestNom} · ${t.reservation.heure} · ${t.reservation.covers} cv${t.reservation.occasion ? ` · ${t.reservation.occasion}` : ""}`
-				);
-			}
 			return;
 		}
 
 		if (modalResa) {
 			if (t.capaciteMax >= modalResa.covers) {
 				setSelectedTableId(t.id);
-				setTableTooltip(`Table ${t.numero} sélectionnée — confirmez dans le panneau`);
-			} else {
-				setTableTooltip(
-					`Table ${t.numero} insuffisante — ${t.capaciteMax} cv pour ${modalResa.covers} demandés`
-				);
 			}
 			return;
 		}
@@ -660,16 +648,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							</div>
 						))}
 					</div>
-
-					{tableTooltip && (
-						<div className="flex items-center gap-2 text-xs text-[#9A8F84] bg-[#141414] border border-[#222] rounded-xl px-3 py-2">
-							<Eye size={12} className="text-[#C8973A] shrink-0" />
-							<span className="flex-1">{tableTooltip}</span>
-							<button onClick={() => setTableTooltip(null)} className="text-[#333] hover:text-[#9A8F84] transition-colors">
-								<X size={12} />
-							</button>
-						</div>
-					)}
 				</div>
 			</div>
 
