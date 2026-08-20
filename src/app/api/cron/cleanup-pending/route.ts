@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-/**
- * Deprecated.
- *
- * Payment sessions are now allowed to remain open for their Stripe-defined
- * expiration period. Stripe's checkout.session.expired webhook is the source
- * of truth for expiration, with auto-cancel-pending acting as a DB fallback.
- *
- * Keep this route temporarily so an old cron invocation does not mutate
- * legitimate pending payments.
- */
 export async function GET() {
-  return NextResponse.json({
-    success: true,
-    cleaned: 0,
-    message: "Deprecated: pending payments are no longer expired by this cron.",
-  });
+	try {
+		// Cancel reservations with PENDING payment older than 30 minutes (payment not completed)
+		const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+		const stalePayments = await prisma.payment.findMany({
+			where: { status: "PENDING", createdAt: { lt: thirtyMinutesAgo } },
+			select: { reservationId: true },
+		});
+		let cleaned = 0;
+		for (const p of stalePayments) {
+			await prisma.payment.update({
+				where: { reservationId: p.reservationId },
+				data: { status: "FAILED" }
+			});
+			cleaned++;
+		}
+		return NextResponse.json({ success: true, cleaned });
+	} catch (error) {
+		console.error("Cron error:", error);
+		return NextResponse.json({ error: "Erreur cron" }, { status: 500 });
+	}
 }

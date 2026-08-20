@@ -4,12 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { generateInvoice } from "@/services/invoice.service";
 import {
 	sendPaymentConfirmation,
-	sendCancellationEmail,
 } from "@/services/email.service";
-import {
-	createAdminNotification,
-	broadcastReservationUpdate,
-} from "@/services/notification.service";
+import { createAdminNotification } from "@/services/notification.service";
 import { formatPrice } from "@/lib/utils";
 import type Stripe from "stripe";
 
@@ -43,25 +39,11 @@ export async function POST(request: Request) {
 
 			const existingPayment = await prisma.payment.findUnique({
 				where: { reservationId },
-				select: {
-					status: true,
-					stripeCheckoutSessionId: true,
-				},
+				select: { status: true },
 			});
 
 			if (existingPayment?.status === "PAID") {
 				console.log(`[stripe/webhook] checkout.session.completed ignoré — déjà PAID (${reservationId})`);
-				return NextResponse.json({ received: true });
-			}
-
-			if (
-				existingPayment?.stripeCheckoutSessionId &&
-				existingPayment.stripeCheckoutSessionId !== session.id
-			) {
-				console.log(
-					`[stripe/webhook] checkout.session.completed ignoré — session obsolète ` +
-					`${session.id} (actuelle : ${existingPayment.stripeCheckoutSessionId})`
-				);
 				return NextResponse.json({ received: true });
 			}
 
@@ -117,7 +99,6 @@ export async function POST(request: Request) {
 			}
 		}
 
-
 		if (event.type === "checkout.session.expired") {
 			const session = event.data.object as Stripe.Checkout.Session;
 			const { reservationId } = session.metadata ?? {};
@@ -126,86 +107,61 @@ export async function POST(request: Request) {
 				return NextResponse.json({ received: true });
 			}
 
-			const current = await prisma.reservation.findUnique({
-				where: { id: reservationId },
-				include: { payment: true },
-			});
+			const currentPayment = await prisma.payment.findUnique({
+				where: { reservationId },
+				select: { status: true, stripePaymentIntentId: true },
+			}).catch(() => null);
 
-			if (!current) {
+			if (!currentPayment) {
 				return NextResponse.json({ received: true });
 			}
 
-			// Paiement déjà reçu : l'expiration d'une ancienne session ne doit
-			// jamais annuler une réservation déjà payée.
-			if (current.payment?.status === "PAID") {
+			if ((TERMINAL_PAID_STATUSES as readonly string[]).includes(currentPayment.status)) {
 				console.log(
-					`[stripe/webhook] checkout.session.expired ignoré — réservation ${reservationId} déjà payée`
+					`[stripe/webhook] checkout.session.expired IGNORÉ — ` +
+					`réservation ${reservationId} déjà en statut ${currentPayment.status} ` +
+					`(session expirée : ${session.id})`
 				);
 				return NextResponse.json({ received: true });
 			}
 
-			// Une session ancienne ne doit pas expirer une nouvelle session
-			// créée pour la même réservation.
 			if (
-				current.payment?.stripeCheckoutSessionId &&
-				current.payment.stripeCheckoutSessionId !== session.id
+				currentPayment.stripePaymentIntentId &&
+				currentPayment.stripePaymentIntentId !== session.id
 			) {
 				console.log(
-					`[stripe/webhook] checkout.session.expired ignoré — ` +
-					`ancienne session ${session.id}, session actuelle ${current.payment.stripeCheckoutSessionId}`
+					`[stripe/webhook] checkout.session.expired IGNORÉ — ` +
+					`session périmée ${session.id} (actuelle : ${currentPayment.stripePaymentIntentId}) ` +
+					`pour réservation ${reservationId}`
 				);
 				return NextResponse.json({ received: true });
 			}
 
-			const reason =
-				"Annulation automatique : le lien de paiement de l'acompte a expiré après 24 heures.";
+			await prisma.payment.update({
+				where: { reservationId },
+				data: {
+					status: "FAILED",
+					failureReason: "Session de paiement expirée",
+				},
+			}).catch(() => {});
 
-			if (current.status === "PENDING") {
-				await prisma.$transaction(async (tx) => {
-					if (current.payment) {
-						await tx.payment.update({
-							where: { reservationId },
-							data: {
-								status: "FAILED",
-								failureReason: reason,
-							},
-						});
-					}
+			console.log(
+				`[stripe/webhook] checkout.session.expired — ` +
+				`paiement marqué FAILED pour réservation ${reservationId} (session : ${session.id})`
+			);
 
-					await tx.reservation.update({
-						where: { id: reservationId },
-						data: {
-							status: "CANCELLED_BY_ADMIN",
-							cancelledAt: new Date(),
-							cancellationReason: reason,
-							autoConfirmDeadline: null,
-						},
-					});
-				});
+			const reservation = await prisma.reservation.findUnique({
+				where: { id: reservationId },
+			}).catch(() => null);
 
-				await sendCancellationEmail({
-					guestFirstName: current.guestFirstName,
-					guestEmail: current.guestEmail,
-					date: current.date,
-					timeSlot: current.timeSlot,
-					cancellationReason: reason,
-				});
-
+			if (reservation) {
 				await createAdminNotification({
 					type: "payment_failed",
-					title: "Réservation annulée — acompte non réglé",
-					message: `${current.guestFirstName} ${current.guestLastName} — lien Stripe expiré sans paiement`,
+					title: "Paiement échoué — session expirée",
+					message: `${reservation.guestFirstName} ${reservation.guestLastName} — Session expirée sans paiement`,
 					link: `/admin/reservations/${reservationId}`,
 				});
-
-				await broadcastReservationUpdate(reservationId, current.userId);
-
-				console.log(
-					`[stripe/webhook] checkout.session.expired — réservation ${reservationId} annulée`
-				);
 			}
-
-			return NextResponse.json({ received: true });
 		}
 
 		if (event.type === "payment_intent.succeeded") {

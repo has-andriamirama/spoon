@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
 import Link from "next/link";
-import { Search, Eye, XCircle, Loader2, Plus, Copy } from "lucide-react";
+import { Search, Eye, XCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Payment, ReservationStatus } from "@/types";
 
@@ -22,7 +22,7 @@ interface Reservation {
 	timeSlot: string;
 	covers: number;
 	status: ReservationStatus;
-	payment: (Payment & { checkoutUrl?: string | null }) | null;
+	payment: Payment | null;
 }
 
 interface Props {
@@ -48,27 +48,6 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 	const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
 	const [cancelReason, setCancelReason] = useState("");
 	const [cancelling, setCancelling] = useState(false);
-
-	const copyPaymentLink = async (url: string) => {
-		try {
-			if (navigator.clipboard?.writeText) {
-				await navigator.clipboard.writeText(url);
-			} else {
-				const textarea = document.createElement("textarea");
-				textarea.value = url;
-				textarea.style.position = "fixed";
-				textarea.style.opacity = "0";
-				document.body.appendChild(textarea);
-				textarea.focus();
-				textarea.select();
-				document.execCommand("copy");
-				document.body.removeChild(textarea);
-			}
-			toast.success("Lien Stripe copié");
-		} catch {
-			toast.error("Impossible de copier le lien");
-		}
-	};
 
 	const openCancelModal = (r: Reservation) => {
 		setCancelTarget(r);
@@ -105,20 +84,11 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 
 	return (
 		<div>
-			<div className="flex items-center justify-between mb-6 gap-4">
+			<div className="flex items-center justify-between mb-6">
 				<h1 className="font-display text-3xl text-[#F5F0EB]">Réservations</h1>
-				<div className="flex items-center gap-4">
-					<Link
-						href="/admin/reservations/new"
-						title="Ajouter une réservation"
-						className="h-9 px-3 rounded-lg bg-[#C8973A] hover:bg-[#D4A34B] text-[#0A0A0A] text-sm font-medium transition-colors flex items-center gap-2"
-					>
-						<Plus size={15} /> Nouvelle réservation
-					</Link>
-					<Link href="/admin/reservations/calendar" className="text-sm text-[#C8973A] hover:underline">
-						Vue calendrier
-					</Link>
-				</div>
+				<Link href="/admin/reservations/calendar" className="text-sm text-[#C8973A] hover:underline">
+					Vue calendrier
+				</Link>
 			</div>
 
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-6 flex flex-wrap gap-4">
@@ -202,19 +172,7 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 											</td>
 											<td className="px-5 py-4">
 												{r.payment ? (
-													<div className="flex items-center gap-2">
-														<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
-														{r.payment.status === "PENDING" && r.payment.checkoutUrl && (
-															<button
-																type="button"
-																onClick={() => copyPaymentLink(r.payment!.checkoutUrl!)}
-																title="Copier le lien Stripe"
-																className="p-1 rounded-md text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-colors"
-															>
-																<Copy size={13} />
-															</button>
-														)}
-													</div>
+													<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
 												) : "—"}
 											</td>
 

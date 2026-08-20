@@ -8,6 +8,7 @@ import { createAdminNotification } from "@/services/notification.service";
 import { createReservationSchema } from "@/lib/validations";
 import { formatDate } from "@/lib/utils";
 
+const DEPOSIT_PER_COVER = 10; // 10 € par personne
 
 export async function POST(request: Request) {
 	try {
@@ -21,19 +22,6 @@ export async function POST(request: Request) {
 		}
 
 		const { date, timeSlot, covers } = parsed.data;
-
-		const settings = await prisma.restaurantSettings.findFirst({
-			select: { depositRequired: true, depositAmountPerCover: true },
-		});
-
-		if (settings?.depositRequired === false) {
-			return NextResponse.json(
-				{ error: "L'acompte est désactivé dans les paramètres du restaurant." },
-				{ status: 422 }
-			);
-		}
-
-		const depositPerCover = Number(settings?.depositAmountPerCover ?? 20);
 
 		// Vérification disponibilité
 		const available = await checkSlotAvailability(date, timeSlot, covers);
@@ -66,7 +54,7 @@ export async function POST(request: Request) {
 		});
 
 		// Création de la session Stripe Checkout
-		const depositAmount = covers * depositPerCover;
+		const depositAmount = covers * DEPOSIT_PER_COVER;
 		const formattedDate = formatDate(date, "EEEE d MMMM yyyy");
 
 		const checkoutSession = await stripe.checkout.sessions.create({
@@ -80,7 +68,7 @@ export async function POST(request: Request) {
 							name: "Acompte de réservation — Spoon",
 							description: `${covers} couvert${covers > 1 ? "s" : ""} · ${formattedDate} à ${timeSlot} · Déduit de votre addition le jour de votre venue`,
 						},
-						unit_amount: Math.round(depositPerCover * 100), // en centimes
+						unit_amount: DEPOSIT_PER_COVER * 100, // en centimes
 					},
 					quantity: covers,
 				},
@@ -100,8 +88,7 @@ export async function POST(request: Request) {
 		await prisma.payment.create({
 			data: {
 				reservationId: reservation.id,
-				stripeCheckoutSessionId: checkoutSession.id,
-				checkoutUrl: checkoutSession.url,
+				stripePaymentIntentId: checkoutSession.id,
 				amount: depositAmount,
 				type: "DEPOSIT",
 				status: "PENDING",

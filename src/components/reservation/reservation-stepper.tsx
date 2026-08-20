@@ -40,13 +40,7 @@ const defaultData: ReservationFormData = {
   allergies: "",
 };
 
-function ReservationStepperInner({
-  depositAmountPerCover = 20,
-  maxBookingAdvanceDays = 60,
-}: {
-  depositAmountPerCover?: number;
-  maxBookingAdvanceDays?: number;
-}) {
+function ReservationStepperInner() {
   const searchParams = useSearchParams();
   const paymentStatus = searchParams.get("payment"); // 'success' | 'canceled'
   const reservationId = searchParams.get("id");
@@ -106,7 +100,7 @@ function ReservationStepperInner({
 
       <div className="bg-[#141414] border border-[#222] rounded-xl p-6 sm:p-8">
         {!paymentStatus && step === 1 && (
-          <StepDateTime data={data} updateData={updateData} onNext={next} maxBookingAdvanceDays={maxBookingAdvanceDays} />
+          <StepDateTime data={data} updateData={updateData} onNext={next} />
         )}
         {!paymentStatus && step === 2 && (
           <StepPersonalInfo
@@ -125,7 +119,7 @@ function ReservationStepperInner({
           />
         )}
         {!paymentStatus && step === 4 && (
-          <StepSummary data={data} onPrev={prev} depositAmountPerCover={depositAmountPerCover} />
+          <StepSummary data={data} onPrev={prev} />
         )}
 
         {paymentStatus && step === 4 && (
@@ -140,19 +134,10 @@ function ReservationStepperInner({
   );
 }
 
-export default function ReservationStepper({
-  depositAmountPerCover = 20,
-  maxBookingAdvanceDays = 60,
-}: {
-  depositAmountPerCover?: number;
-  maxBookingAdvanceDays?: number;
-}) {
+export default function ReservationStepper() {
   return (
     <Suspense fallback={<div className="h-96 animate-pulse bg-[#141414] rounded-xl" />}>
-      <ReservationStepperInner
-        depositAmountPerCover={depositAmountPerCover}
-        maxBookingAdvanceDays={maxBookingAdvanceDays}
-      />
+      <ReservationStepperInner />
     </Suspense>
   );
 }

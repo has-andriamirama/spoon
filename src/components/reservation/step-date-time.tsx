@@ -10,14 +10,13 @@ interface Props {
   data: ReservationFormData;
   updateData: (u: Partial<ReservationFormData>) => void;
   onNext: () => void;
-  maxBookingAdvanceDays?: number;
 }
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
-export default function StepDateTime({ data, updateData, onNext, maxBookingAdvanceDays = 60 }: Props) {
+export default function StepDateTime({ data, updateData, onNext }: Props) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -29,7 +28,7 @@ export default function StepDateTime({ data, updateData, onNext, maxBookingAdvan
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleString("fr-FR", { month: "long", year: "numeric" });
 
   const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + maxBookingAdvanceDays);
+  maxDate.setDate(maxDate.getDate() + 60);
 
   useEffect(() => {
     if (!data.date) return;
