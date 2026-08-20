@@ -71,8 +71,6 @@ enum ZoneTable {
 	PRIVE
 }
 
-// ─── Nouveaux enums pour le service en salle ─────────────────────────────────
-
 enum ServiceStatus {
 	OUVERTE
 	ADDITION_DEMANDEE
@@ -99,8 +97,6 @@ enum CourseType {
 	BOISSON
 	EXTRA
 }
-
-// ─── Modèles existants ────────────────────────────────────────────────────────
 
 model User {
 	id                      String                   @id @default(cuid())
@@ -250,7 +246,7 @@ model Table {
 
 	reservations Reservation[]
 	blocages     TableBlocage[]
-	serviceOrders ServiceOrder[] // ← nouveau
+	serviceOrders ServiceOrder[]
 
 	@@map("tables")
 }
@@ -310,8 +306,6 @@ model Invoice {
 	@@map("invoices")
 }
 
-// ─── Nouveaux modèles pour le service en salle ───────────────────────────────
-
 model ServiceOrder {
 	id              String               @id @default(cuid())
 	tableId         String
@@ -357,8 +351,6 @@ model ServiceOrderItem {
 	@@index([orderId])
 	@@map("service_order_items")
 }
-
-// ─── Offres spéciales ─────────────────────────────────────────────────────────
 
 model SpecialOffer {
 	id          String               @id @default(cuid())
