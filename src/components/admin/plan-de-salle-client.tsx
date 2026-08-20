@@ -355,7 +355,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				).map(({ label, value, icon: Icon, ring, cardCn, valCn, iconCn }) => (
 					<div key={label} className={cn("relative rounded-xl border p-3", cardCn)}>
 						{ring && value > 0 && (
-							<span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-500 rounded-full text-[10px] flex items-center justify-center animate-pulse">
+							<span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#C8973A] text-[#0A0A0A] text-[10px] flex items-center justify-center animate-pulse">
 								{value}
 							</span>
 						)}
@@ -491,7 +491,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 												onClick={() => handleNoShow(r.id)}
 												disabled={loading === `noshow-${r.id}`}
 												className="p-1 text-[#333] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-												title="Marquer absent (no-show)"
+												title="Marquer absent"
 											>
 												<Ban size={12} />
 											</button>
