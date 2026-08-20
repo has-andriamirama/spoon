@@ -387,14 +387,9 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 
 					<div>
 						<div className="flex items-center gap-2 mb-2.5">
-							<span className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
-								En attente
-							</span>
-							{stats.pending > 0 && (
-								<span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-yellow-500 text-[#0A0A0A] text-[9px] font-bold animate-pulse">
-									{stats.pending}
-								</span>
-							)}
+							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
+								En attente ({pending.length})
+							</p>
 						</div>
 
 						{pending.length === 0 ? (
