@@ -180,6 +180,29 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		}
 	}, [order.id, payMethod, router, planUrl]);
 
+	const reopenOrder = useCallback(async () => {
+		setLoading("reopen");
+		setError(null);
+		try {
+			const res = await fetch(`/api/admin/service-orders/${order.id}`, {
+				method:  "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body:    JSON.stringify({ status: "OUVERTE" }),
+			});
+			if (!res.ok) {
+				const { error: e } = await res.json();
+				setError(e ?? "Erreur lors de la réouverture");
+				return;
+			}
+			const { data } = await res.json();
+			setOrder(data);
+			setShowBillPanel(false);
+			setShowPicker(true);
+		} finally {
+			setLoading(null);
+		}
+	}, [order.id]);
+
 	const isAdditionDemandee = order.status === "ADDITION_DEMANDEE";
 	const isOuverte          = order.status === "OUVERTE";
 	const isResa             = order.type   === "RESERVATION";
@@ -187,7 +210,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 	return (
 		<div className="min-h-screen bg-[#0A0A0A]">
 
-			{/* ── En-tête ─────────────────────────────────────────────────── */}
 			<div className="sticky top-0 z-20 bg-[#0A0A0A]/95 backdrop-blur border-b border-[#222]">
 				<div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
 					<Link
@@ -500,6 +522,19 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 									<Check size={16} />
 								)}
 								{loading === "pay" ? "Enregistrement…" : `Encaisser · ${amountDue.toFixed(2)} €`}
+							</button>
+
+							<button
+								onClick={reopenOrder}
+								disabled={loading === "reopen"}
+								className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#222] text-[#5A5249] hover:text-[#9A8F84] hover:border-[#333] text-sm transition-colors disabled:opacity-40"
+							>
+								{loading === "reopen" ? (
+									<Loader2 size={14} className="animate-spin" />
+								) : (
+									<UtensilsCrossed size={14} />
+								)}
+								{loading === "reopen" ? "Réouverture…" : "Ajouter des plats oubliés"}
 							</button>
 						</div>
 					</div>
