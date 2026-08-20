@@ -49,6 +49,27 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 	const [cancelReason, setCancelReason] = useState("");
 	const [cancelling, setCancelling] = useState(false);
 
+	const copyPaymentLink = async (url: string) => {
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(url);
+			} else {
+				const textarea = document.createElement("textarea");
+				textarea.value = url;
+				textarea.style.position = "fixed";
+				textarea.style.opacity = "0";
+				document.body.appendChild(textarea);
+				textarea.focus();
+				textarea.select();
+				document.execCommand("copy");
+				document.body.removeChild(textarea);
+			}
+			toast.success("Lien Stripe copié");
+		} catch {
+			toast.error("Impossible de copier le lien");
+		}
+	};
+
 	const openCancelModal = (r: Reservation) => {
 		setCancelTarget(r);
 		setCancelReason("");
@@ -84,11 +105,20 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 
 	return (
 		<div>
-			<div className="flex items-center justify-between mb-6">
+			<div className="flex items-center justify-between mb-6 gap-4">
 				<h1 className="font-display text-3xl text-[#F5F0EB]">Réservations</h1>
-				<Link href="/admin/reservations/calendar" className="text-sm text-[#C8973A] hover:underline">
-					Vue calendrier
-				</Link>
+				<div className="flex items-center gap-4">
+					<Link
+						href="/admin/reservations/new"
+						title="Ajouter une réservation"
+						className="h-9 px-3 rounded-lg bg-[#C8973A] hover:bg-[#D4A34B] text-[#0A0A0A] text-sm font-medium transition-colors flex items-center gap-2"
+					>
+						<Plus size={15} /> Nouvelle réservation
+					</Link>
+					<Link href="/admin/reservations/calendar" className="text-sm text-[#C8973A] hover:underline">
+						Vue calendrier
+					</Link>
+				</div>
 			</div>
 
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-6 flex flex-wrap gap-4">
