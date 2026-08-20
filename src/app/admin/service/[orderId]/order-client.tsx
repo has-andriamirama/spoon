@@ -26,10 +26,10 @@ interface Props {
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
-	{ value: "CB",           label: "Carte bancaire",   icon: CreditCard },
-	{ value: "ESPECES",      label: "Espèces",          icon: Banknote   },
-	{ value: "CHEQUE",       label: "Chèque",           icon: Receipt    },
-	{ value: "TICKET_RESTO", label: "Ticket-resto",     icon: Ticket     },
+	{ value: "CB",           label: "Carte bancaire", icon: CreditCard },
+	{ value: "ESPECES",      label: "Espèces",        icon: Banknote   },
+	{ value: "CHEQUE",       label: "Chèque",         icon: Receipt    },
+	{ value: "TICKET_RESTO", label: "Ticket-resto",   icon: Ticket     },
 ];
 
 const COURSE_ORDER: Record<string, number> = {
@@ -88,7 +88,8 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 
 	// ─── Ajouter un plat ──────────────────────────────────────────────────────
 
-	const addItem = useCallback(async (dishId: string, dishName: string) => {
+	// dishId suffit — le nom est snapshottable côté serveur depuis la DB
+	const addItem = useCallback(async (dishId: string) => {
 		const notes = itemNote?.dishId === dishId ? itemNote.value : undefined;
 		setLoading(`add-${dishId}`);
 		setError(null);
@@ -118,7 +119,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		setError(null);
 		try {
 			if (newQty <= 0) {
-				// Supprimer l'article
 				const res = await fetch(
 					`/api/admin/service-orders/${order.id}/items/${item.id}`,
 					{ method: "DELETE" }
@@ -192,7 +192,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 				setError(e ?? "Erreur lors de l'encaissement");
 				return;
 			}
-			// Rediriger vers le plan de salle
 			router.push(planUrl);
 			router.refresh();
 		} finally {
@@ -308,10 +307,7 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 										{COURSE_LABELS[course] ?? course}
 									</p>
 									{items.map((item) => (
-										<div
-											key={item.id}
-											className="flex items-center gap-3 px-5 py-3"
-										>
+										<div key={item.id} className="flex items-center gap-3 px-5 py-3">
 											<div className="flex-1 min-w-0">
 												<p className="text-sm text-[#F5F0EB] leading-tight">
 													{item.dishName}
@@ -326,7 +322,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 												</p>
 											</div>
 
-											{/* Contrôles quantité */}
 											{isOuverte && (
 												<div className="flex items-center gap-2 shrink-0">
 													<button
@@ -393,7 +388,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 
 						{showPicker && (
 							<div className="mt-2 bg-[#141414] border border-[#222] rounded-2xl overflow-hidden">
-
 								{/* Onglets catégories */}
 								<div className="flex overflow-x-auto border-b border-[#1e1e1e] scrollbar-none">
 									{menu.map((cat) => (
@@ -437,7 +431,7 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 													)}
 
 													<button
-														onClick={() => addItem(dish.id, dish.name)}
+														onClick={() => addItem(dish.id)}
 														disabled={isAdding}
 														className="w-8 h-8 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/30 hover:bg-[#C8973A]/20 hover:border-[#C8973A]/60 text-[#C8973A] transition-colors flex items-center justify-center shrink-0 disabled:opacity-40"
 													>
@@ -505,7 +499,7 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 							</div>
 						</div>
 
-						{/* Choix du mode de paiement */}
+						{/* Mode de paiement */}
 						<div className="px-5 pb-5 space-y-3">
 							<p className="text-xs text-[#5A5249] font-medium uppercase tracking-wider">
 								Mode de paiement
@@ -577,15 +571,15 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 // ─── Badge de statut ─────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-	const map: Record<string, { label: string; cn: string }> = {
-		OUVERTE:            { label: "En service",  cn: "bg-[#C8973A]/10 text-[#C8973A] border-[#C8973A]/30" },
-		ADDITION_DEMANDEE:  { label: "Addition",    cn: "bg-red-950/40 text-red-400 border-red-800/40 animate-pulse" },
-		PAYEE:              { label: "Payée",        cn: "bg-green-950/40 text-green-400 border-green-800/40" },
-		ANNULEE:            { label: "Annulée",     cn: "bg-[#111] text-[#444] border-[#222]" },
+	const map: Record<string, { label: string; cls: string }> = {
+		OUVERTE:           { label: "En service", cls: "bg-[#C8973A]/10 text-[#C8973A] border-[#C8973A]/30"         },
+		ADDITION_DEMANDEE: { label: "Addition",   cls: "bg-red-950/40 text-red-400 border-red-800/40 animate-pulse" },
+		PAYEE:             { label: "Payée",      cls: "bg-green-950/40 text-green-400 border-green-800/40"         },
+		ANNULEE:           { label: "Annulée",    cls: "bg-[#111] text-[#444] border-[#222]"                        },
 	};
 	const s = map[status] ?? map.OUVERTE;
 	return (
-		<span className={cn("shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border", s.cn)}>
+		<span className={cn("shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border", s.cls)}>
 			{s.label}
 		</span>
 	);

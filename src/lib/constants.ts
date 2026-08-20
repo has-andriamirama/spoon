@@ -32,21 +32,21 @@ export const GALLERY_CATEGORIES = [
 ] as const;
 
 export const RESERVATION_STATUSES = {
-	PENDING: { label: "En attente", color: "yellow" },
-	CONFIRMED: { label: "Confirmée", color: "green" },
-	CANCELLED_BY_CUSTOMER: { label: "Annulée", color: "red" },
-	CANCELLED_BY_ADMIN: { label: "Annulée", color: "red" },
-	COMPLETED: { label: "Terminée", color: "gray" },
-	NO_SHOW: { label: "Absent", color: "orange" },
+	PENDING:               { label: "En attente", color: "yellow" },
+	CONFIRMED:             { label: "Confirmée",  color: "green"  },
+	CANCELLED_BY_CUSTOMER: { label: "Annulée",    color: "red"    },
+	CANCELLED_BY_ADMIN:    { label: "Annulée",    color: "red"    },
+	COMPLETED:             { label: "Terminée",   color: "gray"   },
+	NO_SHOW:               { label: "Absent",     color: "orange" },
 } as const;
 
 export const PAYMENT_STATUSES = {
-	NONE: { label: "Aucun", color: "gray" },
-	PENDING: { label: "En attente", color: "yellow" },
-	PAID: { label: "Payé", color: "green" },
-	REFUNDED: { label: "Remboursé", color: "blue" },
-	PARTIALLY_REFUNDED: { label: "Partiellement remboursé", color: "blue" },
-	FAILED: { label: "Échoué", color: "red" },
+	NONE:                 { label: "Aucun",                      color: "gray"   },
+	PENDING:              { label: "En attente",                 color: "yellow" },
+	PAID:                 { label: "Payé",                       color: "green"  },
+	REFUNDED:             { label: "Remboursé",                  color: "blue"   },
+	PARTIALLY_REFUNDED:   { label: "Partiellement remboursé",    color: "blue"   },
+	FAILED:               { label: "Échoué",                     color: "red"    },
 } as const;
 
 export const EVENT_TYPES = [
@@ -63,3 +63,14 @@ export const EVENT_TYPES = [
 export const DAYS_OF_WEEK = [
 	"Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi",
 ];
+
+export const ZONES = ["SALLE", "TERRASSE", "BAR", "PRIVE"] as const;
+
+export type ZoneName = typeof ZONES[number];
+
+export const ZONE_LABELS: Record<string, { label: string; short: string }> = {
+	SALLE:    { label: "Salle",    short: "SL" },
+	TERRASSE: { label: "Terrasse", short: "TR" },
+	BAR:      { label: "Bar",      short: "BR" },
+	PRIVE:    { label: "Privé",    short: "PV" },
+};

@@ -9,11 +9,11 @@ import {
 	UtensilsCrossed, ConciergeBell, Receipt, Loader2, Plus, Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/date-utils";
 import { ZONE_LABELS, ZONES } from "@/lib/constants";
 import { Modal } from "@/components/ui/modal";
 import type {
-	TableWithStatus, PlanDeSalleData, ReservationForPlan, TableStatus,
+	TableWithStatus, PlanDeSalleData, ReservationForPlan,
 } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -86,16 +86,16 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const router = useRouter();
 
 	// ── États existants ──────────────────────────────────────────────────────
-	const [data,         setData]         = useState<PlanDeSalleData>(initialData);
-	const [refreshing,   setRefreshing]   = useState(false);
-	const [loading,      setLoading]      = useState<string | null>(null);
-	const [hoveredResa,  setHoveredResa]  = useState<ReservationForPlan | null>(null);
-	const [modalResa,    setModalResa]    = useState<ReservationForPlan | null>(null);
-	const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-	const [adminNotes,   setAdminNotes]   = useState("");
-	const [tableTooltip, setTableTooltip] = useState<string | null>(null);
-	const [blocageModal, setBlocageModal] = useState<TableWithStatus | null>(null);
-	const [blocageMotif, setBlocageMotif] = useState("");
+	const [data,            setData]            = useState<PlanDeSalleData>(initialData);
+	const [refreshing,      setRefreshing]       = useState(false);
+	const [loading,         setLoading]          = useState<string | null>(null);
+	const [hoveredResa,     setHoveredResa]      = useState<ReservationForPlan | null>(null);
+	const [modalResa,       setModalResa]        = useState<ReservationForPlan | null>(null);
+	const [selectedTableId, setSelectedTableId]  = useState<string | null>(null);
+	const [adminNotes,      setAdminNotes]       = useState("");
+	const [tableTooltip,    setTableTooltip]     = useState<string | null>(null);
+	const [blocageModal,    setBlocageModal]      = useState<TableWithStatus | null>(null);
+	const [blocageMotif,    setBlocageMotif]      = useState("");
 
 	// ── Nouveaux états ────────────────────────────────────────────────────────
 	const [walkinModal,      setWalkinModal]      = useState<TableWithStatus | null>(null);
@@ -135,8 +135,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				});
 				const channel = pusher.subscribe("admin-reservations");
 				const refresh = () => void refetch();
-				channel.bind("reservation-updated",    refresh);
-				channel.bind("service-order-updated",  refresh);
+				channel.bind("reservation-updated",   refresh);
+				channel.bind("service-order-updated", refresh);
 			} catch { /* pas de Pusher en dev */ }
 		};
 
@@ -190,7 +190,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		}
 	};
 
-	const handleUnblock = async (tableId: string, numero: number) => {
+	// numero retiré — non utilisé dans la logique API
+	const handleUnblock = async (tableId: string) => {
 		setLoading(`unblock-${tableId}`);
 		try {
 			await fetch("/api/admin/tables/unblock", {
@@ -246,7 +247,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			});
 			if (!res.ok) {
 				const { error, orderId } = await res.json();
-				// Conflit : commande déjà ouverte → rediriger directement
 				if (res.status === 409 && orderId) {
 					router.push(`/admin/service/${orderId}?date=${date}`);
 					return;
@@ -318,7 +318,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
-		// Commande active → naviguer vers la page de gestion
 		if (t.status === "EN_SERVICE" || t.status === "ADDITION") {
 			if (t.serviceOrder) {
 				router.push(`/admin/service/${t.serviceOrder.id}?date=${date}`);
@@ -326,11 +325,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
-		// Réservation confirmée → ouvrir la commande
 		if (t.status === "CONFIRMEE") {
-			if (t.reservation) {
-				setOpenOrderModal(t);
-			}
+			if (t.reservation) setOpenOrderModal(t);
 			return;
 		}
 
@@ -356,7 +352,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
-		// Walk-in
 		setWalkinModal(t);
 		setWalkinCovers(Math.min(2, t.capaciteMax));
 	};
@@ -385,13 +380,13 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			<div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
 				{(
 					[
-						{ label: "En attente",     value: stats.pending,     icon: Clock,         ring: stats.pending > 0,   cardCn: "bg-yellow-950/20 border-yellow-900/30", valCn: "text-yellow-400", iconCn: "text-yellow-500" },
-						{ label: "Confirmées",     value: stats.confirmed,   icon: CheckCircle2,  ring: false,               cardCn: "bg-blue-950/20 border-blue-900/30",    valCn: "text-blue-400",   iconCn: "text-blue-400"   },
-						{ label: "En service",     value: stats.enService,   icon: UtensilsCrossed, ring: false,             cardCn: "bg-[#1a1200] border-[#C8973A]/20",     valCn: "text-[#C8973A]",  iconCn: "text-[#C8973A]"  },
-						{ label: "Addition",       value: stats.addition,    icon: Receipt,       ring: stats.addition > 0,  cardCn: "bg-red-950/20 border-red-900/30",      valCn: "text-red-400",    iconCn: "text-red-400"    },
-						{ label: "Tables libres",  value: stats.libres,      icon: TableProperties, ring: false,             cardCn: "bg-green-950/15 border-green-900/20",  valCn: "text-green-400",  iconCn: "text-green-500"  },
-						{ label: "Bloquées",       value: stats.bloquees,    icon: Lock,          ring: false,               cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#444]",     iconCn: "text-[#3a3a3a]"  },
-						{ label: "Couverts prév.", value: stats.totalCovers, icon: Users,         ring: false,               cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#9A8F84]",  iconCn: "text-[#5A5249]"  },
+						{ label: "En attente",     value: stats.pending,     icon: Clock,           ring: stats.pending > 0,  cardCn: "bg-yellow-950/20 border-yellow-900/30", valCn: "text-yellow-400", iconCn: "text-yellow-500" },
+						{ label: "Confirmées",     value: stats.confirmed,   icon: CheckCircle2,    ring: false,              cardCn: "bg-blue-950/20 border-blue-900/30",    valCn: "text-blue-400",   iconCn: "text-blue-400"   },
+						{ label: "En service",     value: stats.enService,   icon: UtensilsCrossed, ring: false,              cardCn: "bg-[#1a1200] border-[#C8973A]/20",     valCn: "text-[#C8973A]",  iconCn: "text-[#C8973A]"  },
+						{ label: "Addition",       value: stats.addition,    icon: Receipt,         ring: stats.addition > 0, cardCn: "bg-red-950/20 border-red-900/30",      valCn: "text-red-400",    iconCn: "text-red-400"    },
+						{ label: "Tables libres",  value: stats.libres,      icon: TableProperties, ring: false,              cardCn: "bg-green-950/15 border-green-900/20",  valCn: "text-green-400",  iconCn: "text-green-500"  },
+						{ label: "Bloquées",       value: stats.bloquees,    icon: Lock,            ring: false,              cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#444]",     iconCn: "text-[#3a3a3a]"  },
+						{ label: "Couverts prév.", value: stats.totalCovers, icon: Users,           ring: false,              cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#9A8F84]",  iconCn: "text-[#5A5249]"  },
 					] as const
 				).map(({ label, value, icon: Icon, ring, cardCn, valCn, iconCn }) => (
 					<div key={label} className={cn("relative rounded-xl border p-3", cardCn)}>
@@ -622,8 +617,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 
 									<div className="p-3 flex flex-wrap gap-2">
 										{zoneTables.map((t) => {
-											const s           = TABLE_STYLES[t.status] || TABLE_STYLES.LIBRE;
-											const isSelected  = selectedTableId === t.id;
+											const s            = TABLE_STYLES[t.status] || TABLE_STYLES.LIBRE;
+											const isSelected   = selectedTableId === t.id;
 											const isCompatible =
 												activeResa !== null &&
 												t.status === "LIBRE" &&
@@ -640,7 +635,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 													key={t.id}
 													onClick={() => onTableClick(t)}
 													className={cn(
-														// Taille augmentée pour afficher plus d'infos
 														"w-[90px] h-[80px] rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all duration-150 px-1.5",
 														s.card,
 														isSelected && "ring-2 ring-[#C8973A] ring-offset-1 ring-offset-[#141414] border-[#C8973A]",
@@ -650,7 +644,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 														t.status === "ADDITION" && "animate-pulse-subtle",
 													)}
 												>
-													{/* Indicateur statut */}
 													<span className={cn(
 														"w-1.5 h-1.5 rounded-full shrink-0",
 														s.dot,
@@ -659,7 +652,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 														isCompatible && !isModalOpen && "bg-green-300"
 													)} />
 
-													{/* Numéro de table */}
 													<span className={cn(
 														"text-[12px] font-bold leading-tight",
 														s.num,
@@ -668,8 +660,12 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 														T{t.numero}
 													</span>
 
-													{/* Ligne info principale */}
-													<TableCardInfo table={t} styles={s} isCompatible={isCompatible} isModalOpen={isModalOpen} />
+													<TableCardInfo
+														table={t}
+														styles={s}
+														isCompatible={isCompatible}
+														isModalOpen={isModalOpen}
+													/>
 												</button>
 											);
 										})}
@@ -682,12 +678,12 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 					{/* Légende */}
 					<div className="flex items-center gap-4 flex-wrap pt-1">
 						{[
-							{ dot: "bg-green-500",                     label: "Libre"      },
-							{ dot: "bg-blue-400",                      label: "Confirmée"  },
-							{ dot: "bg-yellow-400 animate-pulse",      label: "En attente" },
-							{ dot: "bg-[#C8973A]",                     label: "En service" },
-							{ dot: "bg-red-400 animate-pulse",         label: "Addition"   },
-							{ dot: "bg-[#2a2a2a]",                     label: "Bloquée"    },
+							{ dot: "bg-green-500",                     label: "Libre"       },
+							{ dot: "bg-blue-400",                      label: "Confirmée"   },
+							{ dot: "bg-yellow-400 animate-pulse",      label: "En attente"  },
+							{ dot: "bg-[#C8973A]",                     label: "En service"  },
+							{ dot: "bg-red-400 animate-pulse",         label: "Addition"    },
+							{ dot: "bg-[#2a2a2a]",                     label: "Bloquée"     },
 							{ dot: "bg-green-300 animate-pulse-subtle", label: "Compatible" },
 						].map(({ dot, label }) => (
 							<div key={label} className="flex items-center gap-1.5">
@@ -710,7 +706,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				</div>
 			</div>
 
-			{/* ── Modal : confirmer réservation (existant) ─────────────────── */}
+			{/* ── Modal : confirmer réservation ────────────────────────────── */}
 			<Modal
 				open={isModalOpen}
 				onClose={closeConfirmModal}
@@ -852,7 +848,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 										Fermer
 									</button>
 									<button
-										onClick={() => handleUnblock(blocageModal.id, blocageModal.numero)}
+										onClick={() => handleUnblock(blocageModal.id)}
 										disabled={loading === `unblock-${blocageModal.id}`}
 										className="px-5 py-2 rounded-xl border border-red-800/50 bg-red-950/20 text-red-400 hover:bg-red-950/40 text-sm font-medium transition-colors disabled:opacity-40"
 									>
@@ -892,7 +888,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				)}
 			</Modal>
 
-			{/* ── Modal : walk-in (NOUVEAU) ─────────────────────────────────── */}
+			{/* ── Modal : walk-in ───────────────────────────────────────────── */}
 			<Modal
 				open={!!walkinModal}
 				onClose={closeWalkinModal}
@@ -909,9 +905,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						)}
 
 						<div>
-							<label className="text-xs text-[#5A5249] block mb-1.5">
-								Nom du client *
-							</label>
+							<label className="text-xs text-[#5A5249] block mb-1.5">Nom du client *</label>
 							<input
 								autoFocus
 								value={walkinName}
@@ -954,11 +948,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 								disabled={walkinLoading || !walkinName.trim()}
 								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 							>
-								{walkinLoading ? (
-									<Loader2 size={15} className="animate-spin" />
-								) : (
-									<ConciergeBell size={15} />
-								)}
+								{walkinLoading ? <Loader2 size={15} className="animate-spin" /> : <ConciergeBell size={15} />}
 								{walkinLoading ? "Ouverture…" : "Ouvrir la commande"}
 							</button>
 						</div>
@@ -966,7 +956,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				)}
 			</Modal>
 
-			{/* ── Modal : ouvrir commande réservation (NOUVEAU) ─────────────── */}
+			{/* ── Modal : ouvrir commande réservation ───────────────────────── */}
 			<Modal
 				open={!!openOrderModal}
 				onClose={closeOpenOrderModal}
@@ -982,7 +972,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							</div>
 						)}
 
-						{/* Récap réservation */}
 						<div className="bg-[#0A0A0A] rounded-xl border border-[#1e1e1e] p-4 space-y-3">
 							<div className="flex items-start justify-between gap-3">
 								<div>
@@ -1006,7 +995,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							</div>
 
 							{openOrderModal.reservation.depositAmount !== null &&
-								openOrderModal.reservation.depositAmount > 0 && (
+							 openOrderModal.reservation.depositAmount !== undefined &&
+							 openOrderModal.reservation.depositAmount > 0 && (
 								<div className="flex items-center gap-2 text-sm text-green-400 bg-green-950/20 border border-green-900/30 rounded-lg px-3 py-2">
 									<CheckCircle2 size={13} className="shrink-0" />
 									Acompte encaissé : {openOrderModal.reservation.depositAmount.toFixed(2)} €
@@ -1029,11 +1019,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 								disabled={openOrderLoading}
 								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 							>
-								{openOrderLoading ? (
-									<Loader2 size={15} className="animate-spin" />
-								) : (
-									<UtensilsCrossed size={15} />
-								)}
+								{openOrderLoading ? <Loader2 size={15} className="animate-spin" /> : <UtensilsCrossed size={15} />}
 								{openOrderLoading ? "Ouverture…" : "Ouvrir la commande"}
 							</button>
 						</div>
@@ -1094,7 +1080,7 @@ function TableCardInfo({
 				<span className={cn("text-[9px] text-center leading-tight", styles.sub)}>
 					{reservation.covers} cv · {reservation.heure}
 				</span>
-				{reservation.depositAmount && reservation.depositAmount > 0 && (
+				{reservation.depositAmount != null && reservation.depositAmount > 0 && (
 					<span className="text-[8px] text-green-600 text-center leading-tight">
 						{reservation.depositAmount.toFixed(0)} €✓
 					</span>
@@ -1107,7 +1093,6 @@ function TableCardInfo({
 		return <Lock size={10} className={styles.icon} />;
 	}
 
-	// LIBRE
 	return (
 		<span className={cn(
 			"text-[9px]",
