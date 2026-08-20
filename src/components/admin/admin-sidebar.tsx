@@ -21,18 +21,18 @@ const NAV = [
 	{
 		section: "Réservations",
 		items: [
-			{ href: "/admin/reservations/plan", label: "Plan de salle",     icon: LayoutGrid     },
-			{ href: "/admin/reservations",      label: "Liste & filtres",   icon: Calendar       },
-			{ href: "/admin/tables",            label: "Gérer les tables",  icon: TableProperties },
+			{ href: "/admin/reservations", label: "Liste", icon: Calendar },
+			{ href: "/admin/tables", label: "Gérer les tables", icon: TableProperties },
+			{ href: "/admin/reservations/plan", label: "Plan de salle", icon: LayoutGrid },
 		],
 	},
 	{
 		section: "Service en salle",
 		items: [
 			{
-				href:  "/admin/reservations/plan",
+				href: "/admin/reservations/plan",
 				label: "Commandes du jour",
-				icon:  ConciergeBell,
+				icon: ConciergeBell,
 				exact: true,
 			},
 		],
@@ -40,41 +40,37 @@ const NAV = [
 	{
 		section: "Menu",
 		items: [
-			{ href: "/admin/menu/dishes",     label: "Plats",          icon: UtensilsCrossed },
-			{ href: "/admin/menu/categories", label: "Catégories",     icon: FolderTree      },
-			{ href: "/admin/special-offers",  label: "Offres spéciales", icon: Tag           },
+			{ href: "/admin/menu/dishes", label: "Plats", icon: UtensilsCrossed },
+			{ href: "/admin/menu/categories", label: "Catégories", icon: FolderTree },
+			{ href: "/admin/special-offers", label: "Offres spéciales", icon: Tag },
 		],
 	},
 	{
 		section: "Clients",
 		items: [
-			{ href: "/admin/customers", label: "Clients",    icon: Users      },
-			{ href: "/admin/payments",  label: "Paiements",  icon: CreditCard },
-			{ href: "/admin/invoices",  label: "Factures",   icon: FileText   },
+			{ href: "/admin/customers", label: "Clients", icon: Users },
+			{ href: "/admin/payments", label: "Paiements", icon: CreditCard },
+			{ href: "/admin/invoices", label: "Factures", icon: FileText },
 		],
 	},
 	{
 		section: "Contenu",
 		items: [
-			{ href: "/admin/gallery",  label: "Galerie",      icon: ImageIcon  },
-			{ href: "/admin/events",   label: "Événements",   icon: PartyPopper },
-			{ href: "/admin/schedule", label: "Horaires",     icon: Clock      },
+			{ href: "/admin/gallery", label: "Galerie", icon: ImageIcon },
+			{ href: "/admin/events", label: "Événements", icon: PartyPopper },
+			{ href: "/admin/schedule", label: "Horaires", icon: Clock },
 		],
 	},
 	{
 		section: "Système",
 		items: [
-			{ href: "/admin/notifications", label: "Notifications", icon: Bell     },
-			{ href: "/admin/settings",      label: "Paramètres",    icon: Settings },
+			{ href: "/admin/notifications", label: "Notifications", icon: Bell },
+			{ href: "/admin/settings", label: "Paramètres", icon: Settings },
 		],
 	},
 ];
 
-function SidebarContent({
-	collapsed,
-	onClose,
-	showCloseButton,
-}: {
+function SidebarContent({ collapsed, onClose, showCloseButton }: {
 	collapsed?: boolean;
 	onClose?: () => void;
 	showCloseButton?: boolean;
