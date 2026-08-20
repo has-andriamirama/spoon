@@ -355,7 +355,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				).map(({ label, value, icon: Icon, ring, cardCn, valCn, iconCn }) => (
 					<div key={label} className={cn("relative rounded-xl border p-3", cardCn)}>
 						{ring && value > 0 && (
-							<span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center animate-pulse">
+							<span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-500 rounded-full text-[10px] flex items-center justify-center animate-pulse">
 								{value}
 							</span>
 						)}
