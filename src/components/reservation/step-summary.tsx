@@ -9,14 +9,15 @@ import toast from "react-hot-toast";
 interface Props {
 	data: ReservationFormData;
 	onPrev: () => void;
+	depositAmountPerCover?: number;
 }
 
-const DEPOSIT_PER_COVER = 10; // 10 € per person
+const DEPOSIT_PER_COVER = 20; // fallback uniquement
 
-export default function StepSummary({ data, onPrev }: Props) {
+export default function StepSummary({ data, onPrev, depositAmountPerCover = DEPOSIT_PER_COVER }: Props) {
 	const [loading, setLoading] = useState(false);
 
-	const depositAmount = data.covers * DEPOSIT_PER_COVER;
+	const depositAmount = data.covers * depositAmountPerCover;
 
 	const handlePayment = async () => {
 		setLoading(true);
@@ -101,7 +102,7 @@ export default function StepSummary({ data, onPrev }: Props) {
 							{formatPrice(depositAmount)}
 						</p>
 						<p className="text-xs text-[#9A8F84]">
-							{data.covers} × {formatPrice(DEPOSIT_PER_COVER)} par personne
+							{data.covers} × {formatPrice(depositAmountPerCover)} par personne
 						</p>
 					</div>
 				</div>

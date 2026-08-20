@@ -43,11 +43,11 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Cette réservation est annulée" }, { status: 400 });
 		}
 
-		const currentIntentId = reservation.payment.stripePaymentIntentId;
-		if (currentIntentId?.startsWith("cs_")) {
+		const currentCheckoutSessionId = reservation.payment.stripeCheckoutSessionId;
+		if (currentCheckoutSessionId) {
 			try {
-				await stripe.checkout.sessions.expire(currentIntentId);
-				console.log(`[retry-checkout] Session ${currentIntentId} expirée manuellement`);
+				await stripe.checkout.sessions.expire(currentCheckoutSessionId);
+				console.log(`[retry-checkout] Session ${currentCheckoutSessionId} expirée manuellement`);
 			} catch (err: unknown) {
 				const isAlreadyClosed =
 					err instanceof Error &&
@@ -89,7 +89,8 @@ export async function POST(request: Request) {
 		await prisma.payment.update({
 			where: { reservationId: reservation.id },
 			data: {
-				stripePaymentIntentId: checkoutSession.id,
+				stripeCheckoutSessionId: checkoutSession.id,
+				checkoutUrl: checkoutSession.url,
 				status: "PENDING",
 				failureReason: null,
 			},

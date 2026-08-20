@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
 import Link from "next/link";
-import { Search, Eye, XCircle, Loader2 } from "lucide-react";
+import { Search, Eye, XCircle, Loader2, Plus, Copy } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Payment, ReservationStatus } from "@/types";
 
@@ -22,7 +22,7 @@ interface Reservation {
 	timeSlot: string;
 	covers: number;
 	status: ReservationStatus;
-	payment: Payment | null;
+	payment: (Payment & { checkoutUrl?: string | null }) | null;
 }
 
 interface Props {
@@ -172,7 +172,19 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 											</td>
 											<td className="px-5 py-4">
 												{r.payment ? (
-													<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
+													<div className="flex items-center gap-2">
+														<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
+														{r.payment.status === "PENDING" && r.payment.checkoutUrl && (
+															<button
+																type="button"
+																onClick={() => copyPaymentLink(r.payment!.checkoutUrl!)}
+																title="Copier le lien Stripe"
+																className="p-1 rounded-md text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-colors"
+															>
+																<Copy size={13} />
+															</button>
+														)}
+													</div>
 												) : "—"}
 											</td>
 
