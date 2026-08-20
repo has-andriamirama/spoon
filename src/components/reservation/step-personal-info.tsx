@@ -24,8 +24,6 @@ export default function StepPersonalInfo({ data, updateData, onNext, onPrev }: P
 		});
 	}
 
-	const isAdmin = session.user?.role === "SUPER_ADMIN" || session.user?.role === "ADMIN"
-
 	const validate = () => {
 		const errs: Record<string, string> = {};
 		if (!data.guestFirstName.trim()) errs.guestFirstName = "Prénom requis";
@@ -82,7 +80,7 @@ export default function StepPersonalInfo({ data, updateData, onNext, onPrev }: P
 				/>
 			</div>
 
-			{!isAdmin && !session && (
+			{!session && (
 				<p className="text-xs text-[#5A5249] mb-6 p-4 bg-[#0A0A0A] rounded-lg border border-[#222]">
 					Vous avez un compte ? <a href="/auth/login" className="text-[#C8973A] hover:underline">Connectez-vous</a> pour pré-remplir vos informations et suivre vos réservations.
 				</p>
