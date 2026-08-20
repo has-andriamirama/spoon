@@ -521,7 +521,7 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 								) : (
 									<Check size={16} />
 								)}
-								{loading === "pay" ? "Enregistrement…" : `Encaisser · ${amountDue.toFixed(2)} €`}
+								{loading === "pay" ? "Enregistrement..." : `Encaisser · ${amountDue.toFixed(2)} €`}
 							</button>
 
 							<button
@@ -534,7 +534,7 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 								) : (
 									<UtensilsCrossed size={14} />
 								)}
-								{loading === "reopen" ? "Réouverture…" : "Ajouter des plats oubliés"}
+								{loading === "reopen" ? "Réouverture..." : "Rouvrir la commande"}
 							</button>
 						</div>
 					</div>
@@ -551,7 +551,7 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 						) : (
 							<Receipt size={16} />
 						)}
-						{loading === "bill" ? "Chargement…" : "Demander l'addition"}
+						{loading === "bill" ? "Chargement..." : "Demander l'addition"}
 					</button>
 				)}
 
