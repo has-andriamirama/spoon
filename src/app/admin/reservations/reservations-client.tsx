@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
 import Link from "next/link";
-import { Search, Eye, XCircle, Loader2 } from "lucide-react";
+import { Search, Eye, XCircle, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Payment, ReservationStatus } from "@/types";
+import AdminReservationModal from "./admin-reservation-modal";
 
 interface Reservation {
 	id: string;
@@ -48,6 +49,8 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 	const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
 	const [cancelReason, setCancelReason] = useState("");
 	const [cancelling, setCancelling] = useState(false);
+
+	const [addModalOpen, setAddModalOpen] = useState(false);
 
 	const openCancelModal = (r: Reservation) => {
 		setCancelTarget(r);
@@ -86,9 +89,21 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 		<div>
 			<div className="flex items-center justify-between mb-6">
 				<h1 className="font-display text-3xl text-[#F5F0EB]">Réservations</h1>
-				<Link href="/admin/reservations/calendar" className="text-sm text-[#C8973A] hover:underline">
-					Vue calendrier
-				</Link>
+				<div className="flex items-center gap-3">
+					<Link
+						href="/admin/reservations/calendar"
+						className="text-sm text-[#C8973A] hover:underline"
+					>
+						Vue calendrier
+					</Link>
+					<button
+						onClick={() => setAddModalOpen(true)}
+						className="flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
+					>
+						<Plus size={15} />
+						Ajouter
+					</button>
+				</div>
 			</div>
 
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-6 flex flex-wrap gap-4">
@@ -111,7 +126,9 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 						>
 							<option value="">Tous</option>
 							{Object.entries(RESERVATION_STATUSES).map(([k, v]) => (
-								<option key={k} value={k}>{v.label}</option>
+								<option key={k} value={k}>
+									{v.label}
+								</option>
 							))}
 						</select>
 					</div>
@@ -132,26 +149,34 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 
 			<div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 				{reservations.length === 0 ? (
-					<p className="text-center py-16 text-[#5A5249]">Aucune réservation trouvée</p>
+					<p className="text-center py-16 text-[#5A5249]">
+						Aucune réservation trouvée
+					</p>
 				) : (
 					<div className="overflow-x-auto">
 						<table className="w-full">
 							<thead>
 								<tr className="border-b border-[#222]">
-									{["Client", "Date", "Heure", "Couverts", "Statut", "Paiement", "Actions"].map((h) => (
-										<th
-											key={h}
-											className={`text-left px-5 py-3.5 text-xs font-semibold text-[#5A5249] uppercase tracking-wider${h === "Actions" ? " text-center" : ""}`}
-										>
-											{h}
-										</th>
-									))}
+									{["Client", "Date", "Heure", "Couverts", "Statut", "Paiement", "Actions"].map(
+										(h) => (
+											<th
+												key={h}
+												className={`text-left px-5 py-3.5 text-xs font-semibold text-[#5A5249] uppercase tracking-wider${
+													h === "Actions" ? " text-center" : ""
+												}`}
+											>
+												{h}
+											</th>
+										)
+									)}
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-[#1a1a1a]">
 								{reservations.map((r) => {
 									const st = RESERVATION_STATUSES[r.status];
-									const pst = r.payment ? PAYMENT_STATUSES[r.payment.status] : PAYMENT_STATUSES.NONE;
+									const pst = r.payment
+										? PAYMENT_STATUSES[r.payment.status]
+										: PAYMENT_STATUSES.NONE;
 									const isCancellable = CANCELLABLE_STATUSES.includes(r.status);
 
 									return (
@@ -165,17 +190,24 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 											<td className="px-5 py-4 text-sm text-[#9A8F84] whitespace-nowrap">
 												{formatDate(r.date, "dd/MM/yyyy")}
 											</td>
-											<td className="px-5 py-4 text-sm text-[#9A8F84]">{r.timeSlot}</td>
-											<td className="px-5 py-4 text-sm text-[#9A8F84]">{r.covers}</td>
+											<td className="px-5 py-4 text-sm text-[#9A8F84]">
+												{r.timeSlot}
+											</td>
+											<td className="px-5 py-4 text-sm text-[#9A8F84]">
+												{r.covers}
+											</td>
 											<td className="px-5 py-4">
 												<Badge variant={variantMap[st.color]}>{st.label}</Badge>
 											</td>
 											<td className="px-5 py-4">
 												{r.payment ? (
-													<Badge variant={variantMap[pst.color]}>{pst.label}</Badge>
-												) : "—"}
+													<Badge variant={variantMap[pst.color]}>
+														{pst.label}
+													</Badge>
+												) : (
+													"—"
+												)}
 											</td>
-
 											<td className="px-5 py-4">
 												<div className="flex items-center justify-center gap-1">
 													<Link
@@ -222,8 +254,10 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 							</span>{" "}
 							du{" "}
 							<span className="text-[#F5F0EB]">
-								{formatDate(cancelTarget.date, "dd/MM/yyyy")} à {cancelTarget.timeSlot}
-							</span>.
+								{formatDate(cancelTarget.date, "dd/MM/yyyy")} à{" "}
+								{cancelTarget.timeSlot}
+							</span>
+							.
 						</p>
 
 						<Textarea
@@ -261,6 +295,12 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 					</>
 				)}
 			</Modal>
+
+			<AdminReservationModal
+				open={addModalOpen}
+				onClose={() => setAddModalOpen(false)}
+				onCreated={() => router.refresh()}
+			/>
 		</div>
 	);
 }

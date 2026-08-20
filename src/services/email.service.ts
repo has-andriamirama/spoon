@@ -220,6 +220,72 @@ export async function sendEmailVerification(data: {
 	});
 }
 
+export async function sendAdminCreatedPaymentLink(data: {
+	guestFirstName: string;
+	guestEmail: string;
+	date: Date;
+	timeSlot: string;
+	covers: number;
+	amount: number;
+	paymentUrl: string;
+}): Promise<boolean> {
+	return send({
+		from: FROM_EMAIL,
+		to: data.guestEmail,
+		subject: `Votre réservation chez Spoon — Acompte à régler`,
+		html: `
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0A; color: #F5F0EB; padding: 40px; border-radius: 12px;">
+				<div style="text-align: center; margin-bottom: 32px;">
+					<h1 style="font-size: 28px; color: #C8973A; margin: 0;">Spoon</h1>
+					<p style="color: #9A8F84; margin: 8px 0 0;">Restaurant créole haut de gamme</p>
+				</div>
+
+				<h2 style="font-size: 20px; margin-bottom: 8px;">Votre réservation est en attente 🍽️</h2>
+				<p style="color: #9A8F84; margin-bottom: 24px;">Pour la confirmer, veuillez régler l'acompte via le bouton ci-dessous.</p>
+
+				<p>Bonjour ${data.guestFirstName},</p>
+				<p>L'équipe Spoon a créé une réservation pour vous. Il ne vous reste plus qu'à régler l'acompte pour la valider définitivement.</p>
+
+				<div style="background: #141414; border: 1px solid #222; border-radius: 8px; padding: 24px; margin: 24px 0;">
+					<h3 style="color: #C8973A; margin: 0 0 16px;">Détails de votre réservation</h3>
+					<p style="margin: 8px 0;"><strong>Date :</strong> ${formatDate(data.date)}</p>
+					<p style="margin: 8px 0;"><strong>Heure :</strong> ${data.timeSlot}</p>
+					<p style="margin: 8px 0;"><strong>Nombre de couverts :</strong> ${data.covers}</p>
+					<p style="margin: 8px 0;"><strong>Acompte à régler :</strong> <span style="color: #C8973A; font-weight: bold;">${formatPrice(data.amount)}</span></p>
+				</div>
+
+				<div style="text-align: center; margin: 32px 0;">
+					<a
+						href="${data.paymentUrl}"
+						style="background: #C8973A; color: #0A0A0A; padding: 16px 36px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;"
+					>
+						Régler l'acompte — ${formatPrice(data.amount)}
+					</a>
+				</div>
+
+				<div style="background: #141414; border: 1px solid #333; border-radius: 8px; padding: 16px; margin: 24px 0;">
+					<p style="margin: 0; font-size: 13px; color: #9A8F84;">
+						🔒 Paiement sécurisé via Stripe. Vos coordonnées bancaires ne nous sont jamais transmises.
+					</p>
+				</div>
+
+				<p style="color: #5A5249; font-size: 13px; text-align: center;">
+					⏳ Ce lien est valable <strong style="color: #9A8F84;">24 heures</strong>.
+					Passé ce délai, votre réservation sera automatiquement annulée.
+				</p>
+				<p style="color: #5A5249; font-size: 13px; text-align: center; margin-top: 8px;">
+					L'acompte sera déduit de votre addition le jour de votre venue.
+				</p>
+
+				<div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #222;">
+					<p style="color: #5A5249; font-size: 12px;">📍 12 Rue de Paris, 97400 Saint-Denis, La Réunion · 📞 +262 692 00 00 00</p>
+					<p style="color: #5A5249; font-size: 12px; margin-top: 4px;">© Spoon Restaurant</p>
+				</div>
+			</div>
+		`,
+	});
+}
+
 export async function sendAdminNewReservationAlert(reservation: {
 	guestFirstName: string;
 	guestLastName: string;
