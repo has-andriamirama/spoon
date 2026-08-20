@@ -51,7 +51,7 @@ export async function PATCH(
 
 			if (status === "CONFIRMED") {
 				updateData.confirmedAt = new Date();
-				updateData.autoConfirmDeadline = null;
+				updateData.autoCancelDeadline = null;
 
 				sendReservationConfirmation({
 					id: reservation.id,

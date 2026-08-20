@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
 			await prisma.reservation.update({
 				where: { id: reservationId },
-				data: { autoConfirmDeadline: null },
+				data: { autoCancelDeadline: null },
 			}).catch(() => {});
 
 			const reservation = await prisma.reservation.findUnique({

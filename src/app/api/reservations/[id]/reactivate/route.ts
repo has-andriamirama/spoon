@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { broadcastReservationUpdate } from "@/services/notification.service";
 import { formatDate } from "@/lib/utils";
 
-const AUTO_CONFIRM_HOURS = 24;
+const AUTO_CANCEL_HOURS = 24;
 
 const DEPOSIT_PER_COVER = 10;
 
@@ -44,7 +44,7 @@ export async function POST(
 			);
 		}
 
-		const newDeadline = new Date(Date.now() + AUTO_CONFIRM_HOURS * 60 * 60 * 1000);
+		const newDeadline = new Date(Date.now() + AUTO_CANCEL_HOURS * 60 * 60 * 1000);
 
 		if (reservation.payment?.status === "PAID") {
 			await prisma.reservation.update({
@@ -53,7 +53,7 @@ export async function POST(
 					status: "PENDING",
 					cancelledAt: null,
 					cancellationReason: null,
-					autoConfirmDeadline: newDeadline,
+					autoCancelDeadline: newDeadline,
 				},
 			});
 			await broadcastReservationUpdate(id, reservation.userId);
@@ -94,7 +94,7 @@ export async function POST(
 				status: "PENDING",
 				cancelledAt: null,
 				cancellationReason: null,
-				autoConfirmDeadline: newDeadline,
+				autoCancelDeadline: newDeadline,
 			},
 		});
 

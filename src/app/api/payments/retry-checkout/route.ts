@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 
-const AUTO_CONFIRM_HOURS = 24;
+const AUTO_CANCEL_HOURS = 24;
 
 export async function POST(request: Request) {
 	try {
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 			customer_email: reservation.guestEmail,
 			success_url: `${process.env.NEXTAUTH_URL}/account/reservations/${reservation.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
 			cancel_url: `${process.env.NEXTAUTH_URL}/account/reservations/${reservation.id}?payment=canceled`,
-			expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes
+			expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30mn
 		});
 
 		await prisma.payment.update({
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
 		await prisma.reservation.update({
 			where: { id: reservation.id },
 			data: {
-				autoConfirmDeadline: new Date(Date.now() + AUTO_CONFIRM_HOURS * 60 * 60 * 1000),
+				autoCancelDeadline: new Date(Date.now() + AUTO_CANCEL_HOURS * 60 * 60 * 1000),
 			},
 		});
 

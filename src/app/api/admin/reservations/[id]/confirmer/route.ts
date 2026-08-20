@@ -91,7 +91,7 @@ export async function PATCH(
 			data: {
 				status: "CONFIRMED",
 				confirmedAt: new Date(),
-				autoConfirmDeadline: null,
+				autoCancelDeadline: null,
 				tableId,
 				tableAssignedAt: new Date(),
 				adminNotes: adminNotes || null,

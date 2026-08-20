@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 				userId: null,
 				status: "PENDING",
 				confirmedAt: null,
-				autoConfirmDeadline: new Date(Date.now() + LINK_EXPIRY_HOURS * 3600 * 1000),
+				autoCancelDeadline: new Date(Date.now() + LINK_EXPIRY_HOURS * 3600 * 1000),
 			},
 		});
 

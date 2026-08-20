@@ -10,7 +10,7 @@ export async function GET() {
 		const expired = await prisma.reservation.findMany({
 			where: {
 				status: "PENDING",
-				autoConfirmDeadline: { lt: now, not: null },
+				autoCancelDeadline: { lt: now, not: null },
 			},
 			select: {
 				id: true,
@@ -36,7 +36,7 @@ export async function GET() {
 					status: "CANCELLED_BY_ADMIN",
 					cancelledAt: now,
 					cancellationReason: reason,
-					autoConfirmDeadline: null,
+					autoCancelDeadline: null,
 				},
 			});
 

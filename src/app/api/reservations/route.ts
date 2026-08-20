@@ -8,7 +8,7 @@ import { checkSlotAvailability } from "@/services/availability.service";
 import { sendReservationConfirmation, sendAdminNewReservationAlert } from "@/services/email.service";
 import { createAdminNotification, broadcastReservationUpdate } from "@/services/notification.service";
 
-const AUTO_CONFIRM_DEADLINE_HOURS = 24;
+const AUTO_CANCEL_DEADLINE_HOURS = 24;
 
 export async function GET(request: Request) {
 	try {
@@ -56,9 +56,9 @@ export async function POST(request: Request) {
 		const settings = await prisma.restaurantSettings.findFirst();
 		const isAutoConfirm = settings?.autoConfirmReservations ?? false;
 
-		const autoConfirmDeadline = isAutoConfirm
+		const autoCancelDeadline = isAutoConfirm
 			? null
-			: new Date(Date.now() + AUTO_CONFIRM_DEADLINE_HOURS * 60 * 60 * 1000);
+			: new Date(Date.now() + AUTO_CANCEL_DEADLINE_HOURS * 60 * 60 * 1000);
 
 		const reservation = await prisma.reservation.create({
 			data: {
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 				userId: session?.user?.id || null,
 				status: isAutoConfirm ? "CONFIRMED" : "PENDING",
 				confirmedAt: isAutoConfirm ? new Date() : null,
-				autoConfirmDeadline,
+				autoCancelDeadline,
 			},
 		});
 
