@@ -41,12 +41,12 @@ export const RESERVATION_STATUSES = {
 } as const;
 
 export const PAYMENT_STATUSES = {
-	NONE:                 { label: "Aucun",                      color: "gray"   },
-	PENDING:              { label: "En attente",                 color: "yellow" },
-	PAID:                 { label: "Payé",                       color: "green"  },
-	REFUNDED:             { label: "Remboursé",                  color: "blue"   },
-	PARTIALLY_REFUNDED:   { label: "Partiellement remboursé",    color: "blue"   },
-	FAILED:               { label: "Échoué",                     color: "red"    },
+	NONE:               { label: "Aucun",                   color: "gray"   },
+	PENDING:            { label: "En attente",              color: "yellow" },
+	PAID:               { label: "Payé",                    color: "green"  },
+	REFUNDED:           { label: "Remboursé",               color: "blue"   },
+	PARTIALLY_REFUNDED: { label: "Partiellement remboursé", color: "blue"   },
+	FAILED:             { label: "Échoué",                  color: "red"    },
 } as const;
 
 export const EVENT_TYPES = [

@@ -74,7 +74,7 @@ export default async function ServiceOrderPage({
 
 	if (!rawOrder) notFound();
 
-	// Rediriger si la commande est déjà payée ou annulée
+	// Redirect if already paid or cancelled
 	if (rawOrder.status === "PAYEE" || rawOrder.status === "ANNULEE") {
 		const planUrl = `/admin/reservations/plan${date ? `?date=${date}` : ""}`;
 		redirect(planUrl);

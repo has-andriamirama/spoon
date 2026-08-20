@@ -16,14 +16,10 @@ import type {
 	TableWithStatus, PlanDeSalleData, ReservationForPlan,
 } from "@/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface Props {
 	initialData: PlanDeSalleData;
 	date: string;
 }
-
-// ─── Styles par statut ────────────────────────────────────────────────────────
 
 const TABLE_STYLES: Record<
 	string,
@@ -80,12 +76,9 @@ const TABLE_STYLES: Record<
 	},
 };
 
-// ─── Composant principal ──────────────────────────────────────────────────────
-
 export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const router = useRouter();
 
-	// ── États existants ──────────────────────────────────────────────────────
 	const [data,            setData]            = useState<PlanDeSalleData>(initialData);
 	const [refreshing,      setRefreshing]       = useState(false);
 	const [loading,         setLoading]          = useState<string | null>(null);
@@ -97,7 +90,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const [blocageModal,    setBlocageModal]      = useState<TableWithStatus | null>(null);
 	const [blocageMotif,    setBlocageMotif]      = useState("");
 
-	// ── Nouveaux états ────────────────────────────────────────────────────────
 	const [walkinModal,      setWalkinModal]      = useState<TableWithStatus | null>(null);
 	const [walkinName,       setWalkinName]       = useState("");
 	const [walkinCovers,     setWalkinCovers]     = useState(2);
@@ -107,8 +99,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const [openOrderModal,   setOpenOrderModal]   = useState<TableWithStatus | null>(null);
 	const [openOrderLoading, setOpenOrderLoading] = useState(false);
 	const [openOrderError,   setOpenOrderError]   = useState<string | null>(null);
-
-	// ─── Refresh ──────────────────────────────────────────────────────────────
 
 	const refetch = useCallback(async () => {
 		setRefreshing(true);
@@ -123,7 +113,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		}
 	}, [date]);
 
-	// Pusher : écouter les mises à jour temps réel
 	useEffect(() => {
 		let pusher: InstanceType<typeof import("pusher-js").default> | null = null;
 
@@ -137,14 +126,12 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				const refresh = () => void refetch();
 				channel.bind("reservation-updated",   refresh);
 				channel.bind("service-order-updated", refresh);
-			} catch { /* pas de Pusher en dev */ }
+			} catch {}
 		};
 
 		void initPusher();
 		return () => { pusher?.disconnect(); };
 	}, [refetch]);
-
-	// ─── Handlers existants (réservations) ───────────────────────────────────
 
 	const handleConfirm = async () => {
 		if (!modalResa || !selectedTableId) return;
@@ -190,7 +177,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		}
 	};
 
-	// numero retiré — non utilisé dans la logique API
 	const handleUnblock = async (tableId: string) => {
 		setLoading(`unblock-${tableId}`);
 		try {
@@ -224,8 +210,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		setModalResa(resa);
 		setTableTooltip(`Sélectionnez une table libre (≥ ${resa.covers} cv) pour assigner`);
 	};
-
-	// ─── Nouveau : walk-in ───────────────────────────────────────────────────
 
 	const handleWalkin = async () => {
 		if (!walkinModal || !walkinName.trim()) {
@@ -268,8 +252,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		setWalkinError(null);
 	};
 
-	// ─── Nouveau : ouvrir commande (réservation confirmée) ───────────────────
-
 	const handleOpenOrder = async () => {
 		if (!openOrderModal?.reservation) return;
 		setOpenOrderLoading(true);
@@ -308,8 +290,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		setOpenOrderError(null);
 	};
 
-	// ─── Clic sur une table ───────────────────────────────────────────────────
-
 	const onTableClick = (t: TableWithStatus) => {
 		if (!t.isActif || t.status === "INACTIVE") return;
 
@@ -339,7 +319,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
-		// LIBRE
 		if (modalResa) {
 			if (t.capaciteMax >= modalResa.covers) {
 				setSelectedTableId(t.id);
@@ -356,8 +335,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		setWalkinCovers(Math.min(2, t.capaciteMax));
 	};
 
-	// ─── Données dérivées ─────────────────────────────────────────────────────
-
 	const { tables, pending, confirmed, noShow, stats } = data;
 
 	const tablesByZone = ZONES.reduce((acc, zone) => {
@@ -371,12 +348,9 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		? tables.filter((t) => t.status === "LIBRE" && t.isActif && t.capaciteMax >= modalResa.covers)
 		: [];
 
-	// ─── Rendu ────────────────────────────────────────────────────────────────
-
 	return (
 		<div className="space-y-5">
 
-			{/* ── Statistiques ─────────────────────────────────────────────── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
 				{(
 					[
@@ -402,7 +376,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				))}
 			</div>
 
-			{/* ── Barre d'info ─────────────────────────────────────────────── */}
 			<div className="flex items-center justify-between">
 				<p className="text-xs text-[#5A5249]">
 					{stats.libres} table{stats.libres > 1 ? "s" : ""} libre{stats.libres > 1 ? "s" : ""} ·{" "}
@@ -414,17 +387,14 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 					className="flex items-center gap-1.5 text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
 				>
 					<RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
-					{refreshing ? "Actualisation…" : "Actualiser"}
+					{refreshing ? "Actualisation..." : "Actualiser"}
 				</button>
 			</div>
 
-			{/* ── Layout principal ──────────────────────────────────────────── */}
 			<div className="grid grid-cols-1 xl:grid-cols-[260px_1fr] gap-4 items-start">
 
-				{/* ── Colonne gauche : listes ───────────────────────────────── */}
 				<div className="space-y-5">
 
-					{/* En attente */}
 					<div>
 						<div className="flex items-center gap-2 mb-2.5">
 							<span className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
@@ -502,7 +472,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						)}
 					</div>
 
-					{/* Confirmées */}
 					{confirmed.length > 0 && (
 						<div>
 							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest mb-2.5">
@@ -548,7 +517,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						</div>
 					)}
 
-					{/* No-show */}
 					{noShow.length > 0 && (
 						<div>
 							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest mb-2.5">
@@ -576,7 +544,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 					)}
 				</div>
 
-				{/* ── Colonne droite : plan de salle ───────────────────────── */}
 				<div className="space-y-2">
 					<div className="flex items-baseline gap-2 min-h-[20px]">
 						<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
@@ -675,15 +642,14 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						})}
 					</div>
 
-					{/* Légende */}
 					<div className="flex items-center gap-4 flex-wrap pt-1">
 						{[
-							{ dot: "bg-green-500",                     label: "Libre"       },
-							{ dot: "bg-blue-400",                      label: "Confirmée"   },
-							{ dot: "bg-yellow-400 animate-pulse",      label: "En attente"  },
-							{ dot: "bg-[#C8973A]",                     label: "En service"  },
-							{ dot: "bg-red-400 animate-pulse",         label: "Addition"    },
-							{ dot: "bg-[#2a2a2a]",                     label: "Bloquée"     },
+							{ dot: "bg-green-500",                      label: "Libre"       },
+							{ dot: "bg-blue-400",                       label: "Confirmée"   },
+							{ dot: "bg-yellow-400 animate-pulse",       label: "En attente"  },
+							{ dot: "bg-[#C8973A]",                      label: "En service"  },
+							{ dot: "bg-red-400 animate-pulse",          label: "Addition"    },
+							{ dot: "bg-[#2a2a2a]",                      label: "Bloquée"     },
 							{ dot: "bg-green-300 animate-pulse-subtle", label: "Compatible" },
 						].map(({ dot, label }) => (
 							<div key={label} className="flex items-center gap-1.5">
@@ -693,7 +659,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						))}
 					</div>
 
-					{/* Tooltip table */}
 					{tableTooltip && (
 						<div className="flex items-center gap-2 text-xs text-[#9A8F84] bg-[#141414] border border-[#222] rounded-xl px-3 py-2">
 							<Eye size={12} className="text-[#C8973A] shrink-0" />
@@ -706,7 +671,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				</div>
 			</div>
 
-			{/* ── Modal : confirmer réservation ────────────────────────────── */}
 			<Modal
 				open={isModalOpen}
 				onClose={closeConfirmModal}
@@ -794,7 +758,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							<textarea
 								value={adminNotes}
 								onChange={(e) => setAdminNotes(e.target.value)}
-								placeholder="Préférences de placement, notes de service…"
+								placeholder="Préférences de placement, notes de service..."
 								rows={2}
 								className="w-full bg-[#0A0A0A] border border-[#222] rounded-xl px-3 py-2.5 text-sm text-[#F5F0EB] placeholder-[#2a2a2a] focus:border-[#C8973A] focus:outline-none resize-none transition-colors"
 							/>
@@ -810,14 +774,13 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 							>
 								{loading === "confirm" ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-								{loading === "confirm" ? "Confirmation…" : "Confirmer & envoyer l'email"}
+								{loading === "confirm" ? "Confirmation..." : "Confirmer & envoyer l'email"}
 							</button>
 						</div>
 					</div>
 				)}
 			</Modal>
 
-			{/* ── Modal : blocage ───────────────────────────────────────────── */}
 			<Modal
 				open={!!blocageModal}
 				onClose={closeBlocageModal}
@@ -852,7 +815,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 										disabled={loading === `unblock-${blocageModal.id}`}
 										className="px-5 py-2 rounded-xl border border-red-800/50 bg-red-950/20 text-red-400 hover:bg-red-950/40 text-sm font-medium transition-colors disabled:opacity-40"
 									>
-										{loading === `unblock-${blocageModal.id}` ? "Déblocage…" : "Débloquer la table"}
+										{loading === `unblock-${blocageModal.id}` ? "Déblocage..." : "Débloquer la table"}
 									</button>
 								</div>
 							</>
@@ -863,7 +826,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 									<input
 										value={blocageMotif}
 										onChange={(e) => setBlocageMotif(e.target.value)}
-										placeholder="Maintenance, VIP, Repas personnel…"
+										placeholder="Maintenance, VIP, Repas personnel..."
 										className="w-full bg-[#0A0A0A] border border-[#222] rounded-xl px-3 py-2.5 text-sm text-[#F5F0EB] placeholder-[#2a2a2a] focus:border-[#C8973A] focus:outline-none transition-colors"
 									/>
 								</div>
@@ -879,7 +842,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 										disabled={loading === "block"}
 										className="px-5 py-2.5 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#444] text-[#9A8F84] hover:text-[#F5F0EB] text-sm font-medium transition-colors disabled:opacity-40"
 									>
-										{loading === "block" ? "Blocage…" : "Bloquer pour aujourd'hui"}
+										{loading === "block" ? "Blocage..." : "Bloquer pour aujourd'hui"}
 									</button>
 								</div>
 							</>
@@ -888,7 +851,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				)}
 			</Modal>
 
-			{/* ── Modal : walk-in ───────────────────────────────────────────── */}
 			<Modal
 				open={!!walkinModal}
 				onClose={closeWalkinModal}
@@ -949,14 +911,13 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 							>
 								{walkinLoading ? <Loader2 size={15} className="animate-spin" /> : <ConciergeBell size={15} />}
-								{walkinLoading ? "Ouverture…" : "Ouvrir la commande"}
+								{walkinLoading ? "Ouverture..." : "Ouvrir la commande"}
 							</button>
 						</div>
 					</div>
 				)}
 			</Modal>
 
-			{/* ── Modal : ouvrir commande réservation ───────────────────────── */}
 			<Modal
 				open={!!openOrderModal}
 				onClose={closeOpenOrderModal}
@@ -1020,7 +981,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 							>
 								{openOrderLoading ? <Loader2 size={15} className="animate-spin" /> : <UtensilsCrossed size={15} />}
-								{openOrderLoading ? "Ouverture…" : "Ouvrir la commande"}
+								{openOrderLoading ? "Ouverture..." : "Ouvrir la commande"}
 							</button>
 						</div>
 					</div>
@@ -1029,8 +990,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		</div>
 	);
 }
-
-// ─── Sous-composant : contenu de la carte table ───────────────────────────────
 
 function TableCardInfo({
 	table,
@@ -1082,7 +1041,7 @@ function TableCardInfo({
 				</span>
 				{reservation.depositAmount != null && reservation.depositAmount > 0 && (
 					<span className="text-[8px] text-green-600 text-center leading-tight">
-						{reservation.depositAmount.toFixed(0)} €✓
+						{reservation.depositAmount.toFixed(0)} € payé
 					</span>
 				)}
 			</>

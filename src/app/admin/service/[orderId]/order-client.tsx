@@ -13,8 +13,6 @@ import { cn } from "@/lib/utils";
 import { ZONE_LABELS } from "@/lib/constants";
 import type { ServiceOrderFull, ServiceOrderItemRow, MenuCategoryForService } from "@/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type PaymentMethod = "CB" | "ESPECES" | "CHEQUE" | "TICKET_RESTO";
 
 interface Props {
@@ -22,8 +20,6 @@ interface Props {
 	menu: MenuCategoryForService[];
 	date: string;
 }
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
 	{ value: "CB",           label: "Carte bancaire", icon: CreditCard },
@@ -39,8 +35,6 @@ const COURSE_LABELS: Record<string, string> = {
 	ENTREE: "Entrées", PLAT: "Plats", DESSERT: "Desserts", BOISSON: "Boissons", EXTRA: "Extras",
 };
 
-// ─── Composant principal ──────────────────────────────────────────────────────
-
 export default function OrderClient({ order: initialOrder, menu, date }: Props) {
 	const router = useRouter();
 
@@ -55,15 +49,12 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 
 	const planUrl = `/admin/reservations/plan?date=${date}`;
 
-	// ─── Calculs ──────────────────────────────────────────────────────────────
-
 	const itemsTotal = useMemo(
 		() => order.items.reduce((s, i) => s + i.totalPrice, 0),
 		[order.items]
 	);
 	const amountDue = Math.max(0, itemsTotal - order.depositDeducted);
 
-	// Grouper les articles par course
 	const itemsByCourse = useMemo(() => {
 		const groups: Record<string, ServiceOrderItemRow[]> = {};
 		for (const item of order.items) {
@@ -76,8 +67,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		);
 	}, [order.items]);
 
-	// ─── Helpers API ──────────────────────────────────────────────────────────
-
 	const refreshOrder = useCallback(async () => {
 		const res = await fetch(`/api/admin/service-orders/${order.id}`);
 		if (res.ok) {
@@ -86,9 +75,7 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		}
 	}, [order.id]);
 
-	// ─── Ajouter un plat ──────────────────────────────────────────────────────
-
-	// dishId suffit — le nom est snapshottable côté serveur depuis la DB
+	// Add dishes
 	const addItem = useCallback(async (dishId: string) => {
 		const notes = itemNote?.dishId === dishId ? itemNote.value : undefined;
 		setLoading(`add-${dishId}`);
@@ -110,8 +97,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 			setLoading(null);
 		}
 	}, [order.id, itemNote, refreshOrder]);
-
-	// ─── Modifier la quantité ─────────────────────────────────────────────────
 
 	const changeQty = useCallback(async (item: ServiceOrderItemRow, delta: number) => {
 		const newQty = item.qty + delta;
@@ -149,8 +134,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		}
 	}, [order.id, refreshOrder]);
 
-	// ─── Demander l'addition ──────────────────────────────────────────────────
-
 	const requestBill = useCallback(async () => {
 		if (order.items.length === 0) return;
 		setLoading("bill");
@@ -175,8 +158,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		}
 	}, [order.id, order.items.length]);
 
-	// ─── Encaisser ────────────────────────────────────────────────────────────
-
 	const pay = useCallback(async () => {
 		if (!payMethod) return;
 		setLoading("pay");
@@ -199,13 +180,9 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		}
 	}, [order.id, payMethod, router, planUrl]);
 
-	// ─── Statut ───────────────────────────────────────────────────────────────
-
 	const isAdditionDemandee = order.status === "ADDITION_DEMANDEE";
 	const isOuverte          = order.status === "OUVERTE";
 	const isResa             = order.type   === "RESERVATION";
-
-	// ─── Rendu ────────────────────────────────────────────────────────────────
 
 	return (
 		<div className="min-h-screen bg-[#0A0A0A]">
@@ -258,10 +235,8 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 				</div>
 			</div>
 
-			{/* ── Corps ────────────────────────────────────────────────────── */}
 			<div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
 
-				{/* Acompte */}
 				{isResa && order.depositDeducted > 0 && (
 					<div className="flex items-center gap-2 text-sm text-green-400 bg-green-950/20 border border-green-900/30 rounded-xl px-4 py-2.5">
 						<Check size={14} className="shrink-0" />
@@ -269,7 +244,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 					</div>
 				)}
 
-				{/* Erreur */}
 				{error && (
 					<div className="flex items-center gap-2 text-sm text-red-400 bg-red-950/20 border border-red-900/30 rounded-xl px-4 py-2.5">
 						<AlertTriangle size={14} className="shrink-0" />
@@ -280,7 +254,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 					</div>
 				)}
 
-				{/* ── Articles commandés ──────────────────────────────────── */}
 				<div className="bg-[#141414] border border-[#222] rounded-2xl overflow-hidden">
 					<div className="px-5 py-3.5 border-b border-[#1e1e1e] flex items-center justify-between">
 						<h2 className="text-sm font-semibold text-[#F5F0EB]">
@@ -363,7 +336,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 						</div>
 					)}
 
-					{/* Total commande */}
 					<div className="border-t border-[#222] px-5 py-3.5 flex items-center justify-between">
 						<span className="text-sm text-[#9A8F84]">Total commande</span>
 						<span className="text-lg font-bold text-[#F5F0EB]">
@@ -372,7 +344,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 					</div>
 				</div>
 
-				{/* ── Sélecteur de plats ──────────────────────────────────── */}
 				{isOuverte && (
 					<div>
 						<button
@@ -388,7 +359,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 
 						{showPicker && (
 							<div className="mt-2 bg-[#141414] border border-[#222] rounded-2xl overflow-hidden">
-								{/* Onglets catégories */}
 								<div className="flex overflow-x-auto border-b border-[#1e1e1e] scrollbar-none">
 									{menu.map((cat) => (
 										<button
@@ -406,7 +376,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 									))}
 								</div>
 
-								{/* Liste des plats */}
 								<div className="divide-y divide-[#1a1a1a] max-h-72 overflow-y-auto">
 									{menu
 										.find((c) => c.id === activeCat)
@@ -450,7 +419,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 					</div>
 				)}
 
-				{/* ── Panneau addition ────────────────────────────────────── */}
 				{(isAdditionDemandee || showBillPanel) && (
 					<div className="bg-[#141414] border border-[#1e1e1e] rounded-2xl overflow-hidden">
 						<div className="px-5 py-3.5 border-b border-[#1e1e1e] flex items-center gap-2">
@@ -499,7 +467,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 							</div>
 						</div>
 
-						{/* Mode de paiement */}
 						<div className="px-5 pb-5 space-y-3">
 							<p className="text-xs text-[#5A5249] font-medium uppercase tracking-wider">
 								Mode de paiement
@@ -538,7 +505,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 					</div>
 				)}
 
-				{/* ── Actions principales ─────────────────────────────────── */}
 				{isOuverte && !showBillPanel && (
 					<button
 						onClick={requestBill}
@@ -567,8 +533,6 @@ export default function OrderClient({ order: initialOrder, menu, date }: Props) 
 		</div>
 	);
 }
-
-// ─── Badge de statut ─────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
 	const map: Record<string, { label: string; cls: string }> = {

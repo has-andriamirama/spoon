@@ -172,8 +172,6 @@ export type PlanDeSalleData = {
 	};
 };
 
-// ─── Service Order (page de gestion) ─────────────────────────────────────────
-
 export type ServiceOrderItemRow = {
 	id: string;
 	orderId: string;
