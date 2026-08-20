@@ -3,25 +3,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-	LayoutDashboard,
-	Calendar,
-	UtensilsCrossed,
-	Tag,
-	Users,
-	CreditCard,
-	FileText,
-	ImageIcon,
-	PartyPopper,
-	FolderTree,
-	Clock,
-	Bell,
-	Settings,
-	ChevronLeft,
-	ChevronRight,
-	X,
-	UtensilsCrossed as Logo,
-	TableProperties,
-	LayoutGrid,
+	LayoutDashboard, Calendar, UtensilsCrossed, Tag, Users, CreditCard,
+	FileText, ImageIcon, PartyPopper, FolderTree, Clock, Bell, Settings,
+	ChevronLeft, ChevronRight, X, UtensilsCrossed as Logo,
+	TableProperties, LayoutGrid, ConciergeBell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminSidebar } from "./admin-layout-client";
@@ -36,40 +21,51 @@ const NAV = [
 	{
 		section: "Réservations",
 		items: [
-			{ href: "/admin/reservations/plan", label: "Plan de salle", icon: LayoutGrid },
-			{ href: "/admin/reservations", label: "Liste & filtres", icon: Calendar },
-			{ href: "/admin/tables", label: "Gérer les tables", icon: TableProperties },
+			{ href: "/admin/reservations/plan", label: "Plan de salle",     icon: LayoutGrid     },
+			{ href: "/admin/reservations",      label: "Liste & filtres",   icon: Calendar       },
+			{ href: "/admin/tables",            label: "Gérer les tables",  icon: TableProperties },
+		],
+	},
+	{
+		section: "Service en salle",
+		items: [
+			{
+				href:  "/admin/reservations/plan",
+				label: "Commandes du jour",
+				icon:  ConciergeBell,
+				exact: true,
+			},
 		],
 	},
 	{
 		section: "Menu",
 		items: [
-			{ href: "/admin/menu/dishes", label: "Plats", icon: UtensilsCrossed },
-			{ href: "/admin/menu/categories", label: "Catégories", icon: FolderTree },
-			{ href: "/admin/special-offers", label: "Offres spéciales", icon: Tag },
+			{ href: "/admin/menu/dishes",     label: "Plats",          icon: UtensilsCrossed },
+			{ href: "/admin/menu/categories", label: "Catégories",     icon: FolderTree      },
+			{ href: "/admin/special-offers",  label: "Offres spéciales", icon: Tag           },
 		],
 	},
 	{
 		section: "Clients",
 		items: [
-			{ href: "/admin/customers", label: "Clients", icon: Users },
-			{ href: "/admin/payments", label: "Paiements", icon: CreditCard },
-			{ href: "/admin/invoices", label: "Factures", icon: FileText },
+			{ href: "/admin/customers", label: "Clients",    icon: Users      },
+			{ href: "/admin/payments",  label: "Paiements",  icon: CreditCard },
+			{ href: "/admin/invoices",  label: "Factures",   icon: FileText   },
 		],
 	},
 	{
 		section: "Contenu",
 		items: [
-			{ href: "/admin/gallery", label: "Galerie", icon: ImageIcon },
-			{ href: "/admin/events", label: "Événements", icon: PartyPopper },
-			{ href: "/admin/schedule", label: "Horaires", icon: Clock },
+			{ href: "/admin/gallery",  label: "Galerie",      icon: ImageIcon  },
+			{ href: "/admin/events",   label: "Événements",   icon: PartyPopper },
+			{ href: "/admin/schedule", label: "Horaires",     icon: Clock      },
 		],
 	},
 	{
 		section: "Système",
 		items: [
-			{ href: "/admin/notifications", label: "Notifications", icon: Bell },
-			{ href: "/admin/settings", label: "Paramètres", icon: Settings },
+			{ href: "/admin/notifications", label: "Notifications", icon: Bell     },
+			{ href: "/admin/settings",      label: "Paramètres",    icon: Settings },
 		],
 	},
 ];
@@ -110,7 +106,7 @@ function SidebarContent({
 
 			<nav className="flex-1 overflow-y-auto py-4 px-2">
 				{NAV.map(({ section, items }) => (
-					<div key={section} className="mb-6">
+					<div key={section} className="mb-5">
 						{!collapsed && (
 							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest px-3 mb-2">
 								{section}
@@ -121,14 +117,20 @@ function SidebarContent({
 								href === "/admin/reservations"
 									? pathname === href
 									: pathname === href || pathname.startsWith(`${href}/`);
+							const isServiceLink = label === "Commandes du jour";
+							const activeService = isServiceLink
+								? pathname.startsWith("/admin/service/")
+								: false;
+							const isActive = isServiceLink ? activeService : active;
+
 							return (
 								<Link
-									key={href}
+									key={`${href}-${label}`}
 									href={href}
 									title={collapsed ? label : undefined}
 									className={cn(
 										"flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5",
-										active
+										isActive
 											? "bg-[#C8973A]/10 text-[#C8973A]"
 											: "text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#1a1a1a]",
 										collapsed && "justify-center"

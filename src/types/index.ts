@@ -4,6 +4,8 @@ import type {
 	RestaurantSettings, ScheduleDay, ClosedDay, Table, TableBlocage,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
 	OfferType, OfferTarget, GalleryCategory, EventStatus, ZoneTable,
+	ServiceOrder, ServiceOrderItem,
+	ServiceStatus, ServiceType, PaymentMethodService, CourseType,
 } from "../../generated/prisma/client";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
@@ -14,6 +16,8 @@ export type {
 	RestaurantSettings, ScheduleDay, ClosedDay, Table, TableBlocage,
 	Role, ReservationStatus, PaymentStatus, PaymentType,
 	OfferType, OfferTarget, GalleryCategory, EventStatus, ZoneTable,
+	ServiceOrder, ServiceOrderItem,
+	ServiceStatus, ServiceType, PaymentMethodService, CourseType,
 };
 
 // ─── Extended types ───────────────────────────────────────────────────────────
@@ -106,7 +110,25 @@ export type ScheduleSlot = {
 
 // ─── Plan de salle ────────────────────────────────────────────────────────────
 
-export type TableStatus = "LIBRE" | "CONFIRMEE" | "EN_ATTENTE" | "BLOQUEE" | "INACTIVE";
+export type TableStatus =
+	| "LIBRE"
+	| "CONFIRMEE"
+	| "EN_ATTENTE"
+	| "EN_SERVICE"
+	| "ADDITION"
+	| "BLOQUEE"
+	| "INACTIVE";
+
+export type ServiceOrderSnapshot = {
+	id: string;
+	guestName: string;
+	covers: number;
+	totalAmount: number;
+	depositDeducted: number;
+	type: "RESERVATION" | "WALK_IN";
+	itemCount: number;
+	status: "OUVERTE" | "ADDITION_DEMANDEE" | "PAYEE" | "ANNULEE";
+};
 
 export type TableWithStatus = Table & {
 	status: TableStatus;
@@ -117,6 +139,7 @@ export type TableWithStatus = Table & {
 		covers: number;
 		status: ReservationStatus;
 		occasion: string | null;
+		depositAmount: number | null;
 	} | null;
 	blocage?: {
 		id: string;
@@ -124,6 +147,7 @@ export type TableWithStatus = Table & {
 		heureDebut: string;
 		heureFin: string;
 	} | null;
+	serviceOrder?: ServiceOrderSnapshot | null;
 };
 
 export type ReservationForPlan = Reservation & {
@@ -143,5 +167,70 @@ export type PlanDeSalleData = {
 		bloquees: number;
 		noShow: number;
 		totalCovers: number;
+		enService: number;
+		addition: number;
 	};
+};
+
+// ─── Service Order (page de gestion) ─────────────────────────────────────────
+
+export type ServiceOrderItemRow = {
+	id: string;
+	orderId: string;
+	dishId: string;
+	dishName: string;
+	unitPrice: number;
+	qty: number;
+	totalPrice: number;
+	notes: string | null;
+	course: CourseType;
+	createdAt: Date;
+	updatedAt: Date;
+};
+
+export type ServiceOrderFull = {
+	id: string;
+	tableId: string;
+	reservationId: string | null;
+	type: ServiceType;
+	status: ServiceStatus;
+	guestName: string;
+	covers: number;
+	notes: string | null;
+	paymentMethod: PaymentMethodService | null;
+	depositDeducted: number;
+	totalAmount: number;
+	openedAt: Date;
+	closedAt: Date | null;
+	createdAt: Date;
+	updatedAt: Date;
+	table: {
+		id: string;
+		numero: number;
+		zone: ZoneTable;
+		capaciteMax: number;
+		description: string | null;
+	};
+	reservation: {
+		id: string;
+		timeSlot: string;
+		guestFirstName: string;
+		guestLastName: string;
+	} | null;
+	items: ServiceOrderItemRow[];
+};
+
+export type MenuDishForService = {
+	id: string;
+	name: string;
+	price: number;
+	isAvailable: boolean;
+	categoryId: string;
+};
+
+export type MenuCategoryForService = {
+	id: string;
+	name: string;
+	order: number;
+	dishes: MenuDishForService[];
 };

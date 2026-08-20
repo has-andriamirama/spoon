@@ -6,10 +6,8 @@ import { ChevronLeft, ChevronRight, List, TableProperties } from "lucide-react";
 import PlanDeSalleClient from "@/components/admin/plan-de-salle-client";
 import PlanDatePicker from "@/components/admin/plan-date-picker";
 import type {
-	TableWithStatus,
-	TableStatus,
-	PlanDeSalleData,
-	ReservationForPlan,
+	TableWithStatus, TableStatus, PlanDeSalleData,
+	ReservationForPlan, ServiceOrderSnapshot,
 } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -28,45 +26,43 @@ export default async function PlanDeSallePage({
 }) {
 	const { date: dateParam } = await searchParams;
 
-	const today = new Date().toISOString().split("T")[0];
+	const today   = new Date().toISOString().split("T")[0];
 	const dateStr = dateParam || today;
 	const targetDate = new Date(dateStr);
-	const dayStart = startOfDay(targetDate);
-	const dayEnd = endOfDay(targetDate);
+	const dayStart   = startOfDay(targetDate);
+	const dayEnd     = endOfDay(targetDate);
 
 	const datePrev = offsetDate(dateStr, -1);
 	const dateNext = offsetDate(dateStr, 1);
 
-	const tables = await prisma.table.findMany({
-		orderBy: [{ zone: "asc" }, { numero: "asc" }],
-	});
-
-	const blocages = await prisma.tableBlocage.findMany({
-		where: { date: { gte: dayStart, lte: dayEnd } },
-	});
-
-	const reservations = await prisma.reservation.findMany({
-		where: {
-			date: { gte: dayStart, lte: dayEnd },
-			status: { in: ["PENDING", "CONFIRMED", "NO_SHOW"] },
-		},
-		include: {
-			table: true,
-			user: {
-				select: { id: true, firstName: true, lastName: true, email: true },
+	const [tables, blocages, reservations, serviceOrders] = await Promise.all([
+		prisma.table.findMany({
+			orderBy: [{ zone: "asc" }, { numero: "asc" }],
+		}),
+		prisma.tableBlocage.findMany({
+			where: { date: { gte: dayStart, lte: dayEnd } },
+		}),
+		prisma.reservation.findMany({
+			where: {
+				date: { gte: dayStart, lte: dayEnd },
+				status: { in: ["PENDING", "CONFIRMED", "NO_SHOW"] },
 			},
-		},
-		orderBy: { timeSlot: "asc" },
-	});
+			include: {
+				table: true,
+				user: { select: { id: true, firstName: true, lastName: true, email: true } },
+				payment: { select: { amount: true, type: true, status: true } },
+			},
+			orderBy: { timeSlot: "asc" },
+		}),
+		prisma.serviceOrder.findMany({
+			where: { status: { in: ["OUVERTE", "ADDITION_DEMANDEE"] } },
+			include: { _count: { select: { items: true } } },
+		}),
+	]);
 
 	const tablesWithStatus: TableWithStatus[] = tables.map((table) => {
 		if (!table.isActif) {
-			return {
-				...table,
-				status: "INACTIVE" as TableStatus,
-				reservation: null,
-				blocage: null,
-			};
+			return { ...table, status: "INACTIVE" as TableStatus, reservation: null, blocage: null, serviceOrder: null };
 		}
 
 		const blocage = blocages.find((b) => b.tableId === table.id);
@@ -75,23 +71,33 @@ export default async function PlanDeSallePage({
 				...table,
 				status: "BLOQUEE" as TableStatus,
 				reservation: null,
-				blocage: {
-					id: blocage.id,
-					motif: blocage.motif,
-					heureDebut: blocage.heureDebut,
-					heureFin: blocage.heureFin,
-				},
+				blocage: { id: blocage.id, motif: blocage.motif, heureDebut: blocage.heureDebut, heureFin: blocage.heureFin },
+				serviceOrder: null,
 			};
 		}
 
-		const resa = reservations.find(
-			(r) =>
-				r.tableId === table.id && ["PENDING", "CONFIRMED"].includes(r.status)
-		);
+		const svcOrder = serviceOrders.find((o) => o.tableId === table.id);
+		if (svcOrder) {
+			const snapshot: ServiceOrderSnapshot = {
+				id: svcOrder.id,
+				guestName: svcOrder.guestName,
+				covers: svcOrder.covers,
+				totalAmount: svcOrder.totalAmount,
+				depositDeducted: svcOrder.depositDeducted,
+				type: svcOrder.type,
+				itemCount: svcOrder._count.items,
+				status: svcOrder.status,
+			};
+			const status: TableStatus = svcOrder.status === "ADDITION_DEMANDEE" ? "ADDITION" : "EN_SERVICE";
+			return { ...table, status, reservation: null, blocage: null, serviceOrder: snapshot };
+		}
 
+		const resa = reservations.find(
+			(r) => r.tableId === table.id && ["PENDING", "CONFIRMED"].includes(r.status)
+		);
 		if (resa) {
-			const status: TableStatus =
-				resa.status === "CONFIRMED" ? "CONFIRMEE" : "EN_ATTENTE";
+			const status: TableStatus = resa.status === "CONFIRMED" ? "CONFIRMEE" : "EN_ATTENTE";
+			const depositAmount = resa.payment?.status === "PAID" ? resa.payment.amount : null;
 			return {
 				...table,
 				status,
@@ -102,33 +108,24 @@ export default async function PlanDeSallePage({
 					covers: resa.covers,
 					status: resa.status,
 					occasion: resa.occasion,
+					depositAmount,
 				},
 				blocage: null,
+				serviceOrder: null,
 			};
 		}
 
-		return {
-			...table,
-			status: "LIBRE" as TableStatus,
-			reservation: null,
-			blocage: null,
-		};
+		return { ...table, status: "LIBRE" as TableStatus, reservation: null, blocage: null, serviceOrder: null };
 	});
 
-	const pending = reservations.filter(
-		(r) => r.status === "PENDING"
-	) as unknown as ReservationForPlan[];
-	const confirmed = reservations.filter(
-		(r) => r.status === "CONFIRMED"
-	) as unknown as ReservationForPlan[];
-	const noShow = reservations.filter(
-		(r) => r.status === "NO_SHOW"
-	) as unknown as ReservationForPlan[];
+	const pending   = reservations.filter((r) => r.status === "PENDING")   as unknown as ReservationForPlan[];
+	const confirmed = reservations.filter((r) => r.status === "CONFIRMED") as unknown as ReservationForPlan[];
+	const noShow    = reservations.filter((r) => r.status === "NO_SHOW")   as unknown as ReservationForPlan[];
 
-	const libres = tablesWithStatus.filter(
-		(t) => t.status === "LIBRE" && t.isActif
-	).length;
-	const bloquees = tablesWithStatus.filter((t) => t.status === "BLOQUEE").length;
+	const libres    = tablesWithStatus.filter((t) => t.status === "LIBRE"       && t.isActif).length;
+	const bloquees  = tablesWithStatus.filter((t) => t.status === "BLOQUEE").length;
+	const enService = tablesWithStatus.filter((t) => t.status === "EN_SERVICE").length;
+	const addition  = tablesWithStatus.filter((t) => t.status === "ADDITION").length;
 	const totalCovers =
 		confirmed.reduce((s, r) => s + r.covers, 0) +
 		pending.reduce((s, r) => s + r.covers, 0);
@@ -138,18 +135,11 @@ export default async function PlanDeSallePage({
 		pending,
 		confirmed,
 		noShow,
-		stats: {
-			pending: pending.length,
-			confirmed: confirmed.length,
-			libres,
-			bloquees,
-			noShow: noShow.length,
-			totalCovers,
-		},
+		stats: { pending: pending.length, confirmed: confirmed.length, libres, bloquees, noShow: noShow.length, totalCovers, enService, addition },
 	};
 
 	const dateLabel = format(targetDate, "EEEE d MMMM yyyy", { locale: fr });
-	const noTables = tables.length === 0;
+	const noTables  = tables.length === 0;
 
 	return (
 		<div>
@@ -171,7 +161,7 @@ export default async function PlanDeSallePage({
 							href={`/admin/reservations/plan?date=${today}`}
 							className="px-3 py-2 text-xs text-[#9A8F84] hover:text-[#C8973A] transition-colors font-medium border-x border-[#222]"
 						>
-							Aujourd'hui
+							Aujourd&apos;hui
 						</Link>
 						<Link
 							href={`/admin/reservations/plan?date=${dateNext}`}
@@ -206,9 +196,7 @@ export default async function PlanDeSallePage({
 				<div className="mb-6 bg-yellow-950/20 border border-yellow-900/40 rounded-xl p-4 flex items-start gap-3">
 					<TableProperties size={18} className="text-yellow-500 shrink-0 mt-0.5" />
 					<div>
-						<p className="text-sm font-medium text-yellow-400">
-							Aucune table configurée
-						</p>
+						<p className="text-sm font-medium text-yellow-400">Aucune table configurée</p>
 						<p className="text-xs text-yellow-600/70 mt-1">
 							Commencez par créer vos tables physiques pour utiliser le plan de salle.
 						</p>

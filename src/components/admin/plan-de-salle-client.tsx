@@ -1,29 +1,34 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Clock, CheckCircle2, Users, TableProperties, Lock, AlertTriangle, RefreshCw, ChevronRight, X, Ban, Eye, Zap, XCircle } from "lucide-react";
-import { Modal } from "@/components/ui/modal";
-import { getPusherClient } from "@/lib/pusher-client";
-import { formatDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+	RefreshCw, Clock, CheckCircle2, TableProperties, Users, Lock,
+	AlertTriangle, ChevronRight, Eye, Zap, X, Ban, XCircle,
+	UtensilsCrossed, ConciergeBell, Receipt, Loader2, Plus, Minus,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/date-utils";
+import { ZONE_LABELS, ZONES } from "@/lib/constants";
+import { Modal } from "@/components/ui/modal";
 import type {
-	TableWithStatus,
-	ReservationForPlan,
-	PlanDeSalleData,
+	TableWithStatus, PlanDeSalleData, ReservationForPlan, TableStatus,
 } from "@/types";
 
-const ZONES = ["SALLE", "TERRASSE", "BAR", "PRIVE"] as const;
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const ZONE_LABELS: Record<string, { label: string; short: string }> = {
-	SALLE:    { label: "Salle — intérieur", short: "Salle" },
-	TERRASSE: { label: "Terrasse",          short: "Terrasse" },
-	BAR:      { label: "Bar",               short: "Bar" },
-	PRIVE:    { label: "Espace privé",      short: "Privé" },
-};
+interface Props {
+	initialData: PlanDeSalleData;
+	date: string;
+}
 
-const TABLE_STYLES: Record<string, { card: string; num: string; sub: string; dot: string; icon: string }> = {
+// ─── Styles par statut ────────────────────────────────────────────────────────
+
+const TABLE_STYLES: Record<
+	string,
+	{ card: string; num: string; sub: string; dot: string; icon: string }
+> = {
 	LIBRE: {
 		card: "bg-green-950/40 border-green-900/50 hover:border-green-600 hover:bg-green-950/60 cursor-pointer",
 		num:  "text-green-400",
@@ -32,7 +37,7 @@ const TABLE_STYLES: Record<string, { card: string; num: string; sub: string; dot
 		icon: "text-green-500",
 	},
 	CONFIRMEE: {
-		card: "bg-blue-950/30 border-blue-900/40 cursor-pointer",
+		card: "bg-blue-950/30 border-blue-900/40 hover:border-blue-700 cursor-pointer",
 		num:  "text-blue-400",
 		sub:  "text-blue-700",
 		dot:  "bg-blue-400",
@@ -45,8 +50,22 @@ const TABLE_STYLES: Record<string, { card: string; num: string; sub: string; dot
 		dot:  "bg-yellow-400",
 		icon: "text-yellow-400",
 	},
+	EN_SERVICE: {
+		card: "bg-[#C8973A]/8 border-[#C8973A]/35 hover:border-[#C8973A]/60 hover:bg-[#C8973A]/15 cursor-pointer",
+		num:  "text-[#C8973A]",
+		sub:  "text-[#C8973A]/50",
+		dot:  "bg-[#C8973A]",
+		icon: "text-[#C8973A]",
+	},
+	ADDITION: {
+		card: "bg-red-950/35 border-red-800/50 hover:border-red-600 cursor-pointer",
+		num:  "text-red-400",
+		sub:  "text-red-700",
+		dot:  "bg-red-400",
+		icon: "text-red-400",
+	},
 	BLOQUEE: {
-		card: "bg-[#111] border-[#252525] opacity-60 cursor-pointer",
+		card: "bg-[#111] border-[#252525] cursor-pointer",
 		num:  "text-[#363636]",
 		sub:  "text-[#2a2a2a]",
 		dot:  "bg-[#333]",
@@ -61,84 +80,95 @@ const TABLE_STYLES: Record<string, { card: string; num: string; sub: string; dot
 	},
 };
 
-interface Props {
-	initialData: PlanDeSalleData;
-	date: string;
-}
+// ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function PlanDeSalleClient({ initialData, date }: Props) {
-	const [data, setData]                   = useState<PlanDeSalleData>(initialData);
-	const [hoveredResa, setHoveredResa]     = useState<ReservationForPlan | null>(null);
-	const [modalResa, setModalResa]         = useState<ReservationForPlan | null>(null);
+	const router = useRouter();
+
+	// ── États existants ──────────────────────────────────────────────────────
+	const [data,         setData]         = useState<PlanDeSalleData>(initialData);
+	const [refreshing,   setRefreshing]   = useState(false);
+	const [loading,      setLoading]      = useState<string | null>(null);
+	const [hoveredResa,  setHoveredResa]  = useState<ReservationForPlan | null>(null);
+	const [modalResa,    setModalResa]    = useState<ReservationForPlan | null>(null);
 	const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-	const [adminNotes, setAdminNotes]       = useState("");
-	const [blocageModal, setBlocageModal]   = useState<TableWithStatus | null>(null);
-	const [blocageMotif, setBlocageMotif]   = useState("");
-	const [tableTooltip, setTableTooltip]  = useState<string | null>(null);
-	const [loading, setLoading]            = useState<string | null>(null);
-	const [refreshing, setRefreshing]      = useState(false);
+	const [adminNotes,   setAdminNotes]   = useState("");
+	const [tableTooltip, setTableTooltip] = useState<string | null>(null);
+	const [blocageModal, setBlocageModal] = useState<TableWithStatus | null>(null);
+	const [blocageMotif, setBlocageMotif] = useState("");
+
+	// ── Nouveaux états ────────────────────────────────────────────────────────
+	const [walkinModal,      setWalkinModal]      = useState<TableWithStatus | null>(null);
+	const [walkinName,       setWalkinName]       = useState("");
+	const [walkinCovers,     setWalkinCovers]     = useState(2);
+	const [walkinLoading,    setWalkinLoading]    = useState(false);
+	const [walkinError,      setWalkinError]      = useState<string | null>(null);
+
+	const [openOrderModal,   setOpenOrderModal]   = useState<TableWithStatus | null>(null);
+	const [openOrderLoading, setOpenOrderLoading] = useState(false);
+	const [openOrderError,   setOpenOrderError]   = useState<string | null>(null);
+
+	// ─── Refresh ──────────────────────────────────────────────────────────────
 
 	const refetch = useCallback(async () => {
 		setRefreshing(true);
 		try {
-			const res = await fetch(`/api/admin/plan?date=${date}`, { cache: "no-store" });
-			if (res.ok) setData((await res.json()).data);
+			const res = await fetch(`/api/admin/plan?date=${date}`);
+			if (res.ok) {
+				const json = await res.json();
+				setData(json.data);
+			}
 		} finally {
 			setRefreshing(false);
 		}
 	}, [date]);
 
+	// Pusher : écouter les mises à jour temps réel
 	useEffect(() => {
-		const pusher  = getPusherClient();
-		const channel = pusher.subscribe("admin-reservations");
-		channel.bind("reservation-updated", () => refetch());
-		channel.bind("table-updated",       () => refetch());
-		return () => {
-			channel.unbind("reservation-updated");
-			channel.unbind("table-updated");
-			pusher.unsubscribe("admin-reservations");
+		let pusher: InstanceType<typeof import("pusher-js").default> | null = null;
+
+		const initPusher = async () => {
+			try {
+				const Pusher = (await import("pusher-js")).default;
+				pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+					cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+				});
+				const channel = pusher.subscribe("admin-reservations");
+				const refresh = () => void refetch();
+				channel.bind("reservation-updated",    refresh);
+				channel.bind("service-order-updated",  refresh);
+			} catch { /* pas de Pusher en dev */ }
 		};
+
+		void initPusher();
+		return () => { pusher?.disconnect(); };
 	}, [refetch]);
 
+	// ─── Handlers existants (réservations) ───────────────────────────────────
+
 	const handleConfirm = async () => {
-		if (!modalResa || !selectedTableId) {
-			toast.error("Sélectionnez une table avant de confirmer");
-			return;
-		}
+		if (!modalResa || !selectedTableId) return;
 		setLoading("confirm");
 		try {
-			const res = await fetch(`/api/admin/reservations/${modalResa.id}/confirmer`, {
-				method: "PATCH",
+			const res = await fetch(`/api/admin/reservations/${modalResa.id}/confirm`, {
+				method:  "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ tableId: selectedTableId, adminNotes }),
+				body:    JSON.stringify({ tableId: selectedTableId, adminNotes }),
 			});
-			if (!res.ok) {
-				const err = await res.json();
-				throw new Error(err.error || "Erreur lors de la confirmation");
+			if (res.ok) {
+				await refetch();
+				closeConfirmModal();
 			}
-			toast.success("Réservation confirmée — email envoyé au client");
-			closeConfirmModal();
-			await refetch();
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : "Erreur");
 		} finally {
 			setLoading(null);
 		}
 	};
 
-	const handleNoShow = async (resaId: string) => {
-		setLoading(`noshow-${resaId}`);
+	const handleNoShow = async (id: string) => {
+		setLoading(`noshow-${id}`);
 		try {
-			const res = await fetch(`/api/reservations/${resaId}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ status: "NO_SHOW" }),
-			});
-			if (!res.ok) throw new Error();
-			toast.success("Absent marqué");
+			await fetch(`/api/admin/reservations/${id}/no-show`, { method: "POST" });
 			await refetch();
-		} catch {
-			toast.error("Erreur");
 		} finally {
 			setLoading(null);
 		}
@@ -148,42 +178,28 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		if (!blocageModal) return;
 		setLoading("block");
 		try {
-			const res = await fetch(`/api/admin/tables/${blocageModal.id}/bloquer`, {
-				method: "POST",
+			await fetch("/api/admin/tables/block", {
+				method:  "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					date,
-					heureDebut: "00:00",
-					heureFin:   "23:59",
-					motif:      blocageMotif.trim() || "Bloquée par l'admin",
-				}),
+				body:    JSON.stringify({ tableId: blocageModal.id, date, motif: blocageMotif }),
 			});
-			if (!res.ok) {
-				const err = await res.json();
-				throw new Error(err.error || "Erreur");
-			}
-			toast.success(`Table ${blocageModal.numero} bloquée`);
-			closeBlocageModal();
 			await refetch();
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : "Erreur");
+			closeBlocageModal();
 		} finally {
 			setLoading(null);
 		}
 	};
 
-	const handleUnblock = async (tableId: string, tableNum: number) => {
+	const handleUnblock = async (tableId: string, numero: number) => {
 		setLoading(`unblock-${tableId}`);
 		try {
-			const res = await fetch(`/api/admin/tables/${tableId}/bloquer?date=${date}`, {
-				method: "DELETE",
+			await fetch("/api/admin/tables/unblock", {
+				method:  "POST",
+				headers: { "Content-Type": "application/json" },
+				body:    JSON.stringify({ tableId, date }),
 			});
-			if (!res.ok) throw new Error();
-			toast.success(`Table ${tableNum} débloquée`);
-			closeBlocageModal();
 			await refetch();
-		} catch {
-			toast.error("Erreur lors du déblocage");
+			closeBlocageModal();
 		} finally {
 			setLoading(null);
 		}
@@ -208,6 +224,92 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		setTableTooltip(`Sélectionnez une table libre (≥ ${resa.covers} cv) pour assigner`);
 	};
 
+	// ─── Nouveau : walk-in ───────────────────────────────────────────────────
+
+	const handleWalkin = async () => {
+		if (!walkinModal || !walkinName.trim()) {
+			setWalkinError("Le nom du client est requis");
+			return;
+		}
+		setWalkinLoading(true);
+		setWalkinError(null);
+		try {
+			const res = await fetch("/api/admin/service-orders", {
+				method:  "POST",
+				headers: { "Content-Type": "application/json" },
+				body:    JSON.stringify({
+					tableId:   walkinModal.id,
+					type:      "WALK_IN",
+					guestName: walkinName.trim(),
+					covers:    walkinCovers,
+				}),
+			});
+			if (!res.ok) {
+				const { error, orderId } = await res.json();
+				// Conflit : commande déjà ouverte → rediriger directement
+				if (res.status === 409 && orderId) {
+					router.push(`/admin/service/${orderId}?date=${date}`);
+					return;
+				}
+				setWalkinError(error ?? "Erreur lors de la création");
+				return;
+			}
+			const { data: order } = await res.json();
+			router.push(`/admin/service/${order.id}?date=${date}`);
+		} finally {
+			setWalkinLoading(false);
+		}
+	};
+
+	const closeWalkinModal = () => {
+		setWalkinModal(null);
+		setWalkinName("");
+		setWalkinCovers(2);
+		setWalkinError(null);
+	};
+
+	// ─── Nouveau : ouvrir commande (réservation confirmée) ───────────────────
+
+	const handleOpenOrder = async () => {
+		if (!openOrderModal?.reservation) return;
+		setOpenOrderLoading(true);
+		setOpenOrderError(null);
+		try {
+			const resa = openOrderModal.reservation;
+			const res = await fetch("/api/admin/service-orders", {
+				method:  "POST",
+				headers: { "Content-Type": "application/json" },
+				body:    JSON.stringify({
+					tableId:       openOrderModal.id,
+					reservationId: resa.id,
+					type:          "RESERVATION",
+					guestName:     resa.guestNom,
+					covers:        resa.covers,
+				}),
+			});
+			if (!res.ok) {
+				const { error, orderId } = await res.json();
+				if (res.status === 409 && orderId) {
+					router.push(`/admin/service/${orderId}?date=${date}`);
+					return;
+				}
+				setOpenOrderError(error ?? "Erreur lors de l'ouverture");
+				return;
+			}
+			const { data: order } = await res.json();
+			router.push(`/admin/service/${order.id}?date=${date}`);
+		} finally {
+			setOpenOrderLoading(false);
+		}
+	};
+
+	const closeOpenOrderModal = () => {
+		setOpenOrderModal(null);
+		setOpenOrderError(null);
+	};
+
+	// ─── Clic sur une table ───────────────────────────────────────────────────
+
 	const onTableClick = (t: TableWithStatus) => {
 		if (!t.isActif || t.status === "INACTIVE") return;
 
@@ -216,7 +318,23 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
-		if (t.status === "CONFIRMEE" || t.status === "EN_ATTENTE") {
+		// Commande active → naviguer vers la page de gestion
+		if (t.status === "EN_SERVICE" || t.status === "ADDITION") {
+			if (t.serviceOrder) {
+				router.push(`/admin/service/${t.serviceOrder.id}?date=${date}`);
+			}
+			return;
+		}
+
+		// Réservation confirmée → ouvrir la commande
+		if (t.status === "CONFIRMEE") {
+			if (t.reservation) {
+				setOpenOrderModal(t);
+			}
+			return;
+		}
+
+		if (t.status === "EN_ATTENTE") {
 			if (t.reservation) {
 				setTableTooltip(
 					`T${t.numero} · ${t.reservation.guestNom} · ${t.reservation.heure} · ${t.reservation.covers} cv${t.reservation.occasion ? ` · ${t.reservation.occasion}` : ""}`
@@ -225,6 +343,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
+		// LIBRE
 		if (modalResa) {
 			if (t.capaciteMax >= modalResa.covers) {
 				setSelectedTableId(t.id);
@@ -237,10 +356,12 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			return;
 		}
 
-		setTableTooltip(
-			`Table ${t.numero} libre — zone ${ZONE_LABELS[t.zone]?.short} — ${t.capaciteMax} cv max`
-		);
+		// Walk-in
+		setWalkinModal(t);
+		setWalkinCovers(Math.min(2, t.capaciteMax));
 	};
+
+	// ─── Données dérivées ─────────────────────────────────────────────────────
 
 	const { tables, pending, confirmed, noShow, stats } = data;
 
@@ -249,39 +370,44 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		return acc;
 	}, {} as Record<string, TableWithStatus[]>);
 
-	const activeResa    = modalResa ?? hoveredResa;
-	const isModalOpen   = !!modalResa;
-
+	const activeResa       = modalResa ?? hoveredResa;
+	const isModalOpen      = !!modalResa;
 	const compatibleTables = modalResa
 		? tables.filter((t) => t.status === "LIBRE" && t.isActif && t.capaciteMax >= modalResa.covers)
 		: [];
 
+	// ─── Rendu ────────────────────────────────────────────────────────────────
+
 	return (
 		<div className="space-y-5">
 
-			<div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+			{/* ── Statistiques ─────────────────────────────────────────────── */}
+			<div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
 				{(
 					[
-						{ label: "En attente",     value: stats.pending,     icon: Clock,           ring: stats.pending > 0, cardCn: "bg-yellow-950/20 border-yellow-900/30", valCn: "text-yellow-400", iconCn: "text-yellow-500" },
-						{ label: "Confirmées",      value: stats.confirmed,   icon: CheckCircle2,    ring: false,             cardCn: "bg-blue-950/20 border-blue-900/30",    valCn: "text-blue-400",   iconCn: "text-blue-400"   },
-						{ label: "Tables libres",   value: stats.libres,      icon: TableProperties, ring: false,             cardCn: "bg-green-950/15 border-green-900/20",  valCn: "text-green-400",  iconCn: "text-green-500"  },
-						{ label: "Bloquées",        value: stats.bloquees,    icon: Lock,            ring: false,             cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#444]",     iconCn: "text-[#3a3a3a]"  },
-						{ label: "Couverts prévus", value: stats.totalCovers, icon: Users,           ring: false,             cardCn: "bg-[#1a1200] border-[#C8973A]/20",     valCn: "text-[#C8973A]",  iconCn: "text-[#C8973A]"  },
+						{ label: "En attente",     value: stats.pending,     icon: Clock,         ring: stats.pending > 0,   cardCn: "bg-yellow-950/20 border-yellow-900/30", valCn: "text-yellow-400", iconCn: "text-yellow-500" },
+						{ label: "Confirmées",     value: stats.confirmed,   icon: CheckCircle2,  ring: false,               cardCn: "bg-blue-950/20 border-blue-900/30",    valCn: "text-blue-400",   iconCn: "text-blue-400"   },
+						{ label: "En service",     value: stats.enService,   icon: UtensilsCrossed, ring: false,             cardCn: "bg-[#1a1200] border-[#C8973A]/20",     valCn: "text-[#C8973A]",  iconCn: "text-[#C8973A]"  },
+						{ label: "Addition",       value: stats.addition,    icon: Receipt,       ring: stats.addition > 0,  cardCn: "bg-red-950/20 border-red-900/30",      valCn: "text-red-400",    iconCn: "text-red-400"    },
+						{ label: "Tables libres",  value: stats.libres,      icon: TableProperties, ring: false,             cardCn: "bg-green-950/15 border-green-900/20",  valCn: "text-green-400",  iconCn: "text-green-500"  },
+						{ label: "Bloquées",       value: stats.bloquees,    icon: Lock,          ring: false,               cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#444]",     iconCn: "text-[#3a3a3a]"  },
+						{ label: "Couverts prév.", value: stats.totalCovers, icon: Users,         ring: false,               cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#9A8F84]",  iconCn: "text-[#5A5249]"  },
 					] as const
 				).map(({ label, value, icon: Icon, ring, cardCn, valCn, iconCn }) => (
-					<div key={label} className={cn("relative rounded-xl border p-4", cardCn)}>
+					<div key={label} className={cn("relative rounded-xl border p-3", cardCn)}>
 						{ring && value > 0 && (
-							<span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-500 rounded-full text-[10px] font-bold text-[#0A0A0A] flex items-center justify-center animate-bounce">
+							<span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center animate-pulse">
 								{value}
 							</span>
 						)}
-						<Icon size={15} className={cn("mb-2.5", iconCn)} />
-						<p className={cn("text-2xl font-bold", valCn)}>{value}</p>
-						<p className="text-[11px] text-[#5A5249] mt-0.5">{label}</p>
+						<Icon size={14} className={cn("mb-2", iconCn)} />
+						<p className={cn("text-xl font-bold leading-none", valCn)}>{value}</p>
+						<p className="text-[10px] text-[#5A5249] mt-1 leading-tight">{label}</p>
 					</div>
 				))}
 			</div>
 
+			{/* ── Barre d'info ─────────────────────────────────────────────── */}
 			<div className="flex items-center justify-between">
 				<p className="text-xs text-[#5A5249]">
 					{stats.libres} table{stats.libres > 1 ? "s" : ""} libre{stats.libres > 1 ? "s" : ""} ·{" "}
@@ -297,10 +423,13 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				</button>
 			</div>
 
+			{/* ── Layout principal ──────────────────────────────────────────── */}
 			<div className="grid grid-cols-1 xl:grid-cols-[260px_1fr] gap-4 items-start">
 
+				{/* ── Colonne gauche : listes ───────────────────────────────── */}
 				<div className="space-y-5">
 
+					{/* En attente */}
 					<div>
 						<div className="flex items-center gap-2 mb-2.5">
 							<span className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
@@ -345,12 +474,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 											</div>
 
 											<div className="flex items-center gap-3 text-[11px] text-[#5A5249]">
-												<span className="flex items-center gap-1">
-													<Users size={10} /> {r.covers} cv
-												</span>
-												<span className="flex items-center gap-1">
-													<Clock size={10} /> {r.timeSlot}
-												</span>
+												<span className="flex items-center gap-1"><Users size={10} /> {r.covers} cv</span>
+												<span className="flex items-center gap-1"><Clock size={10} /> {r.timeSlot}</span>
 												{r.occasion && (
 													<span className="text-[#C8973A]/80">{r.occasion}</span>
 												)}
@@ -366,7 +491,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 												<span className="text-[10px] text-[#2a2a2a]">
 													{formatDate(r.date, "dd/MM")}
 												</span>
-
 												<button
 													onClick={() => openAssignModal(r)}
 													className="flex items-center gap-0.5 text-[10px] text-yellow-600 hover:text-yellow-400 transition-colors font-medium"
@@ -383,6 +507,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						)}
 					</div>
 
+					{/* Confirmées */}
 					{confirmed.length > 0 && (
 						<div>
 							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest mb-2.5">
@@ -428,6 +553,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						</div>
 					)}
 
+					{/* No-show */}
 					{noShow.length > 0 && (
 						<div>
 							<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest mb-2.5">
@@ -455,6 +581,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 					)}
 				</div>
 
+				{/* ── Colonne droite : plan de salle ───────────────────────── */}
 				<div className="space-y-2">
 					<div className="flex items-baseline gap-2 min-h-[20px]">
 						<p className="text-[10px] font-semibold text-[#333] uppercase tracking-widest">
@@ -480,9 +607,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						{ZONES.map((zone) => {
 							const zoneTables = tablesByZone[zone] || [];
 							if (zoneTables.length === 0) return null;
-							const freeCount = zoneTables.filter(
-								(t) => t.status === "LIBRE" && t.isActif
-							).length;
+							const freeCount = zoneTables.filter((t) => t.status === "LIBRE" && t.isActif).length;
 
 							return (
 								<div key={zone} className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
@@ -497,15 +622,13 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 
 									<div className="p-3 flex flex-wrap gap-2">
 										{zoneTables.map((t) => {
-											const s = TABLE_STYLES[t.status] || TABLE_STYLES.LIBRE;
+											const s           = TABLE_STYLES[t.status] || TABLE_STYLES.LIBRE;
 											const isSelected  = selectedTableId === t.id;
-
 											const isCompatible =
 												activeResa !== null &&
 												t.status === "LIBRE" &&
 												t.isActif &&
 												t.capaciteMax >= (activeResa?.covers ?? 0);
-
 											const isIncompatible =
 												activeResa !== null &&
 												t.status === "LIBRE" &&
@@ -516,55 +639,37 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 												<button
 													key={t.id}
 													onClick={() => onTableClick(t)}
-													title={
-														t.status === "BLOQUEE"
-															? `Bloquée · ${t.blocage?.motif || "aucun motif"}`
-															: t.reservation
-																? `${t.reservation.guestNom} · ${t.reservation.heure}`
-																: `Table ${t.numero} libre`
-													}
 													className={cn(
-														"w-[68px] h-[58px] rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all duration-150",
+														// Taille augmentée pour afficher plus d'infos
+														"w-[90px] h-[80px] rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all duration-150 px-1.5",
 														s.card,
-
-														isSelected &&
-															"ring-2 ring-[#C8973A] ring-offset-1 ring-offset-[#141414] border-[#C8973A]",
-
-														isCompatible && isModalOpen && !isSelected &&
-															"ring-1 ring-green-500/60 border-green-600",
-
-														isCompatible && !isModalOpen &&
-															"animate-pulse-subtle border-green-400 bg-green-900/60",
-
+														isSelected && "ring-2 ring-[#C8973A] ring-offset-1 ring-offset-[#141414] border-[#C8973A]",
+														isCompatible && isModalOpen && !isSelected && "ring-1 ring-green-500/60 border-green-600",
+														isCompatible && !isModalOpen && "animate-pulse-subtle border-green-400 bg-green-900/60",
 														isIncompatible && "opacity-20",
+														t.status === "ADDITION" && "animate-pulse-subtle",
 													)}
 												>
-													<span
-														className={cn(
-															"w-1.5 h-1.5 rounded-full",
-															s.dot,
-															t.status === "EN_ATTENTE" && "animate-pulse",
-															isCompatible && !isModalOpen && "bg-green-300"
-														)}
-													/>
-													<span className={cn("text-[11px] font-bold leading-tight", s.num,
+													{/* Indicateur statut */}
+													<span className={cn(
+														"w-1.5 h-1.5 rounded-full shrink-0",
+														s.dot,
+														t.status === "EN_ATTENTE" && "animate-pulse",
+														t.status === "ADDITION"   && "animate-pulse",
+														isCompatible && !isModalOpen && "bg-green-300"
+													)} />
+
+													{/* Numéro de table */}
+													<span className={cn(
+														"text-[12px] font-bold leading-tight",
+														s.num,
 														isCompatible && !isModalOpen && "text-green-300"
 													)}>
 														T{t.numero}
 													</span>
-													{t.reservation ? (
-														<span className={cn("text-[9px] truncate max-w-[56px] text-center px-0.5", s.icon)}>
-															{t.reservation.guestNom.split(" ")[0]}
-														</span>
-													) : t.status === "BLOQUEE" ? (
-														<Lock size={8} className={s.icon} />
-													) : (
-														<span className={cn("text-[9px]", s.sub,
-															isCompatible && !isModalOpen && "text-green-600"
-														)}>
-															{t.capaciteMax}cv
-														</span>
-													)}
+
+													{/* Ligne info principale */}
+													<TableCardInfo table={t} styles={s} isCompatible={isCompatible} isModalOpen={isModalOpen} />
 												</button>
 											);
 										})}
@@ -574,12 +679,15 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						})}
 					</div>
 
+					{/* Légende */}
 					<div className="flex items-center gap-4 flex-wrap pt-1">
 						{[
-							{ dot: "bg-green-500",                      label: "Libre" },
-							{ dot: "bg-blue-400",                       label: "Confirmée" },
-							{ dot: "bg-yellow-400 animate-pulse",       label: "En attente" },
-							{ dot: "bg-[#2a2a2a]",                      label: "Bloquée" },
+							{ dot: "bg-green-500",                     label: "Libre"      },
+							{ dot: "bg-blue-400",                      label: "Confirmée"  },
+							{ dot: "bg-yellow-400 animate-pulse",      label: "En attente" },
+							{ dot: "bg-[#C8973A]",                     label: "En service" },
+							{ dot: "bg-red-400 animate-pulse",         label: "Addition"   },
+							{ dot: "bg-[#2a2a2a]",                     label: "Bloquée"    },
 							{ dot: "bg-green-300 animate-pulse-subtle", label: "Compatible" },
 						].map(({ dot, label }) => (
 							<div key={label} className="flex items-center gap-1.5">
@@ -589,14 +697,12 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						))}
 					</div>
 
+					{/* Tooltip table */}
 					{tableTooltip && (
 						<div className="flex items-center gap-2 text-xs text-[#9A8F84] bg-[#141414] border border-[#222] rounded-xl px-3 py-2">
 							<Eye size={12} className="text-[#C8973A] shrink-0" />
 							<span className="flex-1">{tableTooltip}</span>
-							<button
-								onClick={() => setTableTooltip(null)}
-								className="text-[#333] hover:text-[#9A8F84] transition-colors"
-							>
+							<button onClick={() => setTableTooltip(null)} className="text-[#333] hover:text-[#9A8F84] transition-colors">
 								<X size={12} />
 							</button>
 						</div>
@@ -604,6 +710,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				</div>
 			</div>
 
+			{/* ── Modal : confirmer réservation (existant) ─────────────────── */}
 			<Modal
 				open={isModalOpen}
 				onClose={closeConfirmModal}
@@ -613,7 +720,6 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 			>
 				{modalResa && (
 					<div className="space-y-5">
-
 						<div className="bg-[#0A0A0A] rounded-xl border border-[#1e1e1e] p-4">
 							<div className="flex items-start justify-between gap-3 mb-2">
 								<div>
@@ -652,8 +758,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 							</p>
 							{compatibleTables.length === 0 ? (
 								<div className="text-center py-4 border border-dashed border-red-900/30 rounded-xl">
-									<p className="text-sm text-red-400">Aucune table disponible avec la capacité requise</p>
-									<p className="text-xs text-[#5A5249] mt-1">Vérifiez les blocages ou combinez des tables manuellement</p>
+									<p className="text-sm text-red-400">Aucune table disponible</p>
 								</div>
 							) : (
 								<div className="flex flex-wrap gap-2">
@@ -688,7 +793,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 
 						<div>
 							<label className="text-xs text-[#5A5249] block mb-1.5">
-								Notes internes (facultatif, non visibles par le client)
+								Notes internes (facultatif)
 							</label>
 							<textarea
 								value={adminNotes}
@@ -700,18 +805,15 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 						</div>
 
 						<div className="flex items-center justify-end gap-3 pt-1 border-t border-[#1e1e1e]">
-							<button
-								onClick={closeConfirmModal}
-								className="px-4 py-2 text-sm text-[#5A5249] hover:text-[#9A8F84] transition-colors"
-							>
+							<button onClick={closeConfirmModal} className="px-4 py-2 text-sm text-[#5A5249] hover:text-[#9A8F84] transition-colors">
 								Annuler
 							</button>
 							<button
 								onClick={handleConfirm}
 								disabled={!selectedTableId || loading === "confirm"}
-								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] active:bg-[#B8872A] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 							>
-								<CheckCircle2 size={15} />
+								{loading === "confirm" ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
 								{loading === "confirm" ? "Confirmation…" : "Confirmer & envoyer l'email"}
 							</button>
 						</div>
@@ -719,6 +821,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 				)}
 			</Modal>
 
+			{/* ── Modal : blocage ───────────────────────────────────────────── */}
 			<Modal
 				open={!!blocageModal}
 				onClose={closeBlocageModal}
@@ -788,6 +891,230 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 					</div>
 				)}
 			</Modal>
+
+			{/* ── Modal : walk-in (NOUVEAU) ─────────────────────────────────── */}
+			<Modal
+				open={!!walkinModal}
+				onClose={closeWalkinModal}
+				title={walkinModal ? `Walk-in · Table ${walkinModal.numero} · ${ZONE_LABELS[walkinModal.zone]?.label}` : ""}
+				description="Aucun acompte pour les walk-ins — l'addition sera soldée en fin de repas."
+			>
+				{walkinModal && (
+					<div className="space-y-4">
+						{walkinError && (
+							<div className="flex items-center gap-2 text-sm text-red-400 bg-red-950/20 border border-red-900/30 rounded-xl px-3 py-2.5">
+								<AlertTriangle size={13} className="shrink-0" />
+								{walkinError}
+							</div>
+						)}
+
+						<div>
+							<label className="text-xs text-[#5A5249] block mb-1.5">
+								Nom du client *
+							</label>
+							<input
+								autoFocus
+								value={walkinName}
+								onChange={(e) => setWalkinName(e.target.value)}
+								onKeyDown={(e) => e.key === "Enter" && handleWalkin()}
+								placeholder="Ex : Famille Martin"
+								className="w-full bg-[#0A0A0A] border border-[#222] rounded-xl px-3 py-2.5 text-sm text-[#F5F0EB] placeholder-[#2a2a2a] focus:border-[#C8973A] focus:outline-none transition-colors"
+							/>
+						</div>
+
+						<div>
+							<label className="text-xs text-[#5A5249] block mb-2">
+								Nombre de couverts (max {walkinModal.capaciteMax})
+							</label>
+							<div className="flex items-center gap-3">
+								<button
+									onClick={() => setWalkinCovers((c) => Math.max(1, c - 1))}
+									className="w-8 h-8 rounded-full border border-[#2a2a2a] bg-[#1a1a1a] hover:border-[#444] text-[#5A5249] hover:text-[#F5F0EB] transition-colors flex items-center justify-center"
+								>
+									<Minus size={13} />
+								</button>
+								<span className="text-lg font-bold text-[#F5F0EB] w-8 text-center">
+									{walkinCovers}
+								</span>
+								<button
+									onClick={() => setWalkinCovers((c) => Math.min(walkinModal.capaciteMax, c + 1))}
+									className="w-8 h-8 rounded-full border border-[#2a2a2a] bg-[#1a1a1a] hover:border-[#444] text-[#5A5249] hover:text-[#F5F0EB] transition-colors flex items-center justify-center"
+								>
+									<Plus size={13} />
+								</button>
+							</div>
+						</div>
+
+						<div className="flex items-center justify-end gap-3 pt-1 border-t border-[#1e1e1e]">
+							<button onClick={closeWalkinModal} className="px-4 py-2 text-sm text-[#5A5249] hover:text-[#9A8F84] transition-colors">
+								Annuler
+							</button>
+							<button
+								onClick={handleWalkin}
+								disabled={walkinLoading || !walkinName.trim()}
+								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+							>
+								{walkinLoading ? (
+									<Loader2 size={15} className="animate-spin" />
+								) : (
+									<ConciergeBell size={15} />
+								)}
+								{walkinLoading ? "Ouverture…" : "Ouvrir la commande"}
+							</button>
+						</div>
+					</div>
+				)}
+			</Modal>
+
+			{/* ── Modal : ouvrir commande réservation (NOUVEAU) ─────────────── */}
+			<Modal
+				open={!!openOrderModal}
+				onClose={closeOpenOrderModal}
+				title={openOrderModal ? `Table ${openOrderModal.numero} · ${ZONE_LABELS[openOrderModal.zone]?.label}` : ""}
+				description="Ouvrir la prise de commande pour cette réservation confirmée."
+			>
+				{openOrderModal?.reservation && (
+					<div className="space-y-4">
+						{openOrderError && (
+							<div className="flex items-center gap-2 text-sm text-red-400 bg-red-950/20 border border-red-900/30 rounded-xl px-3 py-2.5">
+								<AlertTriangle size={13} className="shrink-0" />
+								{openOrderError}
+							</div>
+						)}
+
+						{/* Récap réservation */}
+						<div className="bg-[#0A0A0A] rounded-xl border border-[#1e1e1e] p-4 space-y-3">
+							<div className="flex items-start justify-between gap-3">
+								<div>
+									<p className="text-sm font-semibold text-[#F5F0EB]">
+										{openOrderModal.reservation.guestNom}
+									</p>
+									{openOrderModal.reservation.occasion && (
+										<span className="inline-block mt-1 text-[11px] text-[#C8973A] border border-[#C8973A]/30 bg-[#C8973A]/5 px-2 py-0.5 rounded-md">
+											{openOrderModal.reservation.occasion}
+										</span>
+									)}
+								</div>
+								<div className="flex items-center gap-2 shrink-0">
+									<span className="flex items-center gap-1 text-xs text-[#9A8F84] bg-[#1a1a1a] border border-[#222] px-2 py-1 rounded-lg">
+										<Users size={11} /> {openOrderModal.reservation.covers} cv
+									</span>
+									<span className="flex items-center gap-1 text-xs text-[#9A8F84] bg-[#1a1a1a] border border-[#222] px-2 py-1 rounded-lg">
+										<Clock size={11} /> {openOrderModal.reservation.heure}
+									</span>
+								</div>
+							</div>
+
+							{openOrderModal.reservation.depositAmount !== null &&
+								openOrderModal.reservation.depositAmount > 0 && (
+								<div className="flex items-center gap-2 text-sm text-green-400 bg-green-950/20 border border-green-900/30 rounded-lg px-3 py-2">
+									<CheckCircle2 size={13} className="shrink-0" />
+									Acompte encaissé : {openOrderModal.reservation.depositAmount.toFixed(2)} €
+									<span className="text-xs text-green-700 ml-1">(sera déduit de l&apos;addition)</span>
+								</div>
+							)}
+						</div>
+
+						<p className="text-xs text-[#5A5249]">
+							Le client est arrivé — ouvrez la commande pour commencer la prise des plats.
+							L&apos;acompte sera automatiquement déduit de l&apos;addition finale.
+						</p>
+
+						<div className="flex items-center justify-end gap-3 pt-1 border-t border-[#1e1e1e]">
+							<button onClick={closeOpenOrderModal} className="px-4 py-2 text-sm text-[#5A5249] hover:text-[#9A8F84] transition-colors">
+								Annuler
+							</button>
+							<button
+								onClick={handleOpenOrder}
+								disabled={openOrderLoading}
+								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+							>
+								{openOrderLoading ? (
+									<Loader2 size={15} className="animate-spin" />
+								) : (
+									<UtensilsCrossed size={15} />
+								)}
+								{openOrderLoading ? "Ouverture…" : "Ouvrir la commande"}
+							</button>
+						</div>
+					</div>
+				)}
+			</Modal>
 		</div>
+	);
+}
+
+// ─── Sous-composant : contenu de la carte table ───────────────────────────────
+
+function TableCardInfo({
+	table,
+	styles,
+	isCompatible,
+	isModalOpen,
+}: {
+	table: TableWithStatus;
+	styles: { icon: string; sub: string };
+	isCompatible: boolean;
+	isModalOpen: boolean;
+}) {
+	const { status, reservation, serviceOrder } = table;
+
+	if (status === "EN_SERVICE" && serviceOrder) {
+		return (
+			<>
+				<span className={cn("text-[9px] truncate max-w-[78px] text-center leading-tight", styles.icon)}>
+					{serviceOrder.guestName.split(" ")[0]}
+				</span>
+				<span className={cn("text-[9px] text-center leading-tight", styles.sub)}>
+					{serviceOrder.totalAmount > 0 ? `${serviceOrder.totalAmount.toFixed(0)} €` : `${serviceOrder.covers} cv`}
+				</span>
+			</>
+		);
+	}
+
+	if (status === "ADDITION" && serviceOrder) {
+		return (
+			<>
+				<span className={cn("text-[9px] truncate max-w-[78px] text-center leading-tight", styles.icon)}>
+					{serviceOrder.guestName.split(" ")[0]}
+				</span>
+				<span className="text-[9px] text-red-400 font-semibold text-center leading-tight">
+					{serviceOrder.totalAmount.toFixed(0)} €
+				</span>
+			</>
+		);
+	}
+
+	if ((status === "CONFIRMEE" || status === "EN_ATTENTE") && reservation) {
+		return (
+			<>
+				<span className={cn("text-[9px] truncate max-w-[78px] text-center leading-tight px-0.5", styles.icon)}>
+					{reservation.guestNom.split(" ")[0]}
+				</span>
+				<span className={cn("text-[9px] text-center leading-tight", styles.sub)}>
+					{reservation.covers} cv · {reservation.heure}
+				</span>
+				{reservation.depositAmount && reservation.depositAmount > 0 && (
+					<span className="text-[8px] text-green-600 text-center leading-tight">
+						{reservation.depositAmount.toFixed(0)} €✓
+					</span>
+				)}
+			</>
+		);
+	}
+
+	if (status === "BLOQUEE") {
+		return <Lock size={10} className={styles.icon} />;
+	}
+
+	// LIBRE
+	return (
+		<span className={cn(
+			"text-[9px]",
+			styles.sub,
+			isCompatible && !isModalOpen && "text-green-600"
+		)}>
+			{table.capaciteMax} cv
+		</span>
 	);
 }

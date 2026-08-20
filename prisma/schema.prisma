@@ -71,6 +71,37 @@ enum ZoneTable {
 	PRIVE
 }
 
+// ─── Nouveaux enums pour le service en salle ─────────────────────────────────
+
+enum ServiceStatus {
+	OUVERTE
+	ADDITION_DEMANDEE
+	PAYEE
+	ANNULEE
+}
+
+enum ServiceType {
+	RESERVATION
+	WALK_IN
+}
+
+enum PaymentMethodService {
+	CB
+	ESPECES
+	CHEQUE
+	TICKET_RESTO
+}
+
+enum CourseType {
+	ENTREE
+	PLAT
+	DESSERT
+	BOISSON
+	EXTRA
+}
+
+// ─── Modèles existants ────────────────────────────────────────────────────────
+
 model User {
 	id                      String                   @id @default(cuid())
 	email                   String                   @unique
@@ -156,6 +187,7 @@ model Dish {
 	category        MenuCategory       @relation(fields: [categoryId], references: [id])
 	images          Image[]
 	specialOfferItems SpecialOfferItem[]
+	serviceOrderItems ServiceOrderItem[] // ← nouveau
 	@@index([categoryId])
 	@@index([isAvailable])
 	@@map("dishes")
@@ -193,6 +225,7 @@ model Reservation {
 	user                User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 	payment             Payment?
 	invoice             Invoice?
+	serviceOrder        ServiceOrder?     // ← nouveau
 
 	@@index([date, status])
 	@@index([userId])
@@ -217,6 +250,7 @@ model Table {
 
 	reservations Reservation[]
 	blocages     TableBlocage[]
+	serviceOrders ServiceOrder[] // ← nouveau
 
 	@@map("tables")
 }
@@ -275,6 +309,56 @@ model Invoice {
 	@@index([userId])
 	@@map("invoices")
 }
+
+// ─── Nouveaux modèles pour le service en salle ───────────────────────────────
+
+model ServiceOrder {
+	id              String               @id @default(cuid())
+	tableId         String
+	reservationId   String?              @unique
+	type            ServiceType
+	status          ServiceStatus        @default(OUVERTE)
+	guestName       String
+	covers          Int
+	notes           String?
+	paymentMethod   PaymentMethodService?
+	depositDeducted Float                @default(0)
+	totalAmount     Float                @default(0)
+	openedAt        DateTime             @default(now())
+	closedAt        DateTime?
+	createdAt       DateTime             @default(now())
+	updatedAt       DateTime             @updatedAt
+
+	table           Table                @relation(fields: [tableId], references: [id])
+	reservation     Reservation?         @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+	items           ServiceOrderItem[]
+
+	@@index([tableId, status])
+	@@index([status])
+	@@map("service_orders")
+}
+
+model ServiceOrderItem {
+	id          String       @id @default(cuid())
+	orderId     String
+	dishId      String
+	dishName    String
+	unitPrice   Float
+	qty         Int          @default(1)
+	totalPrice  Float
+	notes       String?
+	course      CourseType   @default(PLAT)
+	createdAt   DateTime     @default(now())
+	updatedAt   DateTime     @updatedAt
+
+	order       ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+	dish        Dish         @relation(fields: [dishId], references: [id])
+
+	@@index([orderId])
+	@@map("service_order_items")
+}
+
+// ─── Offres spéciales ─────────────────────────────────────────────────────────
 
 model SpecialOffer {
 	id          String               @id @default(cuid())
