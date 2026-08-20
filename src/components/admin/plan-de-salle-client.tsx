@@ -9,7 +9,7 @@ import {
 	UtensilsCrossed, ConciergeBell, Receipt, Loader2, Plus, Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/date-utils";
+import { formatDate } from "@/lib/utils";
 import { ZONE_LABELS, ZONES } from "@/lib/constants";
 import { Modal } from "@/components/ui/modal";
 import type {
