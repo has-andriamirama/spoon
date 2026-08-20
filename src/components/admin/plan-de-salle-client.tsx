@@ -137,8 +137,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		if (!modalResa || !selectedTableId) return;
 		setLoading("confirm");
 		try {
-			const res = await fetch(`/api/admin/reservations/${modalResa.id}/confirm`, {
-				method:  "POST",
+			const res = await fetch(`/api/admin/reservations/${modalResa.id}/confirmer`, {
+				method:  "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body:    JSON.stringify({ tableId: selectedTableId, adminNotes }),
 			});
@@ -154,7 +154,11 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const handleNoShow = async (id: string) => {
 		setLoading(`noshow-${id}`);
 		try {
-			await fetch(`/api/admin/reservations/${id}/no-show`, { method: "POST" });
+			await fetch(`/api/reservations/${id}`, {
+				method:  "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body:    JSON.stringify({ status: "NO_SHOW" }),
+			});
 			await refetch();
 		} finally {
 			setLoading(null);
@@ -165,10 +169,10 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 		if (!blocageModal) return;
 		setLoading("block");
 		try {
-			await fetch("/api/admin/tables/block", {
+			await fetch(`/api/admin/tables/${blocageModal.id}/bloquer`, {
 				method:  "POST",
 				headers: { "Content-Type": "application/json" },
-				body:    JSON.stringify({ tableId: blocageModal.id, date, motif: blocageMotif }),
+				body:    JSON.stringify({ date, heureDebut: "00:00", heureFin: "23:59", motif: blocageMotif }),
 			});
 			await refetch();
 			closeBlocageModal();
@@ -180,10 +184,8 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const handleUnblock = async (tableId: string) => {
 		setLoading(`unblock-${tableId}`);
 		try {
-			await fetch("/api/admin/tables/unblock", {
-				method:  "POST",
-				headers: { "Content-Type": "application/json" },
-				body:    JSON.stringify({ tableId, date }),
+			await fetch(`/api/admin/tables/${tableId}/bloquer?date=${date}`, {
+				method: "DELETE",
 			});
 			await refetch();
 			closeBlocageModal();
