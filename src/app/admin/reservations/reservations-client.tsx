@@ -12,7 +12,6 @@ import Link from "next/link";
 import { Search, Eye, XCircle, Loader2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Payment, ReservationStatus } from "@/types";
-import AdminReservationModal from "./admin-reservation-modal";
 
 interface Reservation {
 	id: string;
@@ -49,8 +48,6 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 	const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
 	const [cancelReason, setCancelReason] = useState("");
 	const [cancelling, setCancelling] = useState(false);
-
-	const [addModalOpen, setAddModalOpen] = useState(false);
 
 	const openCancelModal = (r: Reservation) => {
 		setCancelTarget(r);
@@ -96,13 +93,13 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 					>
 						Vue calendrier
 					</Link>
-					<button
-						onClick={() => setAddModalOpen(true)}
+					<Link
+						href="/admin/reservations/new"
 						className="flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
 					>
 						<Plus size={15} />
 						Ajouter
-					</button>
+					</Link>
 				</div>
 			</div>
 
@@ -295,12 +292,6 @@ export default function AdminReservationsClient({ reservations, filterStatus, fi
 					</>
 				)}
 			</Modal>
-
-			<AdminReservationModal
-				open={addModalOpen}
-				onClose={() => setAddModalOpen(false)}
-				onCreated={() => router.refresh()}
-			/>
 		</div>
 	);
 }
