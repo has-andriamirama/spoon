@@ -15,7 +15,7 @@ export default function AdminNewReservationPage() {
 				>
 					<ArrowLeft size={17} />
 				</Link>
-				<div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB]">Nouvelle réservation</h1>
 					<p className="text-sm text-[#5A5249] mt-1">
 						Créez une réservation pour un client et envoyez-lui le lien de paiement par email.
@@ -23,7 +23,9 @@ export default function AdminNewReservationPage() {
 				</div>
 			</div>
 
-			<AdminReservationStepper />
+			<div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+				<AdminReservationStepper />
+			</div>
 		</div>
 	);
 }
