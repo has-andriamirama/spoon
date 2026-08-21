@@ -23,7 +23,7 @@ export default function AdminNewReservationPage() {
 				</div>
 			</div>
 
-			<div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div className="max-w-3xl mx-auto sm:px-6 lg:px-8">
 				<AdminReservationStepper />
 			</div>
 		</div>
