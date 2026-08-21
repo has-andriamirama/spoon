@@ -10,9 +10,16 @@ interface Props {
 	updateData: (u: Partial<ReservationFormData>) => void;
 	onNext: () => void;
 	onPrev: () => void;
+	isAdminReservation?: boolean;
 }
 
-export default function StepPersonalInfo({ data, updateData, onNext, onPrev }: Props) {
+export default function StepPersonalInfo({
+	data,
+	updateData,
+	onNext,
+	onPrev,
+	isAdminReservation = false
+}: Props) {
 	const { data: session } = useSession();
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -80,7 +87,7 @@ export default function StepPersonalInfo({ data, updateData, onNext, onPrev }: P
 				/>
 			</div>
 
-			{!session && (
+			{!session && !isAdminReservation && (
 				<p className="text-xs text-[#5A5249] mb-6 p-4 bg-[#0A0A0A] rounded-lg border border-[#222]">
 					Vous avez un compte ? <a href="/auth/login" className="text-[#C8973A] hover:underline">Connectez-vous</a> pour pré-remplir vos informations et suivre vos réservations.
 				</p>

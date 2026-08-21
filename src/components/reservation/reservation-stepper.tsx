@@ -108,6 +108,7 @@ function ReservationStepperInner() {
             updateData={updateData}
             onNext={next}
             onPrev={prev}
+            isAdminReservation={false}
           />
         )}
         {!paymentStatus && step === 3 && (

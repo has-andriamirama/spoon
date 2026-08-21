@@ -113,6 +113,7 @@ export default function AdminReservationModal({ open, onClose, onCreated }: Prop
 					updateData={updateData}
 					onNext={next}
 					onPrev={prev}
+					isAdminReservation={true}
 				/>
 			)}
 			{step === 3 && (
