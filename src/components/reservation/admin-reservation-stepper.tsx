@@ -77,7 +77,7 @@ export default function AdminReservationStepper() {
 							{idx < STEPS.length - 1 && (
 								<div
 									className={cn(
-										"h-px w-12 sm:w-20 mx-2 mb-4 transition-colors",
+										"h-px w-12 sm:w-20 mx-2 transition-colors",
 										isCompleted ? "bg-[#C8973A]" : "bg-[#222]"
 									)}
 								/>
