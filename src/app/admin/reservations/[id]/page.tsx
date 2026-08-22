@@ -102,13 +102,11 @@ export default async function AdminReservationDetailPage({
 
 	const isActive = ["PENDING", "CONFIRMED"].includes(reservation.status);
 
-	// Service order for this reservation (from Plan de salle)
 	const serviceOrder = reservation.serviceOrder ?? null;
 	const hasAddition  = !!serviceOrder && serviceOrder.status !== "ANNULEE";
 
 	return (
-		<div className="max-w-3xl mx-auto">
-			{/* ── Back link ── */}
+		<div className="min-h-full">
 			<Link
 				href="/admin/reservations"
 				className="inline-flex items-center gap-2 text-sm text-[#5A5249] hover:text-[#F5F0EB] mb-6 transition-colors"
@@ -117,10 +115,8 @@ export default async function AdminReservationDetailPage({
 				Retour aux réservations
 			</Link>
 
-			{/* ── Main card ── */}
 			<div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 
-				{/* Card header */}
 				<div className="px-6 py-5 border-b border-[#222] flex items-center justify-between gap-4">
 					<div className="flex items-center gap-4 min-w-0">
 						<div className="w-12 h-12 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center text-base font-semibold text-[#C8973A] shrink-0">
