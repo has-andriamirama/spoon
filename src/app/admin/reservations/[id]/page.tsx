@@ -106,7 +106,7 @@ export default async function AdminReservationDetailPage({
 	const hasAddition  = !!serviceOrder && serviceOrder.status !== "ANNULEE";
 
 	return (
-		<div className="min-h-full">
+		<div className="max-w-full">
 			<Link
 				href="/admin/reservations"
 				className="inline-flex items-center gap-2 text-sm text-[#5A5249] hover:text-[#F5F0EB] mb-6 transition-colors"
