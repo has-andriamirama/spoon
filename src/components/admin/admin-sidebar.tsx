@@ -30,10 +30,9 @@ const NAV = [
 		section: "Service en salle",
 		items: [
 			{
-				href: "/admin/reservations/plan",
-				label: "Commandes du jour",
+				href: "/admin/commandes",
+				label: "Commandes",
 				icon: ConciergeBell,
-				exact: true,
 			},
 		],
 	},
@@ -109,15 +108,10 @@ function SidebarContent({ collapsed, onClose, showCloseButton }: {
 							</p>
 						)}
 						{items.map(({ href, label, icon: Icon }) => {
-							const active =
+							const isActive =
 								href === "/admin/reservations"
 									? pathname === href
 									: pathname === href || pathname.startsWith(`${href}/`);
-							const isServiceLink = label === "Commandes du jour";
-							const activeService = isServiceLink
-								? pathname.startsWith("/admin/service/")
-								: false;
-							const isActive = isServiceLink ? activeService : active;
 
 							return (
 								<Link

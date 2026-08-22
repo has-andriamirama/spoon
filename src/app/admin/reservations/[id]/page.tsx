@@ -19,7 +19,7 @@ import {
 	CreditCard,
 	Receipt,
 	ExternalLink,
-	Utensils,
+	ConciergeBell,
 } from "lucide-react";
 import ReservationActions from "./reservation-actions";
 
@@ -44,17 +44,10 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 const SERVICE_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-	OUVERTE:           { label: "En cours",         color: "blue"   },
+	OUVERTE:           { label: "En cours",          color: "blue"   },
 	ADDITION_DEMANDEE: { label: "Addition demandée", color: "yellow" },
 	PAYEE:             { label: "Payée",             color: "green"  },
 	ANNULEE:           { label: "Annulée",           color: "red"    },
-};
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-	CB:           "Carte bancaire",
-	ESPECES:      "Espèces",
-	CHEQUE:       "Chèque",
-	TICKET_RESTO: "Ticket-restaurant",
 };
 
 export default async function AdminReservationDetailPage({
@@ -358,13 +351,13 @@ export default async function AdminReservationDetailPage({
 					</div>
 				)}
 
-				{/* Addition / service order section */}
+				{/* Commande en salle — link to /admin/commandes/[id] */}
 				{hasAddition && serviceOrder && (
 					<div className="px-6 py-4 border-b border-[#222]">
 						<div className="flex items-center justify-between mb-3">
 							<p className="text-[10px] font-semibold uppercase tracking-wider text-[#5A5249] flex items-center gap-1.5">
-								<Utensils size={11} />
-								Addition — Plan de salle
+								<ConciergeBell size={11} />
+								Commande en salle
 							</p>
 							<Badge
 								variant={VARIANT_MAP[SERVICE_STATUS_LABELS[serviceOrder.status]?.color ?? "gray"]}
@@ -374,63 +367,17 @@ export default async function AdminReservationDetailPage({
 							</Badge>
 						</div>
 
-						{/* Items */}
-						{serviceOrder.items.length > 0 && (
-							<div className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] overflow-hidden mb-3">
-								{serviceOrder.items.map((item, idx) => (
-									<div
-										key={item.id}
-										className={`flex items-center justify-between px-3 py-2.5 ${
-											idx < serviceOrder.items.length - 1 ? "border-b border-[#1a1a1a]" : ""
-										}`}
-									>
-										<div className="min-w-0">
-											<span className="text-xs text-[#F5F0EB] font-medium">{item.dishName}</span>
-											{item.qty > 1 && (
-												<span className="text-[10px] text-[#5A5249] ml-2">×{item.qty}</span>
-											)}
-										</div>
-										<span className="text-xs text-[#9A8F84] shrink-0 ml-3">
-											{formatPrice(item.totalPrice)}
-										</span>
-									</div>
-								))}
-							</div>
-						)}
-
-						{/* Summary */}
-						<div className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] divide-y divide-[#1a1a1a] overflow-hidden">
-							{serviceOrder.depositDeducted > 0 && (
-								<div className="flex justify-between px-3 py-2.5">
-									<span className="text-xs text-[#5A5249]">Acompte déduit</span>
-									<span className="text-xs text-green-400">
-										−{formatPrice(serviceOrder.depositDeducted)}
-									</span>
-								</div>
-							)}
-							<div className="flex justify-between px-3 py-2.5">
-								<span className="text-xs font-semibold text-[#F5F0EB]">Total</span>
-								<span className="text-xs font-semibold text-[#C8973A]">
-									{formatPrice(serviceOrder.totalAmount)}
-								</span>
-							</div>
-							{serviceOrder.paymentMethod && (
-								<div className="flex justify-between px-3 py-2.5">
-									<span className="text-xs text-[#5A5249]">Mode de paiement</span>
-									<span className="text-xs text-[#9A8F84]">
-										{PAYMENT_METHOD_LABELS[serviceOrder.paymentMethod] ?? serviceOrder.paymentMethod}
-									</span>
-								</div>
-							)}
-							{serviceOrder.closedAt && (
-								<div className="flex justify-between px-3 py-2.5">
-									<span className="text-xs text-[#5A5249]">Encaissé le</span>
-									<span className="text-xs text-[#9A8F84]">
-										{formatDate(serviceOrder.closedAt, "dd/MM/yyyy à HH:mm")}
-									</span>
-								</div>
-							)}
-						</div>
+						<Link
+							href={`/admin/commandes/${serviceOrder.id}`}
+							className="flex items-center justify-between px-3 py-2.5 bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors"
+						>
+							<span className="flex items-center gap-2 text-xs text-[#9A8F84]">
+								<Receipt size={12} />
+								{serviceOrder.items.length} plat{serviceOrder.items.length !== 1 ? "s" : ""}{" "}
+								— {formatPrice(serviceOrder.totalAmount)}
+							</span>
+							<ExternalLink size={11} className="text-[#5A5249]" />
+						</Link>
 					</div>
 				)}
 

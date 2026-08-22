@@ -177,7 +177,7 @@ export default function ReservationActions({ reservation }: Props) {
 						) : (
 							<CheckCircle2 size={14} />
 						)}
-						Confirmer &amp; assigner une table
+						Confirmer
 					</button>
 				)}
 
