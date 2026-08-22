@@ -1074,7 +1074,7 @@ export default function AdminReservationsClient({ reservations }: Props) {
 
 								<div className="flex items-center justify-between pt-3 border-t border-[#1a1a1a]">
 									<div className="flex items-center gap-2 min-w-0">
-										<Badge variant={BADGE_VARIANT[pst.color]} className="text-[10px]">
+										<Badge variant={BADGE_VARIANT[pst.color]} className="text-[10px] shrink-0">
 											{pst.label}
 										</Badge>
 										{r.table ? (
