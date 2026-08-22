@@ -693,10 +693,10 @@ export default function CommandesClient({ orders }: Props) {
 									</span>
 									<Link
 										href={`/admin/commandes/${o.id}`}
-										className="flex items-center gap-1.5 px-3 h-7 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#252525] transition-all"
+										title="Ouvrir la commande"
+										className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
 									>
-										<Eye size={13} />
-										Voir
+										<Eye size={14} />
 									</Link>
 								</div>
 							</div>
