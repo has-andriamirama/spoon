@@ -170,7 +170,7 @@ export default function ReservationActions({ reservation }: Props) {
 					<button
 						onClick={openConfirmModal}
 						disabled={loading === "confirm"}
-						className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40"
+						className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40"
 					>
 						{loading === "confirm" ? (
 							<Loader2 size={14} className="animate-spin" />
