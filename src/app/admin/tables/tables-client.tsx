@@ -325,7 +325,7 @@ export default function TablesClient({
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Rechercher une table…"
-						className="w-full h-9 pl-9 pr-9 rounded-lg bg-[#0A0A0A] border border-[#222] text-sm text-[#F5F0EB] placeholder:text-[#5A5249] focus:border-[#C8973A]/50 focus:outline-none transition-colors"
+						className="w-full h-9 pl-9 pr-9 rounded-lg bg-[#0A0A0A] border border-[#222] text-sm text-[#F5F0EB] placeholder:text-[#5A5249] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
 					/>
 					{search && (
 						<button
