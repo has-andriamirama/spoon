@@ -15,32 +15,23 @@ import {
 	Search,
 	CheckCircle2,
 } from "lucide-react";
-import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Zone = "SALLE" | "TERRASSE" | "BAR" | "PRIVE";
+type Zone         = "SALLE" | "TERRASSE" | "BAR" | "PRIVE";
 type StatusFilter = "all" | "active" | "inactive";
 
 type TableRow = {
-	id: string;
-	numero: number;
+	id:          string;
+	numero:      number;
 	capaciteMin: number;
 	capaciteMax: number;
-	zone: Zone;
+	zone:        Zone;
 	description: string | null;
-	isActif: boolean;
-	_count: { reservations: number };
-};
-
-type FormValues = {
-	numero: string;
-	capaciteMin: string;
-	capaciteMax: string;
-	zone: Zone;
-	description: string;
+	isActif:     boolean;
+	_count:      { reservations: number };
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -49,46 +40,29 @@ const ZONE_ORDER: Zone[] = ["SALLE", "TERRASSE", "BAR", "PRIVE"];
 
 const ZONE_META: Record<
 	Zone,
-	{ short: string; full: string; badge: string; select: string }
+	{ short: string; full: string; badge: string }
 > = {
 	SALLE: {
-		short:  "Salle",
-		full:   "Salle — intérieur",
-		badge:  "text-blue-400 bg-blue-950/30 border-blue-900/40",
-		select: "Salle — intérieur",
+		short: "Salle",
+		full:  "Salle — intérieur",
+		badge: "text-blue-400 bg-blue-950/30 border-blue-900/40",
 	},
 	TERRASSE: {
-		short:  "Terrasse",
-		full:   "Terrasse",
-		badge:  "text-green-400 bg-green-950/30 border-green-900/40",
-		select: "Terrasse",
+		short: "Terrasse",
+		full:  "Terrasse",
+		badge: "text-green-400 bg-green-950/30 border-green-900/40",
 	},
 	BAR: {
-		short:  "Bar",
-		full:   "Bar",
-		badge:  "text-[#C8973A] bg-[#1a1200] border-[#C8973A]/20",
-		select: "Bar",
+		short: "Bar",
+		full:  "Bar",
+		badge: "text-[#C8973A] bg-[#1a1200] border-[#C8973A]/20",
 	},
 	PRIVE: {
-		short:  "Espace privé",
-		full:   "Espace privé",
-		badge:  "text-purple-400 bg-purple-950/30 border-purple-900/40",
-		select: "Espace privé",
+		short: "Espace privé",
+		full:  "Espace privé",
+		badge: "text-purple-400 bg-purple-950/30 border-purple-900/40",
 	},
 };
-
-const EMPTY_FORM: FormValues = {
-	numero: "",
-	capaciteMin: "1",
-	capaciteMax: "",
-	zone: "SALLE",
-	description: "",
-};
-
-// ─── Field class helper ───────────────────────────────────────────────────────
-
-const fieldCls =
-	"w-full bg-[#0A0A0A] border border-[#222] rounded-xl px-3 py-2.5 text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A]/60 focus:ring-1 focus:ring-[#C8973A]/20 focus:outline-none transition-colors";
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
@@ -100,12 +74,12 @@ function StatCard({
 	active,
 	onClick,
 }: {
-	label: string;
-	value: number;
-	icon: React.ElementType;
+	label:     string;
+	value:     number;
+	icon:      React.ElementType;
 	iconColor: string;
-	active?: boolean;
-	onClick?: () => void;
+	active?:   boolean;
+	onClick?:  () => void;
 }) {
 	return (
 		<button
@@ -139,9 +113,9 @@ function ZonePill({
 	active,
 	onClick,
 }: {
-	zone: Zone;
-	count: number;
-	active: boolean;
+	zone:    Zone;
+	count:   number;
+	active:  boolean;
 	onClick: () => void;
 }) {
 	const meta = ZONE_META[zone];
@@ -175,65 +149,32 @@ export default function TablesClient({
 }: {
 	initialTables: TableRow[];
 }) {
-	const [tables, setTables]       = useState<TableRow[]>(initialTables);
-	const [modal, setModal]         = useState<"create" | "edit" | null>(null);
-	const [editTarget, setEditTarget] = useState<TableRow | null>(null);
-	const [form, setForm]           = useState<FormValues>(EMPTY_FORM);
-	const [loading, setLoading]     = useState<string | null>(null);
+	const [tables, setTables]               = useState<TableRow[]>(initialTables);
+	const [loading, setLoading]             = useState<string | null>(null);
 	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-	const [search, setSearch]       = useState("");
-	const [zoneFilter, setZoneFilter] = useState<Zone | null>(null);
-	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-
-	// ── Modal helpers ──────────────────────────────────────────────────────────
-
-	const openCreate = () => {
-		setForm(EMPTY_FORM);
-		setEditTarget(null);
-		setModal("create");
-	};
-
-	const openEdit = (t: TableRow) => {
-		setForm({
-			numero:      String(t.numero),
-			capaciteMin: String(t.capaciteMin),
-			capaciteMax: String(t.capaciteMax),
-			zone:        t.zone,
-			description: t.description || "",
-		});
-		setEditTarget(t);
-		setModal("edit");
-	};
-
-	const closeModal = () => {
-		setModal(null);
-		setEditTarget(null);
-		setForm(EMPTY_FORM);
-	};
-
-	const updateForm = (key: keyof FormValues, value: string) =>
-		setForm((f) => ({ ...f, [key]: value }));
+	const [search, setSearch]               = useState("");
+	const [zoneFilter, setZoneFilter]       = useState<Zone | null>(null);
+	const [statusFilter, setStatusFilter]   = useState<StatusFilter>("all");
 
 	// ── Stats ──────────────────────────────────────────────────────────────────
 
 	const stats = useMemo(
 		() => ({
-			total:    tables.length,
-			actives:  tables.filter((t) => t.isActif).length,
+			total:     tables.length,
+			actives:   tables.filter((t) => t.isActif).length,
 			inactives: tables.filter((t) => !t.isActif).length,
-			zones:    new Set(tables.map((t) => t.zone)).size,
+			zones:     new Set(tables.map((t) => t.zone)).size,
 		}),
 		[tables]
 	);
 
-	// Zone counts (based on all tables, before status/search filter)
 	const zoneCounts = useMemo(() => {
 		const c: Record<Zone, number> = { SALLE: 0, TERRASSE: 0, BAR: 0, PRIVE: 0 };
 		tables.forEach((t) => { c[t.zone]++; });
 		return c;
 	}, [tables]);
 
-	// ── Filtered ───────────────────────────────────────────────────────────────
+	// ── Filtered & grouped ─────────────────────────────────────────────────────
 
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
@@ -249,7 +190,6 @@ export default function TablesClient({
 		});
 	}, [tables, zoneFilter, statusFilter, search]);
 
-	// Grouped by zone
 	const byZone = useMemo(() => {
 		const zones = zoneFilter ? [zoneFilter] : ZONE_ORDER;
 		return zones
@@ -257,84 +197,9 @@ export default function TablesClient({
 			.filter(({ rows }) => rows.length > 0);
 	}, [filtered, zoneFilter]);
 
-	const hasActiveFilters =
-		search.trim() || zoneFilter || statusFilter !== "all";
+	const hasActiveFilters = search.trim() || zoneFilter || statusFilter !== "all";
 
-	// ── CRUD ───────────────────────────────────────────────────────────────────
-
-	const handleCreate = async () => {
-		if (!form.numero || !form.capaciteMax) {
-			toast.error("Numéro et capacité max sont requis");
-			return;
-		}
-		setLoading("create");
-		try {
-			const res = await fetch("/api/admin/tables", {
-				method:  "POST",
-				headers: { "Content-Type": "application/json" },
-				body:    JSON.stringify({
-					numero:      Number(form.numero),
-					capaciteMin: Number(form.capaciteMin),
-					capaciteMax: Number(form.capaciteMax),
-					zone:        form.zone,
-					description: form.description || null,
-				}),
-			});
-			if (!res.ok) {
-				const err = await res.json();
-				throw new Error(err.error);
-			}
-			const { data } = await res.json();
-			setTables((prev) =>
-				[...prev, { ...data, _count: { reservations: 0 } }].sort(
-					(a, b) => a.numero - b.numero
-				)
-			);
-			toast.success(`Table ${data.numero} créée`);
-			closeModal();
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : "Erreur");
-		} finally {
-			setLoading(null);
-		}
-	};
-
-	const handleEdit = async () => {
-		if (!editTarget || !form.numero || !form.capaciteMax) {
-			toast.error("Champs requis manquants");
-			return;
-		}
-		setLoading("edit");
-		try {
-			const res = await fetch(`/api/admin/tables/${editTarget.id}`, {
-				method:  "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body:    JSON.stringify({
-					numero:      Number(form.numero),
-					capaciteMin: Number(form.capaciteMin),
-					capaciteMax: Number(form.capaciteMax),
-					zone:        form.zone,
-					description: form.description || null,
-				}),
-			});
-			if (!res.ok) {
-				const err = await res.json();
-				throw new Error(err.error);
-			}
-			const { data } = await res.json();
-			setTables((prev) =>
-				prev
-					.map((t) => (t.id === data.id ? { ...data, _count: t._count } : t))
-					.sort((a, b) => a.numero - b.numero)
-			);
-			toast.success(`Table ${data.numero} mise à jour`);
-			closeModal();
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : "Erreur");
-		} finally {
-			setLoading(null);
-		}
-	};
+	// ── CRUD (inline ops only — create/edit navigate to their own page) ────────
 
 	const handleToggleActive = async (t: TableRow) => {
 		setLoading(`toggle-${t.id}`);
@@ -383,7 +248,7 @@ export default function TablesClient({
 	return (
 		<div className="min-h-full">
 
-			{/* ── Header ─────────────────────────────────────────────────────── */}
+			{/* ── Header ──────────────────────────────────────────────────────── */}
 			<div className="flex items-start justify-between mb-6 gap-4">
 				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">
@@ -401,17 +266,17 @@ export default function TablesClient({
 						<LayoutGrid size={14} />
 						Plan de salle
 					</Link>
-					<button
-						onClick={openCreate}
+					<Link
+						href="/admin/tables/new"
 						className="flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
 					>
 						<Plus size={15} />
 						Ajouter une table
-					</button>
+					</Link>
 				</div>
 			</div>
 
-			{/* ── Stats ──────────────────────────────────────────────────────── */}
+			{/* ── Stats ───────────────────────────────────────────────────────── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 				<StatCard
 					label="Total tables"
@@ -447,9 +312,9 @@ export default function TablesClient({
 				/>
 			</div>
 
-			{/* ── Filter bar ─────────────────────────────────────────────────── */}
+			{/* ── Filter bar ──────────────────────────────────────────────────── */}
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
-				{/* Search row */}
+				{/* Search */}
 				<div className="relative">
 					<Search
 						size={15}
@@ -476,7 +341,6 @@ export default function TablesClient({
 				{/* Zone pills */}
 				{ZONE_ORDER.some((z) => zoneCounts[z] > 0) && (
 					<div className="flex items-center gap-2 flex-wrap">
-						{/* All zones pill */}
 						<button
 							onClick={() => setZoneFilter(null)}
 							className={cn(
@@ -490,9 +354,7 @@ export default function TablesClient({
 							<span
 								className={cn(
 									"text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
-									!zoneFilter
-										? "bg-white/10"
-										: "bg-[#1a1a1a] text-[#5A5249]"
+									!zoneFilter ? "bg-white/10" : "bg-[#1a1a1a] text-[#5A5249]"
 								)}
 							>
 								{tables.length}
@@ -516,10 +378,10 @@ export default function TablesClient({
 				)}
 			</div>
 
-			{/* ── Content ────────────────────────────────────────────────────── */}
+			{/* ── Content ─────────────────────────────────────────────────────── */}
 
 			{tables.length === 0 ? (
-				/* Empty state — no tables at all */
+				/* Empty state */
 				<div className="text-center py-24 border border-dashed border-[#222] rounded-xl">
 					<div className="w-12 h-12 rounded-xl bg-[#141414] border border-[#222] flex items-center justify-center mx-auto mb-4">
 						<TableProperties size={22} className="text-[#333]" />
@@ -530,13 +392,13 @@ export default function TablesClient({
 					<p className="text-xs text-[#333] mb-5">
 						Ajoutez vos tables pour utiliser le plan de salle dynamique
 					</p>
-					<button
-						onClick={openCreate}
+					<Link
+						href="/admin/tables/new"
 						className="inline-flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
 					>
 						<Plus size={15} />
 						Ajouter une table
-					</button>
+					</Link>
 				</div>
 			) : byZone.length === 0 ? (
 				/* No results after filters */
@@ -558,10 +420,10 @@ export default function TablesClient({
 					)}
 				</div>
 			) : (
-				/* Grouped zones */
+				/* Grouped by zone */
 				<div className="space-y-3">
 					{byZone.map(({ zone, rows }) => {
-						const meta       = ZONE_META[zone];
+						const meta        = ZONE_META[zone];
 						const activeCount = rows.filter((r) => r.isActif).length;
 
 						return (
@@ -593,7 +455,7 @@ export default function TablesClient({
 										<div
 											key={t.id}
 											className={cn(
-												"flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#1a1a1a]",
+												"group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#1a1a1a]",
 												!t.isActif && "opacity-50"
 											)}
 										>
@@ -633,18 +495,19 @@ export default function TablesClient({
 												{t._count.reservations !== 1 ? "s" : ""}
 											</span>
 
-											{/* Actions */}
+											{/* ── Actions ──────────────────────────────────── */}
 											<div className="flex items-center gap-1 shrink-0">
-												{/* Toggle active */}
+
+												{/* Toggle active/inactive */}
 												<button
 													onClick={() => handleToggleActive(t)}
 													disabled={loading === `toggle-${t.id}`}
 													title={t.isActif ? "Désactiver" : "Activer"}
 													className={cn(
-														"p-1.5 rounded-lg transition-colors",
+														"p-1.5 rounded-lg transition-all",
 														t.isActif
 															? "text-green-600 hover:text-green-400 hover:bg-green-950/30"
-															: "text-[#333] hover:text-[#9A8F84] hover:bg-[#222]"
+															: "text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525]"
 													)}
 												>
 													{t.isActif ? (
@@ -654,29 +517,30 @@ export default function TablesClient({
 													)}
 												</button>
 
-												{/* Edit */}
-												<button
-													onClick={() => openEdit(t)}
-													className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#222] transition-colors"
+												{/* Edit → dedicated form page */}
+												<Link
+													href={`/admin/tables/${t.id}`}
 													title="Modifier"
+													className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
 												>
 													<Pencil size={14} />
-												</button>
+												</Link>
 
-												{/* Delete with confirm */}
+												{/* Delete with inline confirm */}
 												{deleteConfirm === t.id ? (
 													<div className="flex items-center gap-1">
 														<button
 															onClick={() => handleDelete(t)}
 															disabled={loading === `delete-${t.id}`}
-															className="p-1.5 rounded-lg text-red-500 hover:bg-red-950/30 transition-colors"
 															title="Confirmer la suppression"
+															className="p-1.5 rounded-lg text-red-500 hover:bg-red-950/30 transition-all"
 														>
 															<Check size={14} />
 														</button>
 														<button
 															onClick={() => setDeleteConfirm(null)}
-															className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+															title="Annuler"
+															className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
 														>
 															<X size={14} />
 														</button>
@@ -684,8 +548,8 @@ export default function TablesClient({
 												) : (
 													<button
 														onClick={() => setDeleteConfirm(t.id)}
-														className="p-1.5 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/20 transition-colors"
 														title="Supprimer"
+														className="p-1.5 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/30 transition-all"
 													>
 														<Trash2 size={14} />
 													</button>
@@ -699,121 +563,6 @@ export default function TablesClient({
 					})}
 				</div>
 			)}
-
-			{/* ── Modal ──────────────────────────────────────────────────────── */}
-			<Modal
-				open={modal !== null}
-				onClose={closeModal}
-				title={
-					modal === "create" ? "Ajouter une table" : "Modifier la table"
-				}
-				description={
-					modal === "create"
-						? "Configurez une nouvelle table physique du restaurant."
-						: `Modifier la configuration de la table ${editTarget?.numero}.`
-				}
-			>
-				<div className="space-y-4">
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="text-xs text-[#5A5249] block mb-1.5">
-								Numéro *
-							</label>
-							<input
-								type="number"
-								min="1"
-								value={form.numero}
-								onChange={(e) => updateForm("numero", e.target.value)}
-								placeholder="Ex : 12"
-								className={fieldCls}
-							/>
-						</div>
-						<div>
-							<label className="text-xs text-[#5A5249] block mb-1.5">
-								Zone *
-							</label>
-							<select
-								value={form.zone}
-								onChange={(e) => updateForm("zone", e.target.value as Zone)}
-								className={fieldCls}
-							>
-								{ZONE_ORDER.map((value) => (
-									<option key={value} value={value}>
-										{ZONE_META[value].select}
-									</option>
-								))}
-							</select>
-						</div>
-					</div>
-
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="text-xs text-[#5A5249] block mb-1.5">
-								Couverts min *
-							</label>
-							<input
-								type="number"
-								min="1"
-								value={form.capaciteMin}
-								onChange={(e) => updateForm("capaciteMin", e.target.value)}
-								className={fieldCls}
-							/>
-						</div>
-						<div>
-							<label className="text-xs text-[#5A5249] block mb-1.5">
-								Couverts max *
-							</label>
-							<input
-								type="number"
-								min="1"
-								value={form.capaciteMax}
-								onChange={(e) => updateForm("capaciteMax", e.target.value)}
-								placeholder="Ex : 4"
-								className={fieldCls}
-							/>
-						</div>
-					</div>
-
-					<div>
-						<label className="text-xs text-[#5A5249] block mb-1.5">
-							Description (facultatif)
-						</label>
-						<input
-							type="text"
-							value={form.description}
-							onChange={(e) => updateForm("description", e.target.value)}
-							placeholder="Ex : Coin fenêtre, Vue mer, Banquette…"
-							className={fieldCls}
-						/>
-					</div>
-
-					<div className="flex justify-end gap-3 pt-2 border-t border-[#1e1e1e]">
-						<button
-							onClick={closeModal}
-							className="px-4 py-2 text-sm text-[#5A5249] hover:text-[#9A8F84] transition-colors"
-						>
-							Annuler
-						</button>
-						<button
-							onClick={modal === "create" ? handleCreate : handleEdit}
-							disabled={loading === "create" || loading === "edit"}
-							className="flex items-center gap-2 h-9 px-5 rounded-lg bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-						>
-							{modal === "create" ? (
-								<>
-									<Plus size={15} />
-									{loading === "create" ? "Création…" : "Créer la table"}
-								</>
-							) : (
-								<>
-									<Check size={15} />
-									{loading === "edit" ? "Sauvegarde…" : "Sauvegarder"}
-								</>
-							)}
-						</button>
-					</div>
-				</div>
-			</Modal>
 		</div>
 	);
 }
