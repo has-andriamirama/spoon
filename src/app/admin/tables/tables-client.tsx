@@ -199,32 +199,7 @@ export default function TablesClient({
 
 	const hasActiveFilters = search.trim() || zoneFilter || statusFilter !== "all";
 
-	// ── CRUD (inline ops only — create/edit navigate to their own page) ────────
-
-	const handleToggleActive = async (t: TableRow) => {
-		setLoading(`toggle-${t.id}`);
-		try {
-			const res = await fetch(`/api/admin/tables/${t.id}`, {
-				method:  "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body:    JSON.stringify({ isActif: !t.isActif }),
-			});
-			if (!res.ok) throw new Error();
-			const { data } = await res.json();
-			setTables((prev) =>
-				prev.map((x) =>
-					x.id === data.id ? { ...data, _count: x._count } : x
-				)
-			);
-			toast.success(
-				`Table ${t.numero} ${data.isActif ? "activée" : "désactivée"}`
-			);
-		} catch {
-			toast.error("Erreur");
-		} finally {
-			setLoading(null);
-		}
-	};
+	// ── CRUD ──────────────────────────────────────────────────────────────────
 
 	const handleDelete = async (t: TableRow) => {
 		setLoading(`delete-${t.id}`);
@@ -261,17 +236,17 @@ export default function TablesClient({
 				<div className="flex items-center gap-2 shrink-0">
 					<Link
 						href="/admin/reservations/plan"
-						className="flex items-center gap-2 h-9 px-4 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+						className="flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
 					>
 						<LayoutGrid size={14} />
-						Plan de salle
+						<span className="hidden sm:inline">Plan de salle</span>
 					</Link>
 					<Link
 						href="/admin/tables/new"
-						className="flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
+						className="flex items-center gap-2 h-9 px-3 sm:px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
 					>
 						<Plus size={15} />
-						Ajouter
+						<span className="hidden sm:inline">Ajouter</span>
 					</Link>
 				</div>
 			</div>
@@ -432,7 +407,7 @@ export default function TablesClient({
 								className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden"
 							>
 								{/* Zone header */}
-								<div className="px-5 py-3 border-b border-[#1e1e1e] flex items-center gap-3">
+								<div className="px-4 sm:px-5 py-3 border-b border-[#1e1e1e] flex items-center gap-3">
 									<span
 										className={cn(
 											"text-[11px] font-semibold px-2.5 py-1 rounded-lg border",
@@ -455,7 +430,7 @@ export default function TablesClient({
 										<div
 											key={t.id}
 											className={cn(
-												"group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#1a1a1a]",
+												"group flex items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3 transition-colors hover:bg-[#1a1a1a]",
 												!t.isActif && "opacity-50"
 											)}
 										>
@@ -468,79 +443,65 @@ export default function TablesClient({
 											/>
 
 											{/* Table number */}
-											<span className="text-sm font-bold text-[#F5F0EB] w-10 shrink-0 tabular-nums">
+											<Link
+												href={`/admin/tables/${t.id}`}
+												className="text-sm font-bold text-[#F5F0EB] w-8 sm:w-10 shrink-0 tabular-nums hover:text-[#C8973A] transition-colors"
+											>
 												T{t.numero}
-											</span>
+											</Link>
 
 											{/* Capacity */}
-											<div className="flex items-center gap-1.5 text-xs text-[#9A8F84] w-28 shrink-0">
+											<div className="flex items-center gap-1 sm:gap-1.5 text-xs text-[#9A8F84] shrink-0">
 												<Users size={12} className="text-[#5A5249] shrink-0" />
-												{t.capaciteMin === t.capaciteMax
-													? `${t.capaciteMax} couverts`
-													: `${t.capaciteMin}–${t.capaciteMax} cv`}
+												<span className="tabular-nums">
+													{t.capaciteMin === t.capaciteMax
+														? `${t.capaciteMax} cv`
+														: `${t.capaciteMin}–${t.capaciteMax} cv`}
+												</span>
 											</div>
 
-											{/* Description */}
+											{/* Description — hidden on mobile */}
 											{t.description ? (
-												<span className="text-xs text-[#5A5249] flex-1 truncate">
+												<span className="hidden sm:block text-xs text-[#5A5249] flex-1 truncate">
 													{t.description}
 												</span>
 											) : (
-												<span className="flex-1" />
+												<span className="hidden sm:block flex-1" />
 											)}
 
 											{/* Reservation count */}
-											<span className="text-[11px] text-[#333] shrink-0">
+											<span className="text-[11px] text-[#333] shrink-0 ml-auto sm:ml-0">
 												{t._count.reservations} résa
 												{t._count.reservations !== 1 ? "s" : ""}
 											</span>
 
 											{/* ── Actions ──────────────────────────────────── */}
-											<div className="flex items-center gap-1 shrink-0">
-
-												{/* Toggle active/inactive */}
-												<button
-													onClick={() => handleToggleActive(t)}
-													disabled={loading === `toggle-${t.id}`}
-													title={t.isActif ? "Désactiver" : "Activer"}
-													className={cn(
-														"p-1.5 rounded-lg transition-all",
-														t.isActif
-															? "text-green-600 hover:text-green-400 hover:bg-green-950/30"
-															: "text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525]"
-													)}
-												>
-													{t.isActif ? (
-														<Check size={14} />
-													) : (
-														<Power size={14} />
-													)}
-												</button>
+											<div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
 
 												{/* Edit → dedicated form page */}
 												<Link
 													href={`/admin/tables/${t.id}`}
 													title="Modifier"
-													className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
+													className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
 												>
 													<Pencil size={14} />
 												</Link>
 
 												{/* Delete with inline confirm */}
 												{deleteConfirm === t.id ? (
-													<div className="flex items-center gap-1">
+													<div className="flex items-center gap-0.5">
 														<button
 															onClick={() => handleDelete(t)}
 															disabled={loading === `delete-${t.id}`}
 															title="Confirmer la suppression"
-															className="p-1.5 rounded-lg text-red-500 hover:bg-red-950/30 transition-all"
+															className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:bg-red-950/30 transition-all"
 														>
 															<Check size={14} />
 														</button>
 														<button
 															onClick={() => setDeleteConfirm(null)}
 															title="Annuler"
-															className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
+															className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
 														>
 															<X size={14} />
 														</button>
@@ -549,7 +510,7 @@ export default function TablesClient({
 													<button
 														onClick={() => setDeleteConfirm(t.id)}
 														title="Supprimer"
-														className="p-1.5 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/30 transition-all"
+														className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/30 transition-all"
 													>
 														<Trash2 size={14} />
 													</button>
