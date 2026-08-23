@@ -571,7 +571,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 				</div>
 				<Link
 					href="/admin/menu/dishes/new"
-					className="flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors shrink-0"
+					className="flex items-center gap-2 h-9 px-3 sm:px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
 				>
 					<Plus size={15} />
 					<span className="hidden sm:inline">Ajouter</span>
