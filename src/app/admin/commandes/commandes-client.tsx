@@ -508,7 +508,7 @@ export default function CommandesClient({ orders }: Props) {
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Rechercher par client, table, zone…"
-						className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:outline-none focus:border-[#C8973A]/50 transition-colors"
+						className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
 					/>
 				</div>
 
