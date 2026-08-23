@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
 	Search,
 	Plus,
@@ -18,10 +19,13 @@ import {
 	ChevronsUpDown,
 	ChevronLeft,
 	ChevronRight,
+	Trash2,
+	Loader2,
 } from "lucide-react";
 import { cn, formatDate, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ALLERGENS, DIETARY_TAGS } from "@/lib/constants";
+import toast from "react-hot-toast";
 
 interface DishCategory {
 	id: string;
@@ -434,6 +438,8 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DishesClient({ dishes, categories }: Props) {
+	const router = useRouter();
+
 	const [search, setSearch] = useState("");
 	const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 	const [availFilter, setAvailFilter] = useState<"all" | "available" | "unavailable">("all");
@@ -442,6 +448,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 	const [sortDir, setSortDir] = useState<SortDir>("asc");
 	const [page, setPage] = useState(1);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [deletingId, setDeletingId] = useState<string | null>(null);
 
 	// Stats
 	const stats = useMemo(() => ({
@@ -513,6 +520,28 @@ export default function DishesClient({ dishes, categories }: Props) {
 		setAvailFilter("all");
 		setSpecialFilter(false);
 	}, []);
+
+	// ── Delete handler ──
+	const handleDelete = useCallback(
+		async (dish: Dish, e: React.MouseEvent) => {
+			e.stopPropagation();
+			if (!confirm(`Supprimer "${dish.name}" et toutes ses images ?`)) return;
+			setDeletingId(dish.id);
+			try {
+				const res = await fetch(`/api/menu/dishes/${dish.id}`, { method: "DELETE" });
+				if (!res.ok) throw new Error((await res.json()).error ?? "Erreur");
+				toast.success("Plat supprimé");
+				// Fermer le panneau si le plat supprimé était sélectionné
+				if (selectedId === dish.id) setSelectedId(null);
+				router.refresh();
+			} catch {
+				toast.error("Erreur lors de la suppression");
+			} finally {
+				setDeletingId(null);
+			}
+		},
+		[selectedId, router]
+	);
 
 	const hasActiveFilters = !!(search || activeCategoryId || availFilter !== "all" || specialFilter);
 	const selectedDish = dishes.find((d) => d.id === selectedId) ?? null;
@@ -663,7 +692,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 
 			{/* ── Desktop Table ── */}
 			<div className="hidden lg:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
-				<div className="grid grid-cols-[2fr_1.1fr_0.9fr_0.7fr_0.7fr_80px] items-center px-5 py-3 border-b border-[#1a1a1a]">
+				<div className="grid grid-cols-[2fr_1.1fr_0.9fr_0.7fr_0.7fr_96px] items-center px-5 py-3 border-b border-[#1a1a1a]">
 					<SortBtn label="Plat"       sortKey="name"     current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Catégorie"  sortKey="category" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Prix"       sortKey="price"    current={sortKey} dir={sortDir} onClick={handleSortClick} />
@@ -684,7 +713,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 								tabIndex={0}
 								onKeyDown={(e) => e.key === "Enter" && setSelectedId(dish.id)}
 								className={cn(
-									"group grid grid-cols-[2fr_1.1fr_0.9fr_0.7fr_0.7fr_80px] items-center px-5 py-3.5 cursor-pointer transition-colors",
+									"group grid grid-cols-[2fr_1.1fr_0.9fr_0.7fr_0.7fr_96px] items-center px-5 py-3.5 cursor-pointer transition-colors",
 									selectedId === dish.id ? "bg-[#C8973A]/5" : "hover:bg-[#1a1a1a]"
 								)}
 							>
@@ -729,6 +758,17 @@ export default function DishesClient({ dishes, categories }: Props) {
 									>
 										<Edit size={14} />
 									</Link>
+									<button
+										onClick={(e) => handleDelete(dish, e)}
+										disabled={deletingId === dish.id}
+										title="Supprimer"
+										className="p-1.5 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-40"
+									>
+										{deletingId === dish.id
+											? <Loader2 size={14} className="animate-spin" />
+											: <Trash2 size={14} />
+										}
+									</button>
 								</div>
 							</div>
 						))}
@@ -779,14 +819,28 @@ export default function DishesClient({ dishes, categories }: Props) {
 									</Badge>
 									{dish.isDailySpecial && <Badge variant="gold">Chef</Badge>}
 								</div>
-								<Link
-									href={`/admin/menu/dishes/${dish.id}`}
-									onClick={(e) => e.stopPropagation()}
-									className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-all"
-									title="Modifier"
-								>
-									<Edit size={14} />
-								</Link>
+								{/* Actions mobile */}
+								<div className="flex items-center gap-1">
+									<Link
+										href={`/admin/menu/dishes/${dish.id}`}
+										onClick={(e) => e.stopPropagation()}
+										className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-all"
+										title="Modifier"
+									>
+										<Edit size={14} />
+									</Link>
+									<button
+										onClick={(e) => handleDelete(dish, e)}
+										disabled={deletingId === dish.id}
+										title="Supprimer"
+										className="p-1.5 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-40"
+									>
+										{deletingId === dish.id
+											? <Loader2 size={14} className="animate-spin" />
+											: <Trash2 size={14} />
+										}
+									</button>
+								</div>
 							</div>
 						</div>
 					))
