@@ -163,14 +163,30 @@ export default function ReservationActions({ reservation }: Props) {
 				</div>
 			)}
 
-			{/* ── Action buttons ── */}
+			{/*
+			  ── Action buttons ──
+			  CORRECTIF MOBILE : utilisation du composant <Button> du projet avec
+			  w-full (mobile) + sm:flex-1 (desktop) au lieu de flex-1 seul.
+
+			  CAUSE DU BUG : dans un conteneur flex-col (mobile), flex-1 applique
+			  flex-basis:0% sur l'axe VERTICAL (la hauteur). Cela écrase h-10 et
+			  rend les boutons très minces car flex-basis prend la priorité sur
+			  la propriété height dans le contexte flexbox.
+			  En flex-row (desktop sm+), flex-1 s'applique à la largeur uniquement,
+			  d'où l'absence du problème sur desktop.
+
+			  SOLUTION : w-full sur mobile (affecte uniquement la largeur, h-10
+			  reste souverain) + sm:flex-1 sur desktop (flex-basis sur la largeur).
+			*/}
 			<div className="flex flex-col sm:flex-row gap-2">
+
 				{/* Confirm + assign table (PENDING only) */}
 				{isPending && !isPaymentBlocking && (
-					<button
+					<Button
+						variant="primary"
 						onClick={openConfirmModal}
 						disabled={loading === "confirm"}
-						className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40"
+						className="w-full sm:flex-1"
 					>
 						{loading === "confirm" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -178,15 +194,16 @@ export default function ReservationActions({ reservation }: Props) {
 							<CheckCircle2 size={14} />
 						)}
 						Confirmer
-					</button>
+					</Button>
 				)}
 
 				{/* Mark no-show */}
 				{(isPending || isConfirmed) && !isPaymentBlocking && (
-					<button
+					<Button
+						variant="ghost"
 						onClick={() => updateStatus("NO_SHOW")}
 						disabled={!!loading}
-						className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl border border-[#333] bg-transparent text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+						className="w-full sm:flex-1 border border-[#333]"
 					>
 						{loading === "NO_SHOW" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -194,15 +211,16 @@ export default function ReservationActions({ reservation }: Props) {
 							<UserX size={14} />
 						)}
 						Marquer absent
-					</button>
+					</Button>
 				)}
 
 				{/* Mark completed */}
 				{isConfirmed && (
-					<button
+					<Button
+						variant="ghost"
 						onClick={() => updateStatus("COMPLETED")}
 						disabled={!!loading}
-						className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl border border-[#333] bg-transparent text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+						className="w-full sm:flex-1 border border-[#333]"
 					>
 						{loading === "COMPLETED" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -210,15 +228,16 @@ export default function ReservationActions({ reservation }: Props) {
 							<Flag size={14} />
 						)}
 						Marquer terminée
-					</button>
+					</Button>
 				)}
 
 				{/* Cancel */}
 				{(isPending || isConfirmed) && (
-					<button
+					<Button
+						variant="destructive"
 						onClick={() => { setCancelReason(""); setCancelOpen(true); }}
 						disabled={!!loading}
-						className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl border border-red-500/20 bg-transparent text-sm text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+						className="w-full sm:flex-1"
 					>
 						{loading === "CANCELLED_BY_ADMIN" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -226,7 +245,7 @@ export default function ReservationActions({ reservation }: Props) {
 							<XCircle size={14} />
 						)}
 						Annuler
-					</button>
+					</Button>
 				)}
 			</div>
 
