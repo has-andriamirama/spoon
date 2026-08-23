@@ -11,6 +11,7 @@ import { ALLERGENS, DIETARY_TAGS } from "@/lib/constants";
 import type { Dish, Image, MenuCategory, ImageInput } from "@/types";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/utils";
+import { X, Plus, Save, Loader2 } from "lucide-react";
 
 type DishWithImages = Dish & { images: Image[] };
 
@@ -51,8 +52,7 @@ function toApiImageInput(
 export default function DishForm({ dish, categories }: Props) {
 	const router = useRouter();
 
-	const [loading,  setLoading]  = useState(false);
-	const [deleting, setDeleting] = useState(false);
+	const [loading, setLoading] = useState(false);
 
 	const [form, setForm] = useState({
 		categoryId:     dish?.categoryId    || "",
@@ -167,33 +167,7 @@ export default function DishForm({ dish, categories }: Props) {
 		}
 	};
 
-	const handleDelete = async () => {
-		if (!dish || !confirm("Supprimer ce plat et toutes ses images ?")) return;
-		setDeleting(true);
-		try {
-			const res = await fetch(`/api/menu/dishes/${dish.id}`, {
-				method: "DELETE",
-			});
-			if (!res.ok) throw new Error((await res.json()).error);
-			toast.success("Plat supprimé");
-			router.push("/admin/menu/dishes");
-			router.refresh();
-		} catch {
-			toast.error("Erreur lors de la suppression");
-		} finally {
-			setDeleting(false);
-		}
-	};
-
 	const pendingCount = images.filter((img) => img.file).length;
-
-	const submitLabel = loading
-		? pendingCount > 0
-			? `Upload en cours...`
-			: dish ? "Enregistrement..." : "Création..."
-		: dish
-			? "Enregistrer les modifications"
-			: "Créer le plat";
 
 	return (
 		<form onSubmit={handleSubmit} className="max-w-2xl">
@@ -305,28 +279,36 @@ export default function DishForm({ dish, categories }: Props) {
 					</label>
 				</div>
 
-				<div className="flex gap-3 pt-2 border-t border-[#1e1e1e]">
-					{dish && (
-						<Button
-							type="button"
-							variant="destructive"
-							onClick={handleDelete}
-							loading={deleting}
-						>
-							Supprimer
-						</Button>
-					)}
+				{/* ── Boutons d'action ── */}
+				<div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#1e1e1e]">
 					<Button
 						type="button"
 						variant="secondary"
-						onClick={() => router.push("/admin/menu")}
-						className="flex-1"
+						onClick={() => router.push("/admin/menu/dishes")}
+						className="w-full sm:flex-1"
 						disabled={loading}
 					>
+						<X size={14} />
 						Annuler
 					</Button>
-					<Button type="submit" loading={loading} className="flex-1">
-						{submitLabel}
+					<Button
+						type="submit"
+						disabled={loading}
+						className="w-full sm:flex-1"
+					>
+						{loading ? (
+							<>
+								<Loader2 size={14} className="animate-spin" />
+								{pendingCount > 0
+									? "Upload en cours..."
+									: dish ? "Enregistrement..." : "Création..."}
+							</>
+						) : (
+							<>
+								{dish ? <Save size={14} /> : <Plus size={14} />}
+								{dish ? "Enregistrer les modifications" : "Créer le plat"}
+							</>
+						)}
 					</Button>
 				</div>
 			</div>
