@@ -8,7 +8,6 @@ import {
 	Trash2,
 	TableProperties,
 	Power,
-	Check,
 	X,
 	Users,
 	LayoutGrid,
@@ -151,7 +150,6 @@ export default function TablesClient({
 }) {
 	const [tables, setTables]               = useState<TableRow[]>(initialTables);
 	const [loading, setLoading]             = useState<string | null>(null);
-	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 	const [search, setSearch]               = useState("");
 	const [zoneFilter, setZoneFilter]       = useState<Zone | null>(null);
 	const [statusFilter, setStatusFilter]   = useState<StatusFilter>("all");
@@ -201,7 +199,9 @@ export default function TablesClient({
 
 	// ── CRUD ──────────────────────────────────────────────────────────────────
 
-	const handleDelete = async (t: TableRow) => {
+	const handleDelete = async (t: TableRow, e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!confirm(`Supprimer la table T${t.numero} ? Cette action est irréversible.`)) return;
 		setLoading(`delete-${t.id}`);
 		try {
 			const res = await fetch(`/api/admin/tables/${t.id}`, {
@@ -210,7 +210,6 @@ export default function TablesClient({
 			if (!res.ok) throw new Error();
 			setTables((prev) => prev.filter((x) => x.id !== t.id));
 			toast.success(`Table ${t.numero} supprimée`);
-			setDeleteConfirm(null);
 		} catch {
 			toast.error("Erreur lors de la suppression");
 		} finally {
@@ -487,34 +486,15 @@ export default function TablesClient({
 													<Edit size={14} />
 												</Link>
 
-												{/* Delete with inline confirm */}
-												{deleteConfirm === t.id ? (
-													<div className="flex items-center gap-0.5">
-														<button
-															onClick={() => handleDelete(t)}
-															disabled={loading === `delete-${t.id}`}
-															title="Confirmer la suppression"
-															className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:bg-red-950/30 transition-all"
-														>
-															<Check size={14} />
-														</button>
-														<button
-															onClick={() => setDeleteConfirm(null)}
-															title="Annuler"
-															className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
-														>
-															<X size={14} />
-														</button>
-													</div>
-												) : (
-													<button
-														onClick={() => setDeleteConfirm(t.id)}
-														title="Supprimer"
-														className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/30 transition-all"
-													>
-														<Trash2 size={14} />
-													</button>
-												)}
+												{/* Delete with confirm dialog */}
+												<button
+													onClick={(e) => handleDelete(t, e)}
+													disabled={loading === `delete-${t.id}`}
+													title="Supprimer"
+													className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/30 transition-all disabled:opacity-40"
+												>
+													<Trash2 size={14} />
+												</button>
 											</div>
 										</div>
 									))}
