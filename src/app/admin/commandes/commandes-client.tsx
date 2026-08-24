@@ -588,8 +588,7 @@ export default function CommandesClient({ orders }: Props) {
 			{/* ── Desktop Grid List ── */}
 			<div className="hidden md:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 
-				{/* En-tête des colonnes */}
-				<div className={cn("grid items-center px-5 py-3 border-b border-[#1a1a1a] bg-[#0A0A0A]", GRID_COLS)}>
+				<div className={cn("grid items-center px-5 py-3 border-b border-[#222] bg-[#141414]", GRID_COLS)}>
 					<SortBtn label="Date"   sortKey="date"   current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Table"  sortKey="table"  current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Client</span>
