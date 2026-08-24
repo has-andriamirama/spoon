@@ -982,9 +982,13 @@ export default function AdminReservationsClient({ reservations }: Props) {
 										)}
 									</div>
 
-									<Badge variant={BADGE_VARIANT[st.color]}>{st.label}</Badge>
+									<div>
+										<Badge variant={BADGE_VARIANT[st.color]}>{st.label}</Badge>
+									</div>
 
-									<Badge variant={BADGE_VARIANT[pst.color]}>{pst.label}</Badge>
+									<div>
+										<Badge variant={BADGE_VARIANT[pst.color]}>{pst.label}</Badge>
+									</div>
 
 									<div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 										<Link

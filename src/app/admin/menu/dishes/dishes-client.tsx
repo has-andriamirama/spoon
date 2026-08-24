@@ -739,14 +739,18 @@ export default function DishesClient({ dishes, categories }: Props) {
 								</span>
 
 								{/* Disponible */}
-								<Badge variant={dish.isAvailable ? "green" : "red"}>
-									{dish.isAvailable ? "Oui" : "Non"}
-								</Badge>
+								<div>
+									<Badge variant={dish.isAvailable ? "green" : "red"}>
+										{dish.isAvailable ? "Oui" : "Non"}
+									</Badge>
+								</div>
 
 								{/* Suggestion */}
-								<Badge variant={dish.isDailySpecial ? "gold" : "default"}>
-									{dish.isDailySpecial ? "Oui" : "Non"}
-								</Badge>
+								<div>
+									<Badge variant={dish.isDailySpecial ? "gold" : "default"}>
+										{dish.isDailySpecial ? "Oui" : "Non"}
+									</Badge>
+								</div>
 
 								{/* Actions */}
 								<div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
