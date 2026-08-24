@@ -76,6 +76,40 @@ const TABLE_STYLES: Record<
 	},
 };
 
+// ─── StatCard ────────────────────────────────────────────────────────────────
+function StatCard({
+	label,
+	value,
+	icon: Icon,
+	iconColor,
+	badge,
+}: {
+	label: string;
+	value: number;
+	icon: React.ElementType;
+	iconColor: string;
+	badge?: boolean;
+}) {
+	return (
+		<div className="relative flex items-center gap-3 p-4 rounded-xl border border-[#222] bg-[#141414]">
+			{badge && value > 0 && (
+				<span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#C8973A] text-[#0A0A0A] text-[10px] font-bold flex items-center justify-center animate-pulse z-10">
+					{value}
+				</span>
+			)}
+			<div className={cn("p-2 rounded-lg shrink-0", iconColor)}>
+				<Icon size={18} />
+			</div>
+			<div className="min-w-0">
+				<p className="text-2xl font-semibold text-[#F5F0EB] leading-none tabular-nums">
+					{value}
+				</p>
+				<p className="text-xs text-[#5A5249] mt-1 truncate">{label}</p>
+			</div>
+		</div>
+	);
+}
+
 export default function PlanDeSalleClient({ initialData, date }: Props) {
 	const router = useRouter();
 
@@ -341,29 +375,52 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 	return (
 		<div className="space-y-5">
 
+			{/* ── Statistiques uniformisées ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
-				{(
-					[
-						{ label: "En attente",     value: stats.pending,     icon: Clock,           ring: stats.pending > 0,  cardCn: "bg-yellow-950/20 border-yellow-900/30", valCn: "text-yellow-400", iconCn: "text-yellow-500" },
-						{ label: "Confirmées",     value: stats.confirmed,   icon: CheckCircle2,    ring: false,              cardCn: "bg-blue-950/20 border-blue-900/30",    valCn: "text-blue-400",   iconCn: "text-blue-400"   },
-						{ label: "En service",     value: stats.enService,   icon: UtensilsCrossed, ring: false,              cardCn: "bg-[#1a1200] border-[#C8973A]/20",     valCn: "text-[#C8973A]",  iconCn: "text-[#C8973A]"  },
-						{ label: "Addition",       value: stats.addition,    icon: Receipt,         ring: stats.addition > 0, cardCn: "bg-red-950/20 border-red-900/30",      valCn: "text-red-400",    iconCn: "text-red-400"    },
-						{ label: "Tables libres",  value: stats.libres,      icon: TableProperties, ring: false,              cardCn: "bg-green-950/15 border-green-900/20",  valCn: "text-green-400",  iconCn: "text-green-500"  },
-						{ label: "Bloquées",       value: stats.bloquees,    icon: Lock,            ring: false,              cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#444]",     iconCn: "text-[#3a3a3a]"  },
-						{ label: "Couverts prév.", value: stats.totalCovers, icon: Users,           ring: false,              cardCn: "bg-[#111] border-[#222]",              valCn: "text-[#9A8F84]",  iconCn: "text-[#5A5249]"  },
-					] as const
-				).map(({ label, value, icon: Icon, ring, cardCn, valCn, iconCn }) => (
-					<div key={label} className={cn("relative rounded-xl border p-3", cardCn)}>
-						{ring && value > 0 && (
-							<span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#C8973A] text-[#0A0A0A] text-[10px] flex items-center justify-center animate-pulse">
-								{value}
-							</span>
-						)}
-						<Icon size={14} className={cn("mb-2", iconCn)} />
-						<p className={cn("text-xl font-bold leading-none", valCn)}>{value}</p>
-						<p className="text-[10px] text-[#5A5249] mt-1 leading-tight">{label}</p>
-					</div>
-				))}
+				<StatCard
+					label="En attente"
+					value={stats.pending}
+					icon={Clock}
+					iconColor="bg-yellow-500/10 text-yellow-400"
+					badge={stats.pending > 0}
+				/>
+				<StatCard
+					label="Confirmées"
+					value={stats.confirmed}
+					icon={CheckCircle2}
+					iconColor="bg-blue-500/10 text-blue-400"
+				/>
+				<StatCard
+					label="En service"
+					value={stats.enService}
+					icon={UtensilsCrossed}
+					iconColor="bg-[#C8973A]/10 text-[#C8973A]"
+				/>
+				<StatCard
+					label="Addition"
+					value={stats.addition}
+					icon={Receipt}
+					iconColor="bg-red-500/10 text-red-400"
+					badge={stats.addition > 0}
+				/>
+				<StatCard
+					label="Tables libres"
+					value={stats.libres}
+					icon={TableProperties}
+					iconColor="bg-green-500/10 text-green-400"
+				/>
+				<StatCard
+					label="Bloquées"
+					value={stats.bloquees}
+					icon={Lock}
+					iconColor="bg-[#222] text-[#5A5249]"
+				/>
+				<StatCard
+					label="Couverts prév."
+					value={stats.totalCovers}
+					icon={Users}
+					iconColor="bg-[#222] text-[#9A8F84]"
+				/>
 			</div>
 
 			<div className="flex items-center justify-between">
