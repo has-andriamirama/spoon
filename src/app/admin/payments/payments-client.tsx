@@ -1,0 +1,690 @@
+"use client";
+
+import { useState, useMemo, useCallback, useEffect } from "react";
+import Link from "next/link";
+import {
+	Search,
+	Download,
+	CreditCard,
+	CheckCircle2,
+	AlertCircle,
+	XCircle,
+	RotateCcw,
+	ChevronDown,
+	ChevronUp,
+	ChevronsUpDown,
+	ChevronLeft,
+	ChevronRight,
+	Eye,
+} from "lucide-react";
+import { cn, formatDate, formatDateTime, formatPrice } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import type { PaymentStatus, PaymentType } from "@/types";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ReservationInfo {
+	id: string;
+	guestFirstName: string;
+	guestLastName: string;
+	guestEmail: string;
+	date: Date;
+	timeSlot: string;
+}
+
+interface Payment {
+	id: string;
+	amount: number;
+	currency: string;
+	type: PaymentType;
+	status: PaymentStatus;
+	refundedAmount: number | null;
+	stripePaymentIntentId: string | null;
+	stripeChargeId: string | null;
+	paidAt: Date | null;
+	refundedAt: Date | null;
+	failureReason: string | null;
+	createdAt: Date;
+	updatedAt: Date;
+	reservation: ReservationInfo;
+}
+
+interface Props {
+	payments: Payment[];
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+	DEPOSIT: "Acompte",
+	FULL:    "Paiement complet",
+	NONE:    "Sans paiement",
+};
+
+const STATUS_META: Record<
+	string,
+	{ label: string; color: "gray" | "yellow" | "green" | "blue" | "red" }
+> = {
+	NONE:               { label: "Aucun",                    color: "gray"   },
+	PENDING:            { label: "En attente",               color: "yellow" },
+	PAID:               { label: "Payé",                     color: "green"  },
+	REFUNDED:           { label: "Remboursé",                color: "blue"   },
+	PARTIALLY_REFUNDED: { label: "Partiellement remboursé",  color: "blue"   },
+	FAILED:             { label: "Échoué",                   color: "red"    },
+};
+
+const PER_PAGE = 10;
+const GRID_COLS = "grid-cols-[1.4fr_1fr_0.8fr_0.7fr_1fr_0.8fr_52px]";
+
+type SortKey = "date" | "amount" | "status" | "client";
+type SortDir = "asc" | "desc";
+
+// ─── Highlight ────────────────────────────────────────────────────────────────
+
+function Highlight({ text, query }: { text: string; query: string }) {
+	if (!query.trim()) return <>{text}</>;
+	const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+	return (
+		<>
+			{parts.map((part, i) =>
+				part.toLowerCase() === query.toLowerCase() ? (
+					<mark key={i} className="bg-yellow-400/25 text-inherit rounded-[2px] px-0.5">
+						{part}
+					</mark>
+				) : (
+					part
+				)
+			)}
+		</>
+	);
+}
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+
+function StatCard({
+	label,
+	value,
+	sub,
+	icon: Icon,
+	iconColor,
+	active,
+	onClick,
+}: {
+	label: string;
+	value: string | number;
+	sub?: string;
+	icon: React.ElementType;
+	iconColor: string;
+	active?: boolean;
+	onClick?: () => void;
+}) {
+	return (
+		<button
+			onClick={onClick}
+			className={cn(
+				"flex items-center gap-3 p-4 rounded-xl border text-left transition-all w-full",
+				active
+					? "border-[#C8973A]/40 bg-[#C8973A]/5"
+					: "border-[#222] bg-[#141414] hover:border-[#333] hover:bg-[#1a1a1a]",
+				!onClick && "cursor-default"
+			)}
+		>
+			<div className={cn("p-2 rounded-lg shrink-0", iconColor)}>
+				<Icon size={18} />
+			</div>
+			<div className="min-w-0">
+				<p className="text-2xl font-semibold text-[#F5F0EB] leading-none tabular-nums">{value}</p>
+				<p className="text-xs text-[#5A5249] mt-1 truncate">{label}</p>
+				{sub && <p className="text-[10px] text-[#C8973A] mt-0.5 font-medium">{sub}</p>}
+			</div>
+		</button>
+	);
+}
+
+// ─── SortBtn ──────────────────────────────────────────────────────────────────
+
+function SortBtn({
+	label,
+	sortKey,
+	current,
+	dir,
+	onClick,
+}: {
+	label: string;
+	sortKey: SortKey;
+	current: SortKey;
+	dir: SortDir;
+	onClick: (k: SortKey) => void;
+}) {
+	const active = current === sortKey;
+	const Icon = active ? (dir === "asc" ? ChevronUp : ChevronDown) : ChevronsUpDown;
+	return (
+		<button
+			onClick={() => onClick(sortKey)}
+			className={cn(
+				"flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors select-none",
+				active ? "text-[#C8973A]" : "text-[#5A5249] hover:text-[#9A8F84]"
+			)}
+		>
+			{label}
+			<Icon size={12} />
+		</button>
+	);
+}
+
+// ─── StatusPill ───────────────────────────────────────────────────────────────
+
+function StatusPill({
+	label,
+	count,
+	color,
+	active,
+	onClick,
+}: {
+	label: string;
+	count: number;
+	color?: string;
+	active: boolean;
+	onClick: () => void;
+}) {
+	const activeClass =
+		color === "yellow"
+			? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+			: color === "green"
+			? "bg-green-500/10 border-green-500/30 text-green-400"
+			: color === "red"
+			? "bg-red-500/10 border-red-500/30 text-red-400"
+			: color === "blue"
+			? "bg-blue-500/10 border-blue-500/30 text-blue-400"
+			: "bg-[#C8973A]/10 border-[#C8973A]/30 text-[#C8973A]";
+
+	return (
+		<button
+			onClick={onClick}
+			className={cn(
+				"flex items-center gap-1.5 px-3 h-8 rounded-full border text-xs font-medium transition-all whitespace-nowrap",
+				active ? activeClass : "border-[#222] text-[#5A5249] hover:border-[#333] hover:text-[#9A8F84]"
+			)}
+		>
+			{label}
+			<span
+				className={cn(
+					"text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
+					active ? "bg-white/10" : "bg-[#1a1a1a] text-[#5A5249]"
+				)}
+			>
+				{count}
+			</span>
+		</button>
+	);
+}
+
+// ─── PgBtn ────────────────────────────────────────────────────────────────────
+
+function PgBtn({
+	children,
+	active,
+	disabled,
+	onClick,
+}: {
+	children: React.ReactNode;
+	active?: boolean;
+	disabled?: boolean;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			onClick={onClick}
+			disabled={disabled}
+			className={cn(
+				"min-w-[32px] h-8 px-2 rounded-lg border text-xs font-medium transition-colors",
+				active
+					? "bg-[#C8973A] border-[#C8973A] text-[#0A0A0A]"
+					: "border-[#222] text-[#5A5249] hover:border-[#333] hover:text-[#9A8F84]",
+				disabled && "opacity-30 pointer-events-none"
+			)}
+		>
+			{children}
+		</button>
+	);
+}
+
+function buildPageList(current: number, total: number): (number | "…")[] {
+	if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+	const pages: (number | "…")[] = [1];
+	if (current > 3) pages.push("…");
+	for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
+		pages.push(p);
+	}
+	if (current < total - 2) pages.push("…");
+	pages.push(total);
+	return pages;
+}
+
+// ─── EmptyState ───────────────────────────────────────────────────────────────
+
+function EmptyState({ onReset }: { onReset?: () => void }) {
+	return (
+		<div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+			<div className="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center">
+				<Search size={20} className="text-[#5A5249]" />
+			</div>
+			<p className="text-sm text-[#5A5249]">Aucun paiement trouvé</p>
+			{onReset && (
+				<button
+					onClick={onReset}
+					className="text-xs text-[#C8973A] hover:underline transition-colors"
+				>
+					Réinitialiser les filtres
+				</button>
+			)}
+		</div>
+	);
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function PaymentsClient({ payments }: Props) {
+	const [search,       setSearch]       = useState("");
+	const [activeStatus, setActiveStatus] = useState<PaymentStatus | null>(null);
+	const [sortKey,      setSortKey]      = useState<SortKey>("date");
+	const [sortDir,      setSortDir]      = useState<SortDir>("desc");
+	const [page,         setPage]         = useState(1);
+
+	// ── Stats ──
+	const stats = useMemo(() => {
+		const paid    = payments.filter((p) => p.status === "PAID");
+		const refunded = payments.filter((p) => p.status === "REFUNDED" || p.status === "PARTIALLY_REFUNDED");
+		return {
+			total:     payments.length,
+			pending:   payments.filter((p) => p.status === "PENDING").length,
+			paid:      paid.length,
+			refunded:  refunded.length,
+			failed:    payments.filter((p) => p.status === "FAILED").length,
+			totalPaid: paid.reduce((s, p) => s + p.amount, 0),
+		};
+	}, [payments]);
+
+	// ── Status counts for pills ──
+	const statusCounts = useMemo(() => {
+		const c: Record<string, number> = {};
+		payments.forEach((p) => { c[p.status] = (c[p.status] ?? 0) + 1; });
+		return c;
+	}, [payments]);
+
+	// ── Filtered + sorted ──
+	const filtered = useMemo(() => {
+		const q = search.toLowerCase().trim();
+
+		let result = payments.filter((p) => {
+			if (q) {
+				const fullName  = `${p.reservation.guestFirstName} ${p.reservation.guestLastName}`;
+				const stripeId  = p.stripePaymentIntentId ?? "";
+				const haystack  = [fullName, p.reservation.guestEmail, stripeId]
+					.join(" ")
+					.toLowerCase();
+				if (!haystack.includes(q)) return false;
+			}
+			if (activeStatus && p.status !== activeStatus) return false;
+			return true;
+		});
+
+		result = [...result].sort((a, b) => {
+			let cmp = 0;
+			if (sortKey === "date")   cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+			if (sortKey === "amount") cmp = a.amount - b.amount;
+			if (sortKey === "status") cmp = a.status.localeCompare(b.status);
+			if (sortKey === "client") {
+				const na = `${a.reservation.guestLastName} ${a.reservation.guestFirstName}`;
+				const nb = `${b.reservation.guestLastName} ${b.reservation.guestFirstName}`;
+				cmp = na.localeCompare(nb, "fr");
+			}
+			return sortDir === "asc" ? cmp : -cmp;
+		});
+
+		return result;
+	}, [payments, search, activeStatus, sortKey, sortDir]);
+
+	useEffect(() => { setPage(1); }, [search, activeStatus, sortKey, sortDir]);
+
+	const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+	const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+	// ── Handlers ──
+	const handleSortClick = useCallback(
+		(key: SortKey) => {
+			if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+			else { setSortKey(key); setSortDir("desc"); }
+		},
+		[sortKey]
+	);
+
+	const handleStatusPill = useCallback((s: PaymentStatus | null) => {
+		setActiveStatus((prev) => (prev === s ? null : s));
+	}, []);
+
+	const resetFilters = useCallback(() => {
+		setSearch("");
+		setActiveStatus(null);
+	}, []);
+
+	const handleExport = useCallback(() => {
+		const headers = ["Client", "Email", "Date réservation", "Montant (€)", "Type", "Statut", "Stripe ID", "Payé le", "Remboursé le"];
+		const rows = filtered.map((p) => [
+			`${p.reservation.guestFirstName} ${p.reservation.guestLastName}`,
+			p.reservation.guestEmail,
+			formatDate(p.reservation.date, "dd/MM/yyyy"),
+			p.amount.toFixed(2),
+			PAYMENT_TYPE_LABELS[p.type] ?? p.type,
+			STATUS_META[p.status]?.label ?? p.status,
+			p.stripePaymentIntentId ?? "",
+			p.paidAt ? formatDateTime(p.paidAt) : "",
+			p.refundedAt ? formatDateTime(p.refundedAt) : "",
+		]);
+		const csv = [headers, ...rows]
+			.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+			.join("\n");
+		const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+		const url  = URL.createObjectURL(blob);
+		const a    = Object.assign(document.createElement("a"), {
+			href: url,
+			download: `paiements-${new Date().toISOString().slice(0, 10)}.csv`,
+		});
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	}, [filtered]);
+
+	const hasActiveFilters = !!(search || activeStatus);
+
+	return (
+		<div className="space-y-6">
+
+			{/* ── Header ── */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+				<div>
+					<h1 className="font-display text-2xl text-[#F5F0EB]">Paiements</h1>
+					<p className="text-sm text-[#5A5249] mt-0.5">
+						{payments.length} paiement{payments.length !== 1 ? "s" : ""} au total
+					</p>
+				</div>
+				<button
+					onClick={handleExport}
+					className="flex items-center gap-2 px-4 h-9 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
+				>
+					<Download size={14} />
+					Exporter
+				</button>
+			</div>
+
+			{/* ── Stats ── */}
+			<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+				<StatCard
+					label="Total paiements"
+					value={stats.total}
+					icon={CreditCard}
+					iconColor="bg-[#1a1a1a] text-[#9A8F84]"
+				/>
+				<StatCard
+					label="Payés"
+					value={stats.paid}
+					sub={stats.totalPaid > 0 ? formatPrice(stats.totalPaid) : undefined}
+					icon={CheckCircle2}
+					iconColor="bg-green-500/10 text-green-400"
+					active={activeStatus === "PAID"}
+					onClick={() => handleStatusPill("PAID")}
+				/>
+				<StatCard
+					label="En attente"
+					value={stats.pending}
+					icon={AlertCircle}
+					iconColor="bg-yellow-500/10 text-yellow-400"
+					active={activeStatus === "PENDING"}
+					onClick={() => handleStatusPill("PENDING")}
+				/>
+				<StatCard
+					label="Remboursés"
+					value={stats.refunded}
+					icon={RotateCcw}
+					iconColor="bg-blue-500/10 text-blue-400"
+					active={activeStatus === "REFUNDED"}
+					onClick={() => handleStatusPill("REFUNDED")}
+				/>
+				<StatCard
+					label="Échoués"
+					value={stats.failed}
+					icon={XCircle}
+					iconColor="bg-red-500/10 text-red-400"
+					active={activeStatus === "FAILED"}
+					onClick={() => handleStatusPill("FAILED")}
+				/>
+			</div>
+
+			{/* ── Filters ── */}
+			<div className="flex flex-col gap-3">
+				<div className="relative">
+					<Search
+						size={14}
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A5249] pointer-events-none"
+					/>
+					<input
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="Rechercher par client, email, Stripe ID…"
+						className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
+					/>
+				</div>
+
+				<div className="flex flex-wrap gap-2">
+					{(Object.entries(STATUS_META) as [PaymentStatus, typeof STATUS_META[string]][]).map(
+						([status, meta]) => (
+							<StatusPill
+								key={status}
+								label={meta.label}
+								count={statusCounts[status] ?? 0}
+								color={meta.color}
+								active={activeStatus === status}
+								onClick={() => handleStatusPill(status)}
+							/>
+						)
+					)}
+					{hasActiveFilters && (
+						<button
+							onClick={resetFilters}
+							className="ml-auto text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+						>
+							Réinitialiser
+						</button>
+					)}
+				</div>
+			</div>
+
+			{/* ── Desktop Table ── */}
+			<div className="hidden md:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
+
+				<div className={cn("grid items-center px-5 py-3 border-b border-[#222] bg-[#141414]", GRID_COLS)}>
+					<SortBtn label="Client"  sortKey="client" current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					<SortBtn label="Date"    sortKey="date"   current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					<div className="flex justify-end">
+						<SortBtn label="Montant" sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					</div>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
+					<SortBtn label="Statut"  sortKey="status" current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] font-mono">Stripe ID</span>
+					<span />
+				</div>
+
+				{paginated.length === 0 ? (
+					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
+				) : (
+					<div className="divide-y divide-[#1a1a1a]">
+						{paginated.map((p) => {
+							const meta     = STATUS_META[p.status];
+							const fullName = `${p.reservation.guestFirstName} ${p.reservation.guestLastName}`;
+							return (
+								<div
+									key={p.id}
+									className={cn(
+										"group grid items-center px-5 py-3.5 hover:bg-[#1a1a1a] transition-colors",
+										GRID_COLS
+									)}
+								>
+									{/* Client */}
+									<div className="min-w-0">
+										<span className="text-sm text-[#F5F0EB] block truncate">
+											<Highlight text={fullName} query={search} />
+										</span>
+										<span className="text-xs text-[#5A5249] block truncate">
+											<Highlight text={p.reservation.guestEmail} query={search} />
+										</span>
+									</div>
+
+									{/* Date */}
+									<div>
+										<span className="text-sm text-[#F5F0EB]">
+											{formatDate(p.reservation.date, "dd/MM/yyyy")}
+										</span>
+										<span className="block text-xs text-[#5A5249]">
+											{p.reservation.timeSlot}
+										</span>
+									</div>
+
+									{/* Montant */}
+									<div className="text-right">
+										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
+											{formatPrice(p.amount)}
+										</span>
+										{p.refundedAmount != null && p.refundedAmount > 0 && (
+											<span className="block text-[10px] text-blue-400 mt-0.5">
+												−{formatPrice(p.refundedAmount)} remboursé
+											</span>
+										)}
+									</div>
+
+									{/* Type */}
+									<span className="text-xs text-[#9A8F84]">
+										{PAYMENT_TYPE_LABELS[p.type] ?? p.type}
+									</span>
+
+									{/* Statut */}
+									<div>
+										<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
+											{meta?.label ?? p.status}
+										</Badge>
+									</div>
+
+									{/* Stripe ID */}
+									<span className="text-xs font-mono text-[#5A5249]">
+										{p.stripePaymentIntentId
+											? <Highlight text={`…${p.stripePaymentIntentId.slice(-10)}`} query={search} />
+											: "—"}
+									</span>
+
+									{/* Action */}
+									<div className="flex items-center justify-end">
+										<Link
+											href={`/admin/payments/${p.id}`}
+											className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all opacity-0 group-hover:opacity-100"
+											title="Voir le paiement"
+										>
+											<Eye size={14} />
+										</Link>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</div>
+
+			{/* ── Mobile Cards ── */}
+			<div className="md:hidden space-y-3">
+				{paginated.length === 0 ? (
+					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
+				) : (
+					paginated.map((p) => {
+						const meta     = STATUS_META[p.status];
+						const fullName = `${p.reservation.guestFirstName} ${p.reservation.guestLastName}`;
+						return (
+							<div
+								key={p.id}
+								className="bg-[#141414] border border-[#222] rounded-xl p-4 space-y-3"
+							>
+								<div className="flex items-start justify-between gap-3">
+									<div className="min-w-0">
+										<p className="text-sm font-medium text-[#F5F0EB] truncate">
+											<Highlight text={fullName} query={search} />
+										</p>
+										<p className="text-xs text-[#5A5249] mt-0.5 truncate">
+											{formatDate(p.reservation.date, "dd/MM/yyyy")} · {p.reservation.timeSlot}
+										</p>
+									</div>
+									<Badge variant={meta?.color ?? "gray"} className="text-[11px] shrink-0">
+										{meta?.label ?? p.status}
+									</Badge>
+								</div>
+								<div className="grid grid-cols-3 gap-2">
+									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
+										<p className="text-[10px] text-[#5A5249] mb-0.5">Montant</p>
+										<p className="text-xs font-semibold text-[#C8973A] tabular-nums">
+											{formatPrice(p.amount)}
+										</p>
+									</div>
+									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
+										<p className="text-[10px] text-[#5A5249] mb-0.5">Type</p>
+										<p className="text-xs font-medium text-[#F5F0EB]">
+											{PAYMENT_TYPE_LABELS[p.type] ?? p.type}
+										</p>
+									</div>
+									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
+										<p className="text-[10px] text-[#5A5249] mb-0.5">Stripe</p>
+										<p className="text-xs font-mono text-[#5A5249] truncate">
+											{p.stripePaymentIntentId ? `…${p.stripePaymentIntentId.slice(-8)}` : "—"}
+										</p>
+									</div>
+								</div>
+								{p.status === "PAID" && (
+									<Link
+										href={`/admin/payments/${p.id}`}
+										className="flex items-center justify-center gap-2 w-full h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+									>
+										<Eye size={12} />
+										Voir le détail
+									</Link>
+								)}
+							</div>
+						);
+					})
+				)}
+			</div>
+
+			{/* ── Pagination ── */}
+			{totalPages > 1 && (
+				<div className="flex items-center justify-between gap-4 pt-2">
+					<p className="text-xs text-[#5A5249] shrink-0">
+						{filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
+					</p>
+					<div className="flex items-center gap-1.5">
+						<PgBtn onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+							<ChevronLeft size={14} />
+						</PgBtn>
+						{buildPageList(page, totalPages).map((p, i) =>
+							p === "…" ? (
+								<span key={`ellipsis-${i}`} className="text-xs text-[#5A5249] px-1">…</span>
+							) : (
+								<PgBtn key={p} active={page === p} onClick={() => setPage(p as number)}>
+									{p}
+								</PgBtn>
+							)
+						)}
+						<PgBtn onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+							<ChevronRight size={14} />
+						</PgBtn>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
