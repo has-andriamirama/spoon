@@ -114,7 +114,7 @@ export default async function AdminMenuCategoriesPage() {
 							"Plats",
 							"Ordre",
 							"Statut",
-							"",
+							"Actions",
 						].map((h, i) => (
 							<span
 								key={i}
