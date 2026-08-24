@@ -578,7 +578,7 @@ export default function PaymentsClient({ payments }: Props) {
 									{/* Stripe ID */}
 									<span className="text-xs font-mono text-[#5A5249]">
 										{p.stripePaymentIntentId
-											? <Highlight text={`…${p.stripePaymentIntentId.slice(-10)}`} query={search} />
+											? <Highlight text={`...${p.stripePaymentIntentId.slice(-10)}`} query={search} />
 											: "—"}
 									</span>
 

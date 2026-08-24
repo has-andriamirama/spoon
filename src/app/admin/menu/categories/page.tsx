@@ -152,9 +152,11 @@ export default async function AdminMenuCategoriesPage() {
 									<span className="text-sm text-[#9A8F84] tabular-nums">
 										{category.order}
 									</span>
-									<Badge variant={category.isActive ? "green" : "gray"}>
-										{category.isActive ? "Active" : "Inactive"}
-									</Badge>
+									<div>
+										<Badge variant={category.isActive ? "green" : "gray"}>
+											{category.isActive ? "Active" : "Inactive"}
+										</Badge>
+									</div>
 									<div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
 										<Link
 											href={`/admin/menu/categories/${category.id}`}
