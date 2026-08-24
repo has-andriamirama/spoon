@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
 	Plus,
-	Pencil,
+	Edit,
 	Trash2,
 	TableProperties,
 	Power,
@@ -484,7 +484,7 @@ export default function TablesClient({
 													title="Modifier"
 													className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
 												>
-													<Pencil size={14} />
+													<Edit size={14} />
 												</Link>
 
 												{/* Delete with inline confirm */}
