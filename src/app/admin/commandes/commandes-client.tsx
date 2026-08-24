@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { ZONE_LABELS } from "@/lib/constants";
 import type { ServiceStatus, ServiceType, ZoneTable, PaymentMethodService, CourseType } from "@/types";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface OrderItem {
 	id: string;
 	dishName: string;
@@ -69,6 +71,8 @@ interface Props {
 	orders: ServiceOrder[];
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const SERVICE_STATUS_META: Record<
 	string,
 	{ label: string; color: "yellow" | "green" | "red" | "gray" | "orange" | "blue" }
@@ -92,9 +96,13 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 };
 
 const PER_PAGE = 10;
+// Colonnes : Date | Table | Client | Type | Statut | Total | Action
+const GRID_COLS = "grid-cols-[1.1fr_0.7fr_1.2fr_0.75fr_1fr_0.9fr_52px]";
 
 type SortKey = "date" | "table" | "amount" | "status";
 type SortDir = "asc" | "desc";
+
+// ─── Highlight ────────────────────────────────────────────────────────────────
 
 function Highlight({ text, query }: { text: string; query: string }) {
 	if (!query.trim()) return <>{text}</>;
@@ -115,6 +123,8 @@ function Highlight({ text, query }: { text: string; query: string }) {
 	);
 }
 
+// ─── dateLabel ────────────────────────────────────────────────────────────────
+
 function dateLabel(date: Date): { text: string; accent: boolean } {
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -127,6 +137,8 @@ function dateLabel(date: Date): { text: string; accent: boolean } {
 	return { text: formatDate(date, "dd/MM/yyyy"), accent: false };
 }
 
+// ─── buildPageList ────────────────────────────────────────────────────────────
+
 function buildPageList(current: number, total: number): (number | "…")[] {
 	if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
 	const pages: (number | "…")[] = [1];
@@ -138,6 +150,8 @@ function buildPageList(current: number, total: number): (number | "…")[] {
 	pages.push(total);
 	return pages;
 }
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
 	label,
@@ -176,6 +190,8 @@ function StatCard({
 	);
 }
 
+// ─── SortBtn ─────────────────────────────────────────────────────────────────
+
 function SortBtn({
 	label,
 	sortKey,
@@ -204,6 +220,8 @@ function SortBtn({
 		</button>
 	);
 }
+
+// ─── StatusPill ───────────────────────────────────────────────────────────────
 
 function StatusPill({
 	label,
@@ -250,6 +268,8 @@ function StatusPill({
 	);
 }
 
+// ─── MobileInfoCell ───────────────────────────────────────────────────────────
+
 function MobileInfoCell({
 	label,
 	value,
@@ -273,6 +293,8 @@ function MobileInfoCell({
 		</div>
 	);
 }
+
+// ─── PgBtn ────────────────────────────────────────────────────────────────────
 
 function PgBtn({
 	children,
@@ -302,6 +324,8 @@ function PgBtn({
 	);
 }
 
+// ─── EmptyState ───────────────────────────────────────────────────────────────
+
 function EmptyState({ onReset }: { onReset?: () => void }) {
 	return (
 		<div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
@@ -321,6 +345,8 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 	);
 }
 
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function CommandesClient({ orders }: Props) {
 	const [search,       setSearch]       = useState("");
 	const [activeStatus, setActiveStatus] = useState<ServiceStatus | null>(null);
@@ -329,6 +355,7 @@ export default function CommandesClient({ orders }: Props) {
 	const [sortDir,      setSortDir]      = useState<SortDir>("desc");
 	const [page,         setPage]         = useState(1);
 
+	// ── Stats ──
 	const stats = useMemo(() => {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
@@ -346,12 +373,14 @@ export default function CommandesClient({ orders }: Props) {
 		};
 	}, [orders]);
 
+	// ── Status counts for pills ──
 	const statusCounts = useMemo(() => {
 		const c: Record<string, number> = {};
 		orders.forEach((o) => { c[o.status] = (c[o.status] ?? 0) + 1; });
 		return c;
 	}, [orders]);
 
+	// ── Filtered + sorted list ──
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
 
@@ -390,11 +419,13 @@ export default function CommandesClient({ orders }: Props) {
 		return result;
 	}, [orders, search, activeStatus, typeFilter, sortKey, sortDir]);
 
+	// Reset page on any filter/sort change
 	useEffect(() => { setPage(1); }, [search, activeStatus, typeFilter, sortKey, sortDir]);
 
 	const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
 	const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
+	// ── Handlers ──
 	const handleSortClick = useCallback(
 		(key: SortKey) => {
 			if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -447,8 +478,12 @@ export default function CommandesClient({ orders }: Props) {
 		URL.revokeObjectURL(url);
 	}, [filtered]);
 
+	const hasActiveFilters = !!(search || activeStatus || typeFilter);
+
 	return (
 		<div className="space-y-6">
+
+			{/* ── Header ── */}
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 				<div>
 					<h1 className="font-display text-2xl text-[#F5F0EB]">Commandes</h1>
@@ -465,6 +500,7 @@ export default function CommandesClient({ orders }: Props) {
 				</button>
 			</div>
 
+			{/* ── Stats ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 				<StatCard
 					label="Total"
@@ -498,6 +534,7 @@ export default function CommandesClient({ orders }: Props) {
 				/>
 			</div>
 
+			{/* ── Filters ── */}
 			<div className="flex flex-col gap-3">
 				<div className="relative">
 					<Search
@@ -536,120 +573,133 @@ export default function CommandesClient({ orders }: Props) {
 							<option value="RESERVATION">Réservation</option>
 							<option value="WALK_IN">Sur place</option>
 						</select>
+						{hasActiveFilters && (
+							<button
+								onClick={resetFilters}
+								className="text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+							>
+								Réinitialiser
+							</button>
+						)}
 					</div>
 				</div>
 			</div>
 
-			<div className="hidden md:block rounded-xl border border-[#222] overflow-hidden">
-				<table className="w-full text-sm">
-					<thead>
-						<tr className="border-b border-[#222] bg-[#0A0A0A]">
-							<th className="px-4 py-3 text-left">
-								<SortBtn label="Date" sortKey="date" current={sortKey} dir={sortDir} onClick={handleSortClick} />
-							</th>
-							<th className="px-4 py-3 text-left">
-								<SortBtn label="Table" sortKey="table" current={sortKey} dir={sortDir} onClick={handleSortClick} />
-							</th>
-							<th className="px-4 py-3 text-left">
-								<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Client</span>
-							</th>
-							<th className="px-4 py-3 text-left">
-								<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
-							</th>
-							<th className="px-4 py-3 text-left">
-								<SortBtn label="Statut" sortKey="status" current={sortKey} dir={sortDir} onClick={handleSortClick} />
-							</th>
-							<th className="px-4 py-3 text-right">
-								<SortBtn label="Total" sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
-							</th>
-							<th className="px-4 py-3" />
-						</tr>
-					</thead>
-					<tbody className="divide-y divide-[#1a1a1a] bg-[#141414]">
-						{paginated.length === 0 ? (
-							<tr>
-								<td colSpan={7}>
-									<EmptyState onReset={search || activeStatus || typeFilter ? resetFilters : undefined} />
-								</td>
-							</tr>
-						) : (
-							paginated.map((o) => {
-								const meta = SERVICE_STATUS_META[o.status];
-								const dl   = dateLabel(new Date(o.openedAt));
-								return (
-									<tr
-										key={o.id}
-										className="hover:bg-[#1a1a1a] transition-colors group"
-									>
-										<td className="px-4 py-3">
-											<span
-												className={cn(
-													"text-sm font-medium",
-													dl.accent ? "text-[#C8973A]" : "text-[#F5F0EB]"
-												)}
-											>
-												<Highlight text={dl.text} query={search} />
-											</span>
-											<span className="block text-xs text-[#5A5249] mt-0.5">
-												{formatDate(o.openedAt, "HH:mm")}
-											</span>
-										</td>
-										<td className="px-4 py-3">
-											<span className="text-sm font-semibold text-[#F5F0EB]">
-												<Highlight text={`T${o.table.numero}`} query={search} />
-											</span>
-											<span className="block text-xs text-[#5A5249]">
-												<Highlight text={ZONE_LABELS[o.table.zone]?.label ?? o.table.zone} query={search} />
-											</span>
-										</td>
-										<td className="px-4 py-3">
-											<span className="text-sm text-[#F5F0EB]">
-												<Highlight text={o.guestName} query={search} />
-											</span>
-											<span className="block text-xs text-[#5A5249]">
-												{o.covers} couvert{o.covers > 1 ? "s" : ""}
-											</span>
-										</td>
-										<td className="px-4 py-3">
-											<span className="text-xs text-[#9A8F84]">
-												{SERVICE_TYPE_LABELS[o.type] ?? o.type}
-											</span>
-										</td>
-										<td className="px-4 py-3">
-											<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
-												{meta?.label ?? o.status}
-											</Badge>
-										</td>
-										<td className="px-4 py-3 text-right">
-											<span className="text-sm font-semibold text-[#C8973A]">
-												{o.totalAmount > 0 ? formatPrice(o.totalAmount) : "—"}
-											</span>
-											{o.depositDeducted > 0 && (
-												<span className="block text-[10px] text-green-400 mt-0.5">
-													−{formatPrice(o.depositDeducted)} acompte
-												</span>
+			{/* ── Desktop Grid List ── */}
+			<div className="hidden md:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
+
+				{/* En-tête des colonnes */}
+				<div className={cn("grid items-center px-5 py-3 border-b border-[#1a1a1a] bg-[#0A0A0A]", GRID_COLS)}>
+					<SortBtn label="Date"   sortKey="date"   current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					<SortBtn label="Table"  sortKey="table"  current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Client</span>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
+					<SortBtn label="Statut" sortKey="status" current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					<div className="flex justify-end">
+						<SortBtn label="Total"  sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					</div>
+					<span />
+				</div>
+
+				{/* Lignes */}
+				{paginated.length === 0 ? (
+					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
+				) : (
+					<div className="divide-y divide-[#1a1a1a]">
+						{paginated.map((o) => {
+							const meta = SERVICE_STATUS_META[o.status];
+							const dl   = dateLabel(new Date(o.openedAt));
+							return (
+								<div
+									key={o.id}
+									className={cn(
+										"group grid items-center px-5 py-3.5 hover:bg-[#1a1a1a] transition-colors",
+										GRID_COLS
+									)}
+								>
+									{/* Date */}
+									<div>
+										<span
+											className={cn(
+												"text-sm font-medium",
+												dl.accent ? "text-[#C8973A]" : "text-[#F5F0EB]"
 											)}
-										</td>
-										<td className="px-4 py-3 text-right">
-											<Link
-												href={`/admin/commandes/${o.id}`}
-												className="inline-flex items-center gap-1.5 p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all opacity-0 group-hover:opacity-100"
-												title="Voir la commande"
-											>
-												<Eye size={14} />
-											</Link>
-										</td>
-									</tr>
-								);
-							})
-						)}
-					</tbody>
-				</table>
+										>
+											<Highlight text={dl.text} query={search} />
+										</span>
+										<span className="block text-xs text-[#5A5249] mt-0.5">
+											{formatDate(o.openedAt, "HH:mm")}
+										</span>
+									</div>
+
+									{/* Table */}
+									<div>
+										<span className="text-sm font-semibold text-[#F5F0EB]">
+											<Highlight text={`T${o.table.numero}`} query={search} />
+										</span>
+										<span className="block text-xs text-[#5A5249]">
+											<Highlight
+												text={ZONE_LABELS[o.table.zone]?.label ?? o.table.zone}
+												query={search}
+											/>
+										</span>
+									</div>
+
+									{/* Client */}
+									<div className="min-w-0">
+										<span className="text-sm text-[#F5F0EB] truncate block">
+											<Highlight text={o.guestName} query={search} />
+										</span>
+										<span className="block text-xs text-[#5A5249]">
+											{o.covers} couvert{o.covers > 1 ? "s" : ""}
+										</span>
+									</div>
+
+									{/* Type */}
+									<span className="text-xs text-[#9A8F84]">
+										{SERVICE_TYPE_LABELS[o.type] ?? o.type}
+									</span>
+
+									{/* Statut */}
+									<div>
+										<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
+											{meta?.label ?? o.status}
+										</Badge>
+									</div>
+
+									{/* Total */}
+									<div className="text-right">
+										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
+											{o.totalAmount > 0 ? formatPrice(o.totalAmount) : "—"}
+										</span>
+										{o.depositDeducted > 0 && (
+											<span className="block text-[10px] text-green-400 mt-0.5">
+												−{formatPrice(o.depositDeducted)} acompte
+											</span>
+										)}
+									</div>
+
+									{/* Action */}
+									<div className="flex items-center justify-end">
+										<Link
+											href={`/admin/commandes/${o.id}`}
+											className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all opacity-0 group-hover:opacity-100"
+											title="Voir la commande"
+										>
+											<Eye size={14} />
+										</Link>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
 			</div>
 
+			{/* ── Mobile Cards ── */}
 			<div className="md:hidden space-y-3">
 				{paginated.length === 0 ? (
-					<EmptyState onReset={search || activeStatus || typeFilter ? resetFilters : undefined} />
+					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
 				) : (
 					paginated.map((o) => {
 						const meta = SERVICE_STATUS_META[o.status];
@@ -659,6 +709,7 @@ export default function CommandesClient({ orders }: Props) {
 								key={o.id}
 								className="bg-[#141414] border border-[#222] hover:border-[#333] hover:bg-[#1a1a1a] rounded-xl p-4 transition-colors"
 							>
+								{/* Ligne haute : icône + infos + badge statut */}
 								<div className="flex items-start justify-between gap-3 mb-3">
 									<div className="flex items-center gap-3 min-w-0">
 										<div className="w-9 h-9 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center shrink-0">
@@ -681,14 +732,16 @@ export default function CommandesClient({ orders }: Props) {
 									</Badge>
 								</div>
 
+								{/* Grille de méta-infos */}
 								<div className="grid grid-cols-3 gap-2 mb-3">
-									<MobileInfoCell label="Date"     value={dl.text}    accent={dl.accent} />
+									<MobileInfoCell label="Date"     value={dl.text}                          accent={dl.accent} />
 									<MobileInfoCell label="Heure"    value={formatDate(o.openedAt, "HH:mm")} />
-									<MobileInfoCell label="Couverts" value={`${o.covers} pers.`} />
+									<MobileInfoCell label="Couverts" value={`${o.covers} pers.`}             />
 								</div>
 
+								{/* Pied : total + lien */}
 								<div className="flex items-center justify-between pt-3 border-t border-[#1a1a1a]">
-									<span className="text-sm font-semibold text-[#C8973A]">
+									<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
 										{o.totalAmount > 0 ? formatPrice(o.totalAmount) : "—"}
 									</span>
 									<Link
@@ -705,6 +758,7 @@ export default function CommandesClient({ orders }: Props) {
 				)}
 			</div>
 
+			{/* ── Pagination ── */}
 			{filtered.length > 0 && (
 				<div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
 					<p className="text-xs text-[#5A5249] order-2 sm:order-1">
