@@ -306,7 +306,7 @@ export default function DishForm({ dish, categories }: Props) {
 						) : (
 							<>
 								{dish ? <Save size={14} /> : <Plus size={14} />}
-								{dish ? "Enregistrer les modifications" : "Créer le plat"}
+								{dish ? "Enregistrer" : "Créer le plat"}
 							</>
 						)}
 					</Button>
