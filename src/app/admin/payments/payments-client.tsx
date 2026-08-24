@@ -512,8 +512,8 @@ export default function PaymentsClient({ payments }: Props) {
 					</div>
 					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
 					<SortBtn label="Statut"  sortKey="status" current={sortKey} dir={sortDir} onClick={handleSortClick} />
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] font-mono">Stripe ID</span>
-					<span />
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Stripe ID</span>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] text-right">Actions</span>
 				</div>
 
 				{paginated.length === 0 ? (

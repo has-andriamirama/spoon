@@ -364,7 +364,7 @@ export default function InvoicesClient({ invoices }: Props) {
 					<div className="flex justify-end">
 						<SortBtn label="TTC" sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					</div>
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] text-right">PDF</span>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] text-right">Actions</span>
 				</div>
 
 				{paginated.length === 0 ? (

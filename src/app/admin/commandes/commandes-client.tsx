@@ -597,7 +597,7 @@ export default function CommandesClient({ orders }: Props) {
 					<div className="flex justify-end">
 						<SortBtn label="Total"  sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					</div>
-					<span />
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] text-right">Actions</span>
 				</div>
 
 				{/* Lignes */}
@@ -672,7 +672,7 @@ export default function CommandesClient({ orders }: Props) {
 											{o.totalAmount > 0 ? formatPrice(o.totalAmount) : "—"}
 										</span>
 										{o.depositDeducted > 0 && (
-											<span className="block text-[10px] text-green-400 mt-0.5">
+											<span className="block text-xs text-[#5A5249]">
 												−{formatPrice(o.depositDeducted)} acompte
 											</span>
 										)}
