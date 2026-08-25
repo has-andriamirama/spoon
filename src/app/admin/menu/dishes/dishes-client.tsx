@@ -131,8 +131,6 @@ function SortBtn({
 	);
 }
 
-// ─── CategoryPill ─────────────────────────────────────────────────────────────
-
 function CategoryPill({
 	label,
 	count,
@@ -167,8 +165,6 @@ function CategoryPill({
 	);
 }
 
-// ─── PgBtn ────────────────────────────────────────────────────────────────────
-
 function PgBtn({
 	children,
 	active,
@@ -197,8 +193,6 @@ function PgBtn({
 	);
 }
 
-// ─── EmptyState ───────────────────────────────────────────────────────────────
-
 function EmptyState({ onReset }: { onReset?: () => void }) {
 	return (
 		<div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
@@ -217,8 +211,6 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 		</div>
 	);
 }
-
-// ─── DishThumbnail ─────────────────────────────────────────────────────────────
 
 function DishThumbnail({ imageUrl, name, large = false }: { imageUrl: string | null; name: string; large?: boolean }) {
 	const cls = large
@@ -245,8 +237,6 @@ function DishThumbnail({ imageUrl, name, large = false }: { imageUrl: string | n
 	);
 }
 
-// ─── Section & InfoRow (detail panel) ────────────────────────────────────────
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<div>
@@ -270,8 +260,6 @@ function InfoRow({ label, value, valueClass }: { label: string; value: string; v
 		</div>
 	);
 }
-
-// ─── DetailPanel ─────────────────────────────────────────────────────────────
 
 function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void }) {
 	useEffect(() => {
@@ -310,7 +298,6 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 			>
 				{dish && (
 					<>
-						{/* Header */}
 						<div className="flex items-center justify-between p-5 border-b border-[#222] shrink-0">
 							<div className="flex items-center gap-3 min-w-0">
 								<DishThumbnail imageUrl={dish.imageUrl} name={dish.name} />
@@ -328,13 +315,10 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 							</button>
 						</div>
 
-						{/* Body */}
 						<div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-							{/* Image grande */}
 							{dish.imageUrl && <DishThumbnail imageUrl={dish.imageUrl} name={dish.name} large />}
 
-							{/* Badges statut */}
 							<div className="flex flex-wrap gap-2">
 								<Badge variant={dish.isAvailable ? "green" : "red"}>
 									{dish.isAvailable ? "Disponible" : "Indisponible"}
@@ -343,7 +327,6 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 								<Badge variant="default">{dish.category.name}</Badge>
 							</div>
 
-							{/* Informations */}
 							<Section title="Plat">
 								<InfoRow label="Nom" value={dish.name} />
 								<InfoRow
@@ -356,7 +339,6 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 								<InfoRow label="Ordre d'affichage" value={String(dish.order)} />
 							</Section>
 
-							{/* Allergènes */}
 							{dish.allergens.length > 0 && (
 								<div>
 									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
@@ -378,7 +360,6 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 								</div>
 							)}
 
-							{/* Régimes */}
 							{dish.dietaryTags.length > 0 && (
 								<div>
 									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
@@ -400,7 +381,6 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 								</div>
 							)}
 
-							{/* Historique */}
 							<Section title="Historique">
 								<InfoRow
 									label="Créé le"
@@ -418,7 +398,6 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 							</Section>
 						</div>
 
-						{/* Footer */}
 						<div className="p-5 border-t border-[#222] shrink-0">
 							<Link
 								href={`/admin/menu/dishes/${dish.id}`}
@@ -435,8 +414,6 @@ function DetailPanel({ dish, onClose }: { dish: Dish | null; onClose: () => void
 	);
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 export default function DishesClient({ dishes, categories }: Props) {
 	const router = useRouter();
 
@@ -450,7 +427,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 
-	// Stats
 	const stats = useMemo(() => ({
 		total: dishes.length,
 		available: dishes.filter((d) => d.isAvailable).length,
@@ -458,7 +434,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 		totalCategories: categories.length,
 	}), [dishes, categories]);
 
-	// Counts per category
 	const categoryCounts = useMemo(() => {
 		const counts: Record<string, number> = {};
 		dishes.forEach((d) => {
@@ -467,7 +442,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 		return counts;
 	}, [dishes]);
 
-	// Filtered + sorted list
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
 
@@ -498,7 +472,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 		return result;
 	}, [dishes, search, activeCategoryId, availFilter, specialFilter, sortKey, sortDir]);
 
-	// Reset page on any filter change
 	useEffect(() => {
 		setPage(1);
 	}, [search, activeCategoryId, availFilter, specialFilter, sortKey, sortDir]);
@@ -521,7 +494,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 		setSpecialFilter(false);
 	}, []);
 
-	// ── Delete handler ──
 	const handleDelete = useCallback(
 		async (dish: Dish, e: React.MouseEvent) => {
 			e.stopPropagation();
@@ -531,7 +503,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 				const res = await fetch(`/api/menu/dishes/${dish.id}`, { method: "DELETE" });
 				if (!res.ok) throw new Error((await res.json()).error ?? "Erreur");
 				toast.success("Plat supprimé");
-				// Fermer le panneau si le plat supprimé était sélectionné
+				
 				if (selectedId === dish.id) setSelectedId(null);
 				router.refresh();
 			} catch {
@@ -561,7 +533,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 	return (
 		<div className="min-h-full">
 
-			{/* ── Header ── */}
 			<div className="flex items-start justify-between mb-6 gap-4">
 				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">Plats</h1>
@@ -578,7 +549,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 				</Link>
 			</div>
 
-			{/* ── Stats ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 				<StatCard
 					label="Total plats"
@@ -610,10 +580,8 @@ export default function DishesClient({ dishes, categories }: Props) {
 				/>
 			</div>
 
-			{/* ── Filters ── */}
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
 				<div className="flex flex-col sm:flex-row gap-3">
-					{/* Search */}
 					<div className="relative flex-1">
 						<Search
 							size={15}
@@ -637,7 +605,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 						)}
 					</div>
 
-					{/* Availability select */}
 					<div className="relative">
 						<select
 							value={availFilter}
@@ -657,7 +624,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 					</div>
 				</div>
 
-				{/* Category pills */}
 				<div className="flex items-center gap-2 flex-wrap">
 					<CategoryPill
 						label="Toutes"
@@ -690,7 +656,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 				</div>
 			</div>
 
-			{/* ── Desktop Table ── */}
+			{/* ── Desktop ── */}
 			<div className="hidden lg:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 				<div className="grid grid-cols-[2fr_1.1fr_0.9fr_0.7fr_0.7fr_96px] items-center px-5 py-3 border-b border-[#1a1a1a]">
 					<SortBtn label="Plat"       sortKey="name"     current={sortKey} dir={sortDir} onClick={handleSortClick} />
@@ -717,7 +683,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 									selectedId === dish.id ? "bg-[#C8973A]/5" : "hover:bg-[#1a1a1a]"
 								)}
 							>
-								{/* Plat */}
 								<div className="flex items-center gap-3 min-w-0">
 									<DishThumbnail imageUrl={dish.imageUrl} name={dish.name} />
 									<div className="min-w-0">
@@ -730,29 +695,24 @@ export default function DishesClient({ dishes, categories }: Props) {
 									</div>
 								</div>
 
-								{/* Catégorie */}
 								<span className="text-sm text-[#9A8F84] truncate">{dish.category.name}</span>
 
-								{/* Prix */}
 								<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
 									{formatPrice(dish.price)}
 								</span>
 
-								{/* Disponible */}
 								<div>
 									<Badge variant={dish.isAvailable ? "green" : "red"}>
 										{dish.isAvailable ? "Oui" : "Non"}
 									</Badge>
 								</div>
 
-								{/* Suggestion */}
 								<div>
 									<Badge variant={dish.isDailySpecial ? "gold" : "default"}>
 										{dish.isDailySpecial ? "Oui" : "Non"}
 									</Badge>
 								</div>
 
-								{/* Actions */}
 								<div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 									<Link
 										href={`/admin/menu/dishes/${dish.id}`}
@@ -780,7 +740,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 				)}
 			</div>
 
-			{/* ── Mobile Cards ── */}
+			{/* ── Mobile ── */}
 			<div className="lg:hidden space-y-3">
 				{paginated.length === 0 ? (
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
@@ -823,7 +783,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 									</Badge>
 									{dish.isDailySpecial && <Badge variant="gold">Chef</Badge>}
 								</div>
-								{/* Actions mobile */}
 								<div className="flex items-center gap-1">
 									<Link
 										href={`/admin/menu/dishes/${dish.id}`}
@@ -883,7 +842,6 @@ export default function DishesClient({ dishes, categories }: Props) {
 				</div>
 			)}
 
-			{/* ── Detail Panel ── */}
 			<DetailPanel dish={selectedDish} onClose={() => setSelectedId(null)} />
 		</div>
 	);

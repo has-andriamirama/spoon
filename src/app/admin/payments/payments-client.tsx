@@ -24,8 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import type { PaymentStatus, PaymentType } from "@/types";
 import RefundForm from "./[id]/refund-form";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface InvoiceInfo {
 	id: string;
 	invoiceNumber: string;
@@ -63,8 +61,6 @@ interface Props {
 	payments: Payment[];
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
 	DEPOSIT: "Acompte",
 	FULL:    "Paiement complet",
@@ -89,8 +85,6 @@ const GRID_COLS = "grid-cols-[1.4fr_1fr_0.8fr_0.7fr_1fr_0.8fr]";
 type SortKey = "date" | "amount" | "status" | "client";
 type SortDir = "asc" | "desc";
 
-// ─── Highlight ────────────────────────────────────────────────────────────────
-
 function Highlight({ text, query }: { text: string; query: string }) {
 	if (!query.trim()) return <>{text}</>;
 	const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -109,8 +103,6 @@ function Highlight({ text, query }: { text: string; query: string }) {
 		</>
 	);
 }
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
 	label,
@@ -152,8 +144,6 @@ function StatCard({
 	);
 }
 
-// ─── SortBtn ──────────────────────────────────────────────────────────────────
-
 function SortBtn({
 	label,
 	sortKey,
@@ -182,8 +172,6 @@ function SortBtn({
 		</button>
 	);
 }
-
-// ─── StatusPill ───────────────────────────────────────────────────────────────
 
 function StatusPill({
 	label,
@@ -230,8 +218,6 @@ function StatusPill({
 	);
 }
 
-// ─── PgBtn ────────────────────────────────────────────────────────────────────
-
 function PgBtn({
 	children,
 	active,
@@ -272,8 +258,6 @@ function buildPageList(current: number, total: number): (number | "…")[] {
 	return pages;
 }
 
-// ─── EmptyState ───────────────────────────────────────────────────────────────
-
 function EmptyState({ onReset }: { onReset?: () => void }) {
 	return (
 		<div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
@@ -292,8 +276,6 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 		</div>
 	);
 }
-
-// ─── Panel helpers ────────────────────────────────────────────────────────────
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
@@ -327,14 +309,6 @@ function InfoRow({
 	);
 }
 
-// ─── DetailPanel ──────────────────────────────────────────────────────────────
-//
-// Structure identique au panel des plats :
-//   aside (fixed inset-y-0, flex flex-col)
-//     ├── header  (shrink-0)       ← fixe en haut
-//     ├── body    (flex-1, scroll) ← scrollable
-//     └── footer  (shrink-0)       ← fixe en bas (formulaire de remboursement)
-
 function DetailPanel({
 	payment,
 	onClose,
@@ -355,7 +329,6 @@ function DetailPanel({
 
 	const isOpen = !!payment;
 
-	/* données calculées une seule fois ici, utilisées dans header + footer */
 	const fullName     = payment ? `${payment.reservation.guestFirstName} ${payment.reservation.guestLastName}` : "";
 	const initials     = payment ? getInitials(payment.reservation.guestFirstName, payment.reservation.guestLastName) : "";
 	const meta         = payment ? STATUS_META[payment.status] : null;
@@ -410,10 +383,8 @@ function DetailPanel({
 							</div>
 						</div>
 
-						{/* ── Body (scrollable) ─────────────────────────────── */}
 						<div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-							{/* Key info 2×2 */}
 							<div className="grid grid-cols-2 gap-2">
 								{[
 									{
@@ -447,7 +418,6 @@ function DetailPanel({
 								))}
 							</div>
 
-							{/* Remboursement partiel */}
 							{payment.refundedAmount != null && payment.refundedAmount > 0 && (
 								<div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-blue-500/5 border border-blue-500/10">
 									<span className="text-xs text-[#5A5249]">Montant remboursé</span>
@@ -457,7 +427,6 @@ function DetailPanel({
 								</div>
 							)}
 
-							{/* Stripe */}
 							<Section title="Informations Stripe">
 								<InfoRow
 									label="Référence"
@@ -492,7 +461,6 @@ function DetailPanel({
 								/>
 							</Section>
 
-							{/* Réservation liée */}
 							<div>
 								<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
 									Réservation liée
@@ -514,7 +482,6 @@ function DetailPanel({
 								</Link>
 							</div>
 
-							{/* Facture associée */}
 							{payment.reservation.invoice && (
 								<div>
 									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
@@ -544,7 +511,6 @@ function DetailPanel({
 							)}
 						</div>
 
-						{/* ── Footer fixe — formulaire de remboursement ─────── */}
 						{isRefundable && refundable > 0 && (
 							<div className="shrink-0 border-t border-[#222]">
 								<RefundForm paymentId={payment.id} maxAmount={refundable} />
@@ -557,8 +523,6 @@ function DetailPanel({
 	);
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 export default function PaymentsClient({ payments }: Props) {
 	const [search,        setSearch]        = useState("");
 	const [activeStatus,  setActiveStatus]  = useState<PaymentStatus | null>(null);
@@ -567,7 +531,6 @@ export default function PaymentsClient({ payments }: Props) {
 	const [page,          setPage]          = useState(1);
 	const [selectedId,    setSelectedId]    = useState<string | null>(null);
 
-	// ── Stats ──
 	const stats = useMemo(() => {
 		const paid     = payments.filter((p) => p.status === "PAID");
 		const refunded = payments.filter((p) => p.status === "REFUNDED" || p.status === "PARTIALLY_REFUNDED");
@@ -581,14 +544,12 @@ export default function PaymentsClient({ payments }: Props) {
 		};
 	}, [payments]);
 
-	// ── Status counts for pills ──
 	const statusCounts = useMemo(() => {
 		const c: Record<string, number> = {};
 		payments.forEach((p) => { c[p.status] = (c[p.status] ?? 0) + 1; });
 		return c;
 	}, [payments]);
 
-	// ── Filtered + sorted ──
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
 
@@ -626,7 +587,6 @@ export default function PaymentsClient({ payments }: Props) {
 	const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
 	const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-	// ── Handlers ──
 	const handleSortClick = useCallback(
 		(key: SortKey) => {
 			if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -678,8 +638,7 @@ export default function PaymentsClient({ payments }: Props) {
 	return (
 		<div className="min-h-full">
 
-			{/* ── Header ── */}
-			<div className="flex items-center justify-between gap-4">
+			<div className="flex items-center justify-between mb-6 gap-4">
 				<div>
 					<h1 className="font-display text-2xl text-[#F5F0EB]">Paiements</h1>
 					<p className="text-sm text-[#5A5249] mt-0.5">
@@ -695,8 +654,7 @@ export default function PaymentsClient({ payments }: Props) {
 				</button>
 			</div>
 
-			{/* ── Stats ── */}
-			<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+			<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
 				<StatCard
 					label="Total paiements"
 					value={stats.total}
@@ -738,8 +696,7 @@ export default function PaymentsClient({ payments }: Props) {
 				/>
 			</div>
 
-			{/* ── Filters ── */}
-			<div className="flex flex-col gap-3">
+			<div className="flex flex-col gap-3 mb-4">
 				<div className="relative">
 					<Search
 						size={14}
@@ -777,10 +734,9 @@ export default function PaymentsClient({ payments }: Props) {
 				</div>
 			</div>
 
-			{/* ── Desktop Table ── */}
+			{/* ── Desktop ── */}
 			<div className="hidden md:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 
-				{/* Header row */}
 				<div className={cn("grid items-center px-5 py-3 border-b border-[#222] bg-[#141414]", GRID_COLS)}>
 					<SortBtn label="Client"  sortKey="client" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Date"    sortKey="date"   current={sortKey} dir={sortDir} onClick={handleSortClick} />
@@ -813,7 +769,6 @@ export default function PaymentsClient({ payments }: Props) {
 										isSelected ? "bg-[#C8973A]/5" : "hover:bg-[#1a1a1a]"
 									)}
 								>
-									{/* Client */}
 									<div className="min-w-0">
 										<span className="text-sm text-[#F5F0EB] block truncate">
 											<Highlight text={fullName} query={search} />
@@ -823,7 +778,6 @@ export default function PaymentsClient({ payments }: Props) {
 										</span>
 									</div>
 
-									{/* Date */}
 									<div>
 										<span className="text-sm text-[#F5F0EB]">
 											{formatDate(p.reservation.date, "dd/MM/yyyy")}
@@ -833,7 +787,6 @@ export default function PaymentsClient({ payments }: Props) {
 										</span>
 									</div>
 
-									{/* Montant */}
 									<div className="text-right">
 										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
 											{formatPrice(p.amount)}
@@ -845,19 +798,16 @@ export default function PaymentsClient({ payments }: Props) {
 										)}
 									</div>
 
-									{/* Type */}
 									<span className="text-xs text-[#9A8F84]">
 										{PAYMENT_TYPE_LABELS[p.type] ?? p.type}
 									</span>
 
-									{/* Statut */}
 									<div>
 										<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
 											{meta?.label ?? p.status}
 										</Badge>
 									</div>
 
-									{/* Stripe ID */}
 									<span className="text-xs font-mono text-[#5A5249]">
 										{p.stripePaymentIntentId
 											? <Highlight text={`...${p.stripePaymentIntentId.slice(-10)}`} query={search} />
@@ -870,7 +820,7 @@ export default function PaymentsClient({ payments }: Props) {
 				)}
 			</div>
 
-			{/* ── Mobile Cards ── */}
+			{/* ── Mobile ── */}
 			<div className="md:hidden space-y-3">
 				{paginated.length === 0 ? (
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
@@ -893,7 +843,6 @@ export default function PaymentsClient({ payments }: Props) {
 										: "bg-[#141414] border-[#222] hover:border-[#333] hover:bg-[#1a1a1a]"
 								)}
 							>
-								{/* Top: nom + date */}
 								<div className="min-w-0">
 									<p className="text-sm font-medium text-[#F5F0EB] truncate">
 										<Highlight text={fullName} query={search} />
@@ -903,7 +852,6 @@ export default function PaymentsClient({ payments }: Props) {
 									</p>
 								</div>
 
-								{/* Info boxes */}
 								<div className="grid grid-cols-3 gap-2">
 									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
 										<p className="text-[10px] text-[#5A5249] mb-0.5">Montant</p>
@@ -925,7 +873,6 @@ export default function PaymentsClient({ payments }: Props) {
 									</div>
 								</div>
 
-								{/* Bottom: badge */}
 								<div className="flex items-center gap-2">
 									<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
 										{meta?.label ?? p.status}
@@ -944,7 +891,7 @@ export default function PaymentsClient({ payments }: Props) {
 
 			{/* ── Pagination ── */}
 			{totalPages > 1 && (
-				<div className="flex items-center justify-between gap-4 pt-2">
+				<div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
 					<p className="text-xs text-[#5A5249] shrink-0">
 						{filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
 					</p>
@@ -968,11 +915,7 @@ export default function PaymentsClient({ payments }: Props) {
 				</div>
 			)}
 
-			{/* ── Detail Panel ── */}
-			<DetailPanel
-				payment={selectedPayment}
-				onClose={() => setSelectedId(null)}
-			/>
+			<DetailPanel payment={selectedPayment} onClose={() => setSelectedId(null)} />
 		</div>
 	);
 }
