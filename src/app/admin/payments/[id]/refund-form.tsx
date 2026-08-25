@@ -43,7 +43,7 @@ export default function RefundForm({
 	};
 
 	return (
-		<div className="bg-[#141414] border border-red-500/20 rounded-xl overflow-hidden">
+		<div className="pb-5 border-t border-[#222]">
 
 			{/* Header */}
 			<div className="px-6 py-4 border-b border-red-500/10 flex items-center gap-3">
