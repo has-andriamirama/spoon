@@ -15,16 +15,16 @@ import {
 	TableProperties,
 	Loader2,
 	Users,
-	X,
+	Sun,
+	Moon,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn, formatDate, formatPrice, getInitials } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
-import { Badge } from "@/components/ui/badge";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES, ZONE_LABELS } from "@/lib/constants";
 import type { ReservationStatus, ZoneTable, PaymentStatus } from "@/types";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────────
 
 interface TableInfo {
 	id: string;
@@ -75,21 +75,27 @@ interface Props {
 const FR_DAYS_SHORT = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const FR_DAYS_FULL  = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const FR_MONTHS     = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-const HOURS = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
-const HOUR_HEIGHT = 56; // px per hour slot
 
-const BADGE_MAP: Record<string, "yellow" | "green" | "red" | "gray" | "orange" | "blue"> = {
-	yellow: "yellow", green: "green", red: "red",
-	gray: "gray", orange: "orange", blue: "blue",
+/** Couleurs inline par statut (pour les bordures & backgrounds dynamiques) */
+const STATUS_STYLE: Record<string, { c: string; bg: string; bd: string; label: string }> = {
+	CONFIRMED:             { c: "#22c55e", bg: "rgba(34,197,94,0.08)",   bd: "rgba(34,197,94,0.22)",  label: "Confirmée"  },
+	PENDING:               { c: "#eab308", bg: "rgba(234,179,8,0.08)",  bd: "rgba(234,179,8,0.22)",  label: "En attente" },
+	CANCELLED_BY_CUSTOMER: { c: "#ef4444", bg: "rgba(239,68,68,0.08)",  bd: "rgba(239,68,68,0.22)",  label: "Annulée"    },
+	CANCELLED_BY_ADMIN:    { c: "#ef4444", bg: "rgba(239,68,68,0.08)",  bd: "rgba(239,68,68,0.22)",  label: "Annulée"    },
+	COMPLETED:             { c: "#9A8F84", bg: "rgba(154,143,132,0.08)",bd: "rgba(154,143,132,0.22)",label: "Terminée"   },
+	NO_SHOW:               { c: "#f97316", bg: "rgba(249,115,22,0.08)", bd: "rgba(249,115,22,0.22)", label: "Absent"     },
 };
+
+// Colonne CSS partagée entre headers et lignes horaires
+const GRID_COLS = "56px repeat(7, minmax(0, 1fr))";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
 function sameDay(a: Date, b: Date) {
 	return (
 		a.getFullYear() === b.getFullYear() &&
-		a.getMonth() === b.getMonth() &&
-		a.getDate() === b.getDate()
+		a.getMonth()    === b.getMonth()    &&
+		a.getDate()     === b.getDate()
 	);
 }
 
@@ -103,8 +109,7 @@ function getMonday(d: Date): Date {
 	const r = new Date(d);
 	r.setHours(0, 0, 0, 0);
 	const day = r.getDay();
-	const diff = day === 0 ? -6 : 1 - day;
-	r.setDate(r.getDate() + diff);
+	r.setDate(r.getDate() + (day === 0 ? -6 : 1 - day));
 	return r;
 }
 
@@ -113,10 +118,8 @@ function timeToMinutes(slot: string): number {
 	return h * 60 + (m || 0);
 }
 
-function timeToY(slot: string): number {
-	const mins = timeToMinutes(slot);
-	const startMins = HOURS[0] * 60;
-	return ((mins - startMins) / 60) * HOUR_HEIGHT;
+function isMidi(slot: string): boolean {
+	return Number(slot.split(":")[0]) < 17;
 }
 
 function weekRangeLabel(monday: Date): string {
@@ -127,7 +130,7 @@ function weekRangeLabel(monday: Date): string {
 	return `${monday.getDate()} ${FR_MONTHS[monday.getMonth()]} – ${sunday.getDate()} ${FR_MONTHS[sunday.getMonth()]} ${sunday.getFullYear()}`;
 }
 
-// ─── Sub-component: Confirm / assign modal ─────────────────────────────────────
+// ─── Sub-component: Confirm / assign modal (inchangé) ──────────────────────────
 
 function ConfirmModal({
 	reservation,
@@ -158,9 +161,7 @@ function ConfirmModal({
 	const compatibleTables = useMemo(
 		() =>
 			reservation
-				? tables.filter(
-						(t) => t.isActif && t.capaciteMax >= reservation.covers
-				  )
+				? tables.filter((t) => t.isActif && t.capaciteMax >= reservation.covers)
 				: [],
 		[tables, reservation]
 	);
@@ -196,7 +197,7 @@ function ConfirmModal({
 		>
 			{reservation && (
 				<div className="space-y-5">
-					{/* Reservation summary */}
+					{/* Résumé */}
 					<div className="bg-[#0A0A0A] rounded-xl border border-[#1e1e1e] p-4">
 						<div className="flex items-start justify-between gap-3 mb-2">
 							<div>
@@ -229,7 +230,7 @@ function ConfirmModal({
 						)}
 					</div>
 
-					{/* Payment blocking warning */}
+					{/* Avertissement paiement bloquant */}
 					{isPaymentBlocking && (
 						<div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
 							<Clock size={14} className="text-yellow-400 shrink-0 mt-0.5" />
@@ -243,7 +244,7 @@ function ConfirmModal({
 						</div>
 					)}
 
-					{/* Table picker */}
+					{/* Sélecteur de table */}
 					{!isPaymentBlocking && (
 						<div>
 							<p className="text-xs font-medium text-[#5A5249] mb-2">
@@ -268,17 +269,9 @@ function ConfirmModal({
 										>
 											<TableProperties
 												size={13}
-												className={cn(
-													"mt-2",
-													selectedTableId === t.id ? "text-[#C8973A]" : "text-green-500"
-												)}
+												className={cn("mt-2", selectedTableId === t.id ? "text-[#C8973A]" : "text-green-500")}
 											/>
-											<span
-												className={cn(
-													"text-xs font-semibold",
-													selectedTableId === t.id ? "text-[#C8973A]" : "text-green-400"
-												)}
-											>
+											<span className={cn("text-xs font-semibold", selectedTableId === t.id ? "text-[#C8973A]" : "text-green-400")}>
 												T{t.numero}
 											</span>
 											<span className="text-[9px] text-[#5A5249] leading-tight">
@@ -291,7 +284,7 @@ function ConfirmModal({
 						</div>
 					)}
 
-					{/* Admin notes */}
+					{/* Notes internes */}
 					{!isPaymentBlocking && (
 						<div>
 							<label className="text-xs text-[#5A5249] block mb-1.5">
@@ -309,10 +302,7 @@ function ConfirmModal({
 
 					{/* Actions */}
 					<div className="flex items-center justify-end gap-3 pt-1 border-t border-[#1e1e1e]">
-						<button
-							onClick={onClose}
-							className="px-4 py-2 text-sm text-[#5A5249] hover:text-[#9A8F84] transition-colors"
-						>
+						<button onClick={onClose} className="px-4 py-2 text-sm text-[#5A5249] hover:text-[#9A8F84] transition-colors">
 							Annuler
 						</button>
 						{!isPaymentBlocking && (
@@ -321,11 +311,7 @@ function ConfirmModal({
 								disabled={!selectedTableId || loading}
 								className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 							>
-								{loading ? (
-									<Loader2 size={15} className="animate-spin" />
-								) : (
-									<CheckCircle2 size={15} />
-								)}
+								{loading ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
 								{loading ? "Confirmation…" : "Confirmer & envoyer l'email"}
 							</button>
 						)}
@@ -336,48 +322,52 @@ function ConfirmModal({
 	);
 }
 
-// ─── Sub-component: Reservation block (week view) ──────────────────────────────
+// ─── WeekChip : puce dans la vue semaine ────────────────────────────────────────
 
-function ResBlock({
+function WeekChip({
 	r,
 	onOpen,
 }: {
 	r: Reservation;
 	onOpen: (r: Reservation) => void;
 }) {
-	const top    = timeToY(r.timeSlot);
-	const height = Math.max(40, HOUR_HEIGHT * 1.5);
-	const isPending = r.status === "PENDING";
-
+	const sc = STATUS_STYLE[r.status] ?? STATUS_STYLE.CONFIRMED;
 	return (
-		<div
+		<button
 			onClick={() => onOpen(r)}
-			role="button"
-			tabIndex={0}
-			onKeyDown={(e) => e.key === "Enter" && onOpen(r)}
-			style={{ top, height, left: 3, right: 3, position: "absolute" }}
-			className={cn(
-				"rounded-md px-2 py-1 cursor-pointer z-10 overflow-hidden border-l-2 transition-all",
-				"hover:brightness-110 hover:scale-[1.015] hover:z-20",
-				isPending
-					? "bg-yellow-500/10 border-yellow-400"
-					: "bg-green-500/10 border-green-400"
-			)}
+			className="w-full text-left rounded-lg transition-[filter] hover:brightness-[1.15] block"
+			style={{
+				background:  sc.bg,
+				border:      `1px solid ${sc.bd}`,
+				borderLeft:  `3px solid ${sc.c}`,
+				padding:     "5px 7px",
+			}}
 		>
-			<p className={cn("text-[10px] font-semibold leading-none", isPending ? "text-yellow-400" : "text-green-400")}>
+			<div
+				className="text-[9px] font-bold uppercase tracking-wider mb-1"
+				style={{ color: sc.c }}
+			>
 				{r.timeSlot}
-			</p>
-			<p className="text-[11px] font-medium text-[#F5F0EB] leading-tight mt-0.5 truncate">
+			</div>
+			<p className="text-[11px] font-semibold text-[#F5F0EB] truncate">
 				{r.guestLastName}
 			</p>
-			<p className="text-[10px] text-[#5A5249] mt-0.5">{r.covers} pers.</p>
-		</div>
+			<div className="flex items-center gap-1 mt-0.5" style={{ color: "#5A5249", fontSize: 10 }}>
+				<span>{r.covers}p</span>
+				{r.table && (
+					<>
+						<span style={{ color: "#2a2a2a" }}>·</span>
+						<span>T{r.table.numero}</span>
+					</>
+				)}
+			</div>
+		</button>
 	);
 }
 
-// ─── Sub-component: Day card (day view) ────────────────────────────────────────
+// ─── DayCard : carte réservation dans la vue journée ───────────────────────────
 
-function DayResCard({
+function DayCard({
 	r,
 	onOpen,
 	onConfirm,
@@ -386,115 +376,534 @@ function DayResCard({
 	onOpen: (r: Reservation) => void;
 	onConfirm: (r: Reservation) => void;
 }) {
-	const st  = RESERVATION_STATUSES[r.status];
-	const pst = r.payment ? PAYMENT_STATUSES[r.payment.status] : null;
+	const sc  = STATUS_STYLE[r.status] ?? STATUS_STYLE.CONFIRMED;
+	const ini = getInitials(r.guestFirstName, r.guestLastName);
 
 	return (
-		<div
-			className="group flex items-center gap-4 px-4 py-3.5 border-b border-[#1a1a1a] last:border-none hover:bg-[#1a1a1a] transition-colors cursor-pointer"
+		<button
 			onClick={() => onOpen(r)}
+			className="group w-full text-left rounded-xl transition-[background,border-color]"
+			style={{
+				background:  "#141414",
+				border:      "1px solid #242424",
+				borderLeft:  `4px solid ${sc.c}`,
+				padding:     "15px 17px",
+			}}
+			onMouseEnter={(e) => {
+				(e.currentTarget as HTMLElement).style.background = "#1c1c1c";
+				(e.currentTarget as HTMLElement).style.borderColor = sc.c;
+			}}
+			onMouseLeave={(e) => {
+				(e.currentTarget as HTMLElement).style.background = "#141414";
+				(e.currentTarget as HTMLElement).style.borderColor = "#242424";
+				(e.currentTarget as HTMLElement).style.borderLeftColor = sc.c;
+			}}
 		>
-			{/* Time */}
-			<div className="w-12 text-center shrink-0">
-				<p className="text-sm font-medium text-[#F5F0EB]">{r.timeSlot}</p>
-				<p className="text-[10px] text-[#5A5249]">
-					{Number(r.timeSlot.split(":")[0]) < 17 ? "Midi" : "Soir"}
-				</p>
-			</div>
-
-			<div className="w-px h-8 bg-[#222] shrink-0" />
-
-			{/* Avatar + info */}
-			<div className="flex items-center gap-3 flex-1 min-w-0">
-				<div className="w-8 h-8 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center text-xs font-semibold text-[#C8973A] shrink-0">
-					{getInitials(r.guestFirstName, r.guestLastName)}
+			<div className="flex items-start gap-3">
+				{/* Avatar initiales */}
+				<div className="w-9 h-9 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/25 flex items-center justify-center text-xs font-bold text-[#C8973A] shrink-0">
+					{ini}
 				</div>
-				<div className="min-w-0">
-					<p className="text-sm font-medium text-[#F5F0EB] truncate">
-						{r.guestFirstName} {r.guestLastName}
-					</p>
-					<p className="text-xs text-[#5A5249] truncate">{r.guestEmail}</p>
+
+				{/* Infos principales */}
+				<div className="flex-1 min-w-0">
+					<div className="flex items-start justify-between gap-3 mb-1">
+						<div className="min-w-0">
+							<p className="text-sm font-semibold text-[#F5F0EB]">
+								{r.guestFirstName} {r.guestLastName}
+							</p>
+							<p className="text-[11px] text-[#5A5249] mt-0.5">
+								{r.covers} couvert{r.covers > 1 ? "s" : ""}
+								{r.table
+									? ` · Table ${r.table.numero} · ${ZONE_LABELS[r.table.zone]?.label ?? r.table.zone}`
+									: " · Table à assigner"}
+							</p>
+						</div>
+						{/* Badge statut */}
+						<div
+							className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shrink-0 mt-0.5"
+							style={{ background: sc.bg, border: `1px solid ${sc.bd}`, color: sc.c }}
+						>
+							{sc.label}
+						</div>
+					</div>
+
+					{/* Chips occasion / allergie / note */}
+					{(r.occasion || r.allergies || r.notes) && (
+						<div className="flex flex-wrap gap-1.5 mt-2">
+							{r.occasion && (
+								<span className="inline-flex items-center gap-1 text-[10px] text-[#C8973A] bg-[#C8973A]/5 border border-[#C8973A]/20 px-1.5 py-0.5 rounded">
+									🎉 {r.occasion}
+								</span>
+							)}
+							{r.allergies && (
+								<span className="inline-flex items-center gap-1 text-[10px] text-red-400 bg-red-500/5 border border-red-500/20 px-1.5 py-0.5 rounded">
+									⚠ Allergie · {r.allergies}
+								</span>
+							)}
+							{r.notes && (
+								<span className="inline-flex items-center gap-1 text-[10px] text-[#9A8F84] bg-[#9A8F84]/5 border border-[#9A8F84]/15 px-1.5 py-0.5 rounded">
+									✍ {r.notes}
+								</span>
+							)}
+						</div>
+					)}
 				</div>
-			</div>
 
-			{/* Meta chips */}
-			<div className="hidden sm:flex items-center gap-2 shrink-0">
-				<span className="flex items-center gap-1 text-xs text-[#9A8F84] bg-[#1a1a1a] border border-[#222] px-2 py-0.5 rounded-lg">
-					<Users size={10} /> {r.covers}
-				</span>
-				{r.table && (
-					<span className="text-xs text-[#9A8F84] bg-[#1a1a1a] border border-[#222] px-2 py-0.5 rounded-lg">
-						T{r.table.numero}
-					</span>
-				)}
-				{r.occasion && (
-					<span className="text-[10px] text-[#C8973A] border border-[#C8973A]/30 bg-[#C8973A]/5 px-2 py-0.5 rounded-md">
-						{r.occasion}
-					</span>
-				)}
-			</div>
-
-			{/* Status + actions */}
-			<div className="flex items-center gap-2 shrink-0">
-				<Badge variant={BADGE_MAP[st.color]} className="hidden sm:inline-flex text-[10px]">
-					{st.label}
-				</Badge>
-				{pst && (
-					<Badge variant={BADGE_MAP[pst.color]} className="hidden md:inline-flex text-[10px]">
-						{pst.label}
-					</Badge>
-				)}
-
-				{r.status === "PENDING" && (
-					<button
-						onClick={(e) => { e.stopPropagation(); onConfirm(r); }}
-						className="opacity-0 group-hover:opacity-100 flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-lg bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] transition-all"
+				{/* Actions au survol */}
+				<div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+					{r.status === "PENDING" && (
+						<button
+							onClick={(e) => { e.stopPropagation(); onConfirm(r); }}
+							className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] transition-colors"
+						>
+							<CheckCircle2 size={11} />
+							Confirmer
+						</button>
+					)}
+					<Link
+						href={`/admin/reservations/${r.id}`}
+						onClick={(e) => e.stopPropagation()}
+						className="text-[11px] text-[#5A5249] hover:text-[#9A8F84] px-2 py-1.5 rounded-lg hover:bg-[#252525] transition-all"
 					>
-						<CheckCircle2 size={12} />
-						Confirmer
-					</button>
-				)}
+						Fiche →
+					</Link>
+				</div>
+			</div>
+		</button>
+	);
+}
 
-				<Link
-					href={`/admin/reservations/${r.id}`}
-					onClick={(e) => e.stopPropagation()}
-					className="opacity-0 group-hover:opacity-100 text-[11px] text-[#5A5249] hover:text-[#9A8F84] px-2 py-1.5 rounded-lg hover:bg-[#252525] transition-all"
-				>
-					Fiche →
-				</Link>
+// ─── ServiceHeader : bande de séparation de service ────────────────────────────
+
+function ServiceHeader({
+	icon,
+	label,
+	count,
+	covers,
+}: {
+	icon: React.ReactNode;
+	label: string;
+	count: number;
+	covers: number;
+}) {
+	return (
+		<div className="flex items-center gap-2.5 px-5 py-2.5 border-y border-[#1a1a1a] bg-[#C8973A]/[0.025]">
+			{icon}
+			<span className="text-[10px] font-bold uppercase tracking-[0.10em] text-[#C8973A]">
+				{label}
+			</span>
+			<div className="flex-1 h-px bg-[#1a1a1a]" />
+			<span className="text-[10px] text-[#5A5249]">
+				{count} rés. · {covers} couverts
+			</span>
+		</div>
+	);
+}
+
+// ─── WeekView ───────────────────────────────────────────────────────────────────
+
+function WeekView({
+	weekDays,
+	getDayRes,
+	today,
+	onDayClick,
+	onChipClick,
+}: {
+	weekDays: Date[];
+	getDayRes: (d: Date) => Reservation[];
+	today: Date;
+	onDayClick: (d: Date) => void;
+	onChipClick: (r: Reservation) => void;
+}) {
+	// Tous les créneaux uniques de la semaine
+	const allRes  = weekDays.flatMap(getDayRes);
+	const allSlots = [...new Set(allRes.map((r) => r.timeSlot))].sort(
+		(a, b) => timeToMinutes(a) - timeToMinutes(b)
+	);
+	const midiSlots = allSlots.filter(isMidi);
+	const soirSlots = allSlots.filter((t) => !isMidi(t));
+
+	const maxRes = Math.max(...weekDays.map((d) => getDayRes(d).length), 1);
+
+	const getCell = (d: Date, t: string) =>
+		getDayRes(d).filter((r) => r.timeSlot === t);
+
+	// Ligne horaire : label + 7 cellules
+	const TimeRow = ({ slot }: { slot: string }) => (
+		<div
+			style={{ display: "grid", gridTemplateColumns: GRID_COLS }}
+			className="border-b border-[#111]"
+		>
+			{/* Label heure */}
+			<div className="flex items-start justify-end pr-2.5 pt-3 border-r border-[#111] pb-1">
+				<span className="text-[9px] font-bold text-[#5A5249] tracking-wide leading-none">
+					{slot}
+				</span>
+			</div>
+			{/* Cellules par jour */}
+			{weekDays.map((d) => {
+				const key = formatDate(d, "yyyy-MM-dd");
+				const res = getCell(d, slot);
+				const isT = sameDay(d, today);
+				return (
+					<div
+						key={key}
+						className="border-l border-[#111]"
+						style={{ background: isT ? "rgba(200,151,58,0.018)" : "transparent" }}
+					>
+						<div className="p-1.5 min-h-[70px] flex flex-col gap-1">
+							{res.slice(0, 2).map((r) => (
+								<WeekChip key={r.id} r={r} onOpen={onChipClick} />
+							))}
+							{res.length > 2 && (
+								<button
+									onClick={() => onDayClick(d)}
+									className="text-[9px] text-[#9A8F84] border border-[#282828] rounded px-1.5 py-0.5 hover:border-[#3a3a3a] hover:text-[#F5F0EB] transition-colors text-center"
+								>
+									+{res.length - 2} autre{res.length - 2 > 1 ? "s" : ""}
+								</button>
+							)}
+						</div>
+					</div>
+				);
+			})}
+		</div>
+	);
+
+	return (
+		<div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
+			<div className="overflow-x-auto">
+				<div style={{ minWidth: 680 }}>
+					{/* ── En-têtes des jours ── */}
+					<div
+						style={{ display: "grid", gridTemplateColumns: GRID_COLS }}
+						className="border-b border-[#1e1e1e]"
+					>
+						<div className="border-r border-[#1e1e1e]" />
+						{weekDays.map((d, i) => {
+							const dr      = getDayRes(d);
+							const isT     = sameDay(d, today);
+							const conf    = dr.filter((r) => r.status === "CONFIRMED").length;
+							const pend    = dr.filter((r) => r.status === "PENDING").length;
+							const density = dr.length / maxRes;
+							return (
+								<div
+									key={i}
+									onClick={() => onDayClick(d)}
+									className="border-l border-[#1e1e1e] py-3 px-2 text-center cursor-pointer transition-colors hover:bg-[#1a1a1a]"
+									style={{ background: isT ? "rgba(200,151,58,0.04)" : "transparent" }}
+								>
+									{/* Jour abrégé */}
+									<p className={cn(
+										"text-[9px] font-bold uppercase tracking-wider mb-1.5",
+										isT ? "text-[#C8973A]" : "text-[#5A5249]"
+									)}>
+										{FR_DAYS_SHORT[d.getDay()]}
+									</p>
+
+									{/* Numéro du jour */}
+									{isT ? (
+										<div className="w-[26px] h-[26px] rounded-full bg-[#C8973A] flex items-center justify-center mx-auto mb-2">
+											<span className="text-[13px] font-bold text-[#0A0A0A]">{d.getDate()}</span>
+										</div>
+									) : (
+										<p className="text-sm font-medium text-[#F5F0EB] mb-2">{d.getDate()}</p>
+									)}
+
+									{/* Barre de densité — élément signature */}
+									<div className="h-[3px] rounded-full bg-[#1e1e1e] mx-auto mb-2 overflow-hidden" style={{ width: "52%" }}>
+										<div
+											className="h-full rounded-full transition-all duration-500 ease-out"
+											style={{
+												width:      `${density * 100}%`,
+												background: isT ? "#C8973A" : "#555",
+											}}
+										/>
+									</div>
+
+									{/* Compteurs */}
+									<div className="flex justify-center gap-1 flex-wrap min-h-[18px]">
+										{conf > 0 && (
+											<span className="text-[8px] font-bold px-1 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400">
+												{conf}✓
+											</span>
+										)}
+										{pend > 0 && (
+											<span className="text-[8px] font-bold px-1 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-yellow-400">
+												{pend}⏳
+											</span>
+										)}
+										{!conf && !pend && (
+											<span className="text-[#252525] text-[9px]">—</span>
+										)}
+									</div>
+								</div>
+							);
+						})}
+					</div>
+
+					{/* ── Section Midi ── */}
+					{midiSlots.length > 0 && (
+						<>
+							<ServiceHeader
+								icon={<Sun size={11} className="text-[#C8973A]" />}
+								label="Service Midi"
+								count={weekDays.flatMap((d) => getDayRes(d).filter((r) => isMidi(r.timeSlot))).length}
+								covers={weekDays.flatMap((d) => getDayRes(d).filter((r) => isMidi(r.timeSlot))).reduce((s, r) => s + r.covers, 0)}
+							/>
+							{midiSlots.map((t) => <TimeRow key={t} slot={t} />)}
+						</>
+					)}
+
+					{/* ── Section Soir ── */}
+					{soirSlots.length > 0 && (
+						<>
+							<ServiceHeader
+								icon={<Moon size={11} className="text-[#C8973A]" />}
+								label="Service Soir"
+								count={weekDays.flatMap((d) => getDayRes(d).filter((r) => !isMidi(r.timeSlot))).length}
+								covers={weekDays.flatMap((d) => getDayRes(d).filter((r) => !isMidi(r.timeSlot))).reduce((s, r) => s + r.covers, 0)}
+							/>
+							{soirSlots.map((t) => <TimeRow key={t} slot={t} />)}
+						</>
+					)}
+
+					{!midiSlots.length && !soirSlots.length && (
+						<div className="flex flex-col items-center justify-center py-16 gap-3 text-[#5A5249]">
+							<CalendarDays size={26} />
+							<p className="text-sm">Aucune réservation cette semaine</p>
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ─── DayView ────────────────────────────────────────────────────────────────────
+
+function DayView({
+	weekDays,
+	getDayRes,
+	today,
+	selectedDay,
+	onSelectDay,
+	onConfirm,
+}: {
+	weekDays: Date[];
+	getDayRes: (d: Date) => Reservation[];
+	today: Date;
+	selectedDay: Date;
+	onSelectDay: (d: Date) => void;
+	onConfirm: (r: Reservation) => void;
+}) {
+	const dayRes  = getDayRes(selectedDay);
+	const midiRes = [...dayRes.filter((r) => isMidi(r.timeSlot))].sort(
+		(a, b) => timeToMinutes(a.timeSlot) - timeToMinutes(b.timeSlot)
+	);
+	const soirRes = [...dayRes.filter((r) => !isMidi(r.timeSlot))].sort(
+		(a, b) => timeToMinutes(a.timeSlot) - timeToMinutes(b.timeSlot)
+	);
+	const midiSlots = [...new Set(midiRes.map((r) => r.timeSlot))];
+	const soirSlots = [...new Set(soirRes.map((r) => r.timeSlot))];
+
+	const openRes = (r: Reservation) => {
+		if (r.status === "PENDING") onConfirm(r);
+		else window.location.href = `/admin/reservations/${r.id}`;
+	};
+
+	return (
+		<div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
+			{/* ── Sélecteur de jour ── */}
+			<div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e] gap-4 flex-wrap">
+				<div>
+					<p className="text-base font-semibold text-[#F5F0EB] tracking-[-0.01em]">
+						{FR_DAYS_FULL[selectedDay.getDay()]}{" "}
+						{selectedDay.getDate()}{" "}
+						{FR_MONTHS[selectedDay.getMonth()]}{" "}
+						{selectedDay.getFullYear()}
+					</p>
+					<p className="text-xs text-[#5A5249] mt-1">
+						{dayRes.length} réservation{dayRes.length !== 1 ? "s" : ""}{" "}
+						· {dayRes.reduce((s, r) => s + r.covers, 0)} couverts
+					</p>
+				</div>
+
+				{/* Pilules 7 jours */}
+				<div className="flex gap-1.5 flex-wrap">
+					{weekDays.map((d, i) => {
+						const isT   = sameDay(d, today);
+						const isSel = sameDay(d, selectedDay);
+						const cnt   = getDayRes(d).length;
+						return (
+							<button
+								key={i}
+								onClick={() => onSelectDay(d)}
+								className={cn(
+									"flex flex-col items-center w-10 py-1.5 rounded-xl border transition-all",
+									isSel
+										? "bg-[#C8973A]/10 border-[#C8973A]/50"
+										: isT
+										? "border-[#C8973A]/20 hover:border-[#333]"
+										: "border-[#1e1e1e] hover:border-[#2e2e2e]"
+								)}
+							>
+								<span className={cn(
+									"text-[8px] font-bold uppercase tracking-wider",
+									isSel ? "text-[#C8973A]" : "text-[#5A5249]"
+								)}>
+									{FR_DAYS_SHORT[d.getDay()]}
+								</span>
+								<span className={cn(
+									"text-sm font-semibold mt-0.5",
+									isSel ? "text-[#C8973A]" : isT ? "text-[#F5F0EB]" : "text-[#9A8F84]"
+								)}>
+									{d.getDate()}
+								</span>
+								<span
+									className="w-1 h-1 rounded-full mt-1 block"
+									style={{
+										background: cnt > 0 ? (isSel ? "#C8973A" : "#3a3a3a") : "transparent",
+									}}
+								/>
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
+			{/* ── Contenu ── */}
+			{dayRes.length === 0 ? (
+				<div className="flex flex-col items-center justify-center py-16 gap-3 text-[#5A5249]">
+					<CalendarDays size={26} />
+					<p className="text-sm">Aucune réservation ce jour</p>
+					<p className="text-xs text-[#333]">Sélectionnez un autre jour ci-dessus</p>
+				</div>
+			) : (
+				<>
+					{/* Service Midi */}
+					{midiRes.length > 0 && (
+						<div>
+							<ServiceHeader
+								icon={<Sun size={11} className="text-[#C8973A]" />}
+								label="Service Midi"
+								count={midiRes.length}
+								covers={midiRes.reduce((s, r) => s + r.covers, 0)}
+							/>
+							<div className="px-6 pt-5 pb-2">
+								{midiSlots.map((slot) => {
+									const res = midiRes.filter((r) => r.timeSlot === slot);
+									return (
+										<div key={slot} className="mb-7">
+											{/* Label créneau */}
+											<div className="flex items-center gap-2.5 mb-3">
+												<div
+													className="text-[11px] font-bold tracking-wider px-2.5 py-0.5 rounded-md shrink-0"
+													style={{
+														color:      "#C8973A",
+														background: "rgba(200,151,58,0.08)",
+														border:     "1px solid rgba(200,151,58,0.20)",
+													}}
+												>
+													{slot}
+												</div>
+												<div className="flex-1 h-px bg-[#1a1a1a]" />
+												<span className="text-[10px] text-[#5A5249] shrink-0">
+													{res.length} table{res.length > 1 ? "s" : ""}{" "}
+													· {res.reduce((s, r) => s + r.covers, 0)} cv
+												</span>
+											</div>
+											{/* Grille de cartes */}
+											<div className={cn(
+												"grid gap-2.5",
+												res.length >= 2 ? "sm:grid-cols-2 grid-cols-1" : "grid-cols-1"
+											)}>
+												{res.map((r) => (
+													<DayCard key={r.id} r={r} onOpen={openRes} onConfirm={onConfirm} />
+												))}
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					)}
+
+					{/* Service Soir */}
+					{soirRes.length > 0 && (
+						<div>
+							<ServiceHeader
+								icon={<Moon size={11} className="text-[#C8973A]" />}
+								label="Service Soir"
+								count={soirRes.length}
+								covers={soirRes.reduce((s, r) => s + r.covers, 0)}
+							/>
+							<div className="px-6 pt-5 pb-2">
+								{soirSlots.map((slot) => {
+									const res = soirRes.filter((r) => r.timeSlot === slot);
+									return (
+										<div key={slot} className="mb-7">
+											<div className="flex items-center gap-2.5 mb-3">
+												<div
+													className="text-[11px] font-bold tracking-wider px-2.5 py-0.5 rounded-md shrink-0"
+													style={{
+														color:      "#C8973A",
+														background: "rgba(200,151,58,0.08)",
+														border:     "1px solid rgba(200,151,58,0.20)",
+													}}
+												>
+													{slot}
+												</div>
+												<div className="flex-1 h-px bg-[#1a1a1a]" />
+												<span className="text-[10px] text-[#5A5249] shrink-0">
+													{res.length} table{res.length > 1 ? "s" : ""}{" "}
+													· {res.reduce((s, r) => s + r.covers, 0)} cv
+												</span>
+											</div>
+											<div className={cn(
+												"grid gap-2.5",
+												res.length >= 2 ? "sm:grid-cols-2 grid-cols-1" : "grid-cols-1"
+											)}>
+												{res.map((r) => (
+													<DayCard key={r.id} r={r} onOpen={openRes} onConfirm={onConfirm} />
+												))}
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					)}
+				</>
+			)}
+		</div>
+	);
+}
+
+// ─── Composant principal ────────────────────────────────────────────────────────
 
 export default function CalendarClient({ reservations, tables }: Props) {
 	const router = useRouter();
-	const today  = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+	const today  = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
 
-	const [weekStart,    setWeekStart]    = useState<Date>(() => getMonday(today));
-	const [view,         setView]         = useState<"week" | "day">("week");
-	const [selectedDay,  setSelectedDay]  = useState<Date>(() => today);
-	const [confirmResa,  setConfirmResa]  = useState<Reservation | null>(null);
+	const [weekStart,   setWeekStart]   = useState<Date>(() => getMonday(today));
+	const [view,        setView]        = useState<"week" | "day">("week");
+	const [selectedDay, setSelectedDay] = useState<Date>(() => today);
+	const [confirmResa, setConfirmResa] = useState<Reservation | null>(null);
 
-	// Navigate weeks
-	const navigate = useCallback((dir: -1 | 1) => {
-		setWeekStart((w) => addDays(w, dir * 7));
-	}, []);
+	const navigate = useCallback((dir: -1 | 1) => setWeekStart((w) => addDays(w, dir * 7)), []);
 
 	const goToday = useCallback(() => {
 		setWeekStart(getMonday(today));
 		setSelectedDay(today);
 	}, [today]);
 
-	// Week days array
 	const weekDays = useMemo(
 		() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
 		[weekStart]
 	);
 
-	// Reservations indexed by day string
 	const byDay = useMemo(() => {
 		const map = new Map<string, Reservation[]>();
 		reservations.forEach((r) => {
@@ -505,46 +914,50 @@ export default function CalendarClient({ reservations, tables }: Props) {
 		return map;
 	}, [reservations]);
 
-	const getDayRes = (d: Date) =>
-		byDay.get(formatDate(d, "yyyy-MM-dd")) ?? [];
+	const getDayRes = useCallback(
+		(d: Date) => byDay.get(formatDate(d, "yyyy-MM-dd")) ?? [],
+		[byDay]
+	);
 
-	// Stats for current week
 	const weekStats = useMemo(() => {
 		const all = weekDays.flatMap(getDayRes);
 		return {
-			total:    all.length,
-			pending:  all.filter((r) => r.status === "PENDING").length,
-			confirmed:all.filter((r) => r.status === "CONFIRMED").length,
-			covers:   all.reduce((s, r) => s + r.covers, 0),
+			total:     all.length,
+			confirmed: all.filter((r) => r.status === "CONFIRMED").length,
+			pending:   all.filter((r) => r.status === "PENDING").length,
+			covers:    all.reduce((s, r) => s + r.covers, 0),
 		};
-	}, [weekDays, byDay]);
-
-	// Now-line Y position
-	const nowY = useMemo(() => {
-		const now = new Date();
-		const h = now.getHours(), m = now.getMinutes();
-		if (h < HOURS[0] || h > HOURS[HOURS.length - 1] + 1) return null;
-		return ((h - HOURS[0]) + m / 60) * HOUR_HEIGHT;
-	}, []);
+	}, [weekDays, getDayRes]);
 
 	const isThisWeek = weekDays.some((d) => sameDay(d, today));
 
-	const handleConfirmed = useCallback(() => {
-		router.refresh();
-	}, [router]);
+	const handleConfirmed = useCallback(() => router.refresh(), [router]);
 
 	const openDayView = useCallback((d: Date) => {
 		setSelectedDay(d);
 		setView("day");
 	}, []);
 
-	// ─── Render ─────────────────────────────────────────────────────────────────
+	// Ouvre la modal de confirmation ou redirige vers la fiche
+	const handleChipClick = useCallback((r: Reservation) => {
+		if (r.status === "PENDING") setConfirmResa(r);
+		else window.location.href = `/admin/reservations/${r.id}`;
+	}, []);
+
+	// ── Rendu ──────────────────────────────────────────────────────────────────
 
 	return (
 		<div>
-			{/* ── Header ── */}
+			{/* ── En-tête ── */}
 			<div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-				<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">Calendrier</h1>
+				<div>
+					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight tracking-tight">
+						Calendrier
+					</h1>
+					<p className="text-xs text-[#5A5249] mt-1.5">
+						Réservations · semaine du {weekRangeLabel(weekStart)}
+					</p>
+				</div>
 				<div className="flex items-center gap-2 flex-wrap">
 					<Link
 						href="/admin/reservations"
@@ -555,7 +968,7 @@ export default function CalendarClient({ reservations, tables }: Props) {
 					</Link>
 					<Link
 						href="/admin/reservations/new"
-						className="flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
+						className="flex items-center gap-2 h-9 px-4 bg-[#C8973A] hover:bg-[#D4A445] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
 					>
 						<Plus size={15} />
 						Ajouter
@@ -563,306 +976,136 @@ export default function CalendarClient({ reservations, tables }: Props) {
 				</div>
 			</div>
 
-			{/* ── Toolbar: view toggle + week nav ── */}
-			<div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-				<div className="flex items-center gap-3 flex-wrap">
-					{/* View toggle */}
-					<div className="flex border border-[#222] rounded-lg overflow-hidden">
-						{(["week", "day"] as const).map((v) => (
-							<button
-								key={v}
-								onClick={() => setView(v)}
-								className={cn(
-									"h-8 px-3 text-xs font-medium transition-colors",
-									view === v
-										? "bg-[#1a1a1a] text-[#F5F0EB]"
-										: "text-[#5A5249] hover:text-[#9A8F84]"
-								)}
-							>
-								{v === "week" ? (
-									<span className="flex items-center gap-1.5"><CalendarDays size={12} />Semaine</span>
-								) : (
-									<span className="flex items-center gap-1.5"><List size={12} />Journée</span>
-								)}
-							</button>
-						))}
-					</div>
-
-					{/* Week navigation */}
-					<div className="flex items-center gap-2">
+			{/* ── Barre d'outils ── */}
+			<div className="flex items-center gap-3 mb-5 flex-wrap">
+				{/* Toggle vue */}
+				<div className="flex border border-[#222] rounded-lg overflow-hidden">
+					{(["week", "day"] as const).map((v) => (
 						<button
-							onClick={() => navigate(-1)}
-							className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#222] text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
-							aria-label="Semaine précédente"
+							key={v}
+							onClick={() => setView(v)}
+							className={cn(
+								"h-8 px-3 text-xs font-medium transition-colors flex items-center gap-1.5",
+								view === v
+									? "bg-[#1a1a1a] text-[#F5F0EB]"
+									: "text-[#5A5249] hover:text-[#9A8F84]"
+							)}
 						>
-							<ChevronLeft size={15} />
+							{v === "week" ? (
+								<><CalendarDays size={12} />Semaine</>
+							) : (
+								<><List size={12} />Journée</>
+							)}
 						</button>
-						<span className="text-sm font-medium text-[#F5F0EB] min-w-[190px] text-center">
-							{weekRangeLabel(weekStart)}
-						</span>
-						<button
-							onClick={() => navigate(1)}
-							className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#222] text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
-							aria-label="Semaine suivante"
-						>
-							<ChevronRight size={15} />
-						</button>
-					</div>
-
-					{!isThisWeek && (
-						<button
-							onClick={goToday}
-							className="h-8 px-3 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
-						>
-							Aujourd'hui
-						</button>
-					)}
+					))}
 				</div>
+
+				{/* Navigation semaine */}
+				<div className="flex items-center gap-2">
+					<button
+						onClick={() => navigate(-1)}
+						className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#222] text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+						aria-label="Semaine précédente"
+					>
+						<ChevronLeft size={15} />
+					</button>
+					<span className="text-sm font-medium text-[#F5F0EB] min-w-[210px] text-center">
+						{weekRangeLabel(weekStart)}
+					</span>
+					<button
+						onClick={() => navigate(1)}
+						className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#222] text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+						aria-label="Semaine suivante"
+					>
+						<ChevronRight size={15} />
+					</button>
+				</div>
+
+				{!isThisWeek && (
+					<button
+						onClick={goToday}
+						className="h-8 px-3 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+					>
+						Aujourd'hui
+					</button>
+				)}
 			</div>
 
-			{/* ── Stats row ── */}
+			{/* ── Statistiques semaine ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
 				{[
-					{ label: "Cette semaine",  val: weekStats.total,     color: "text-[#F5F0EB]" },
-					{ label: "Confirmées",     val: weekStats.confirmed, color: "text-green-400"  },
-					{ label: "En attente",     val: weekStats.pending,   color: "text-yellow-400" },
-					{ label: "Couverts",       val: weekStats.covers,    color: "text-[#C8973A]"  },
-				].map(({ label, val, color }) => (
-					<div key={label} className="bg-[#141414] border border-[#222] rounded-xl p-4">
-						<p className="text-[11px] text-[#5A5249] uppercase tracking-wider mb-1">{label}</p>
-						<p className={cn("text-2xl font-medium leading-none tabular-nums", color)}>{val}</p>
+					{
+						label:   "Cette semaine",
+						val:     weekStats.total,
+						icon:    <CalendarDays size={16} />,
+						iconBg:  "bg-[#F5F0EB]/5",
+						iconCol: "text-[#F5F0EB]",
+						valCol:  "text-[#F5F0EB]",
+					},
+					{
+						label:   "Confirmées",
+						val:     weekStats.confirmed,
+						icon:    <CheckCircle2 size={16} />,
+						iconBg:  "bg-green-500/10",
+						iconCol: "text-green-400",
+						valCol:  "text-green-400",
+					},
+					{
+						label:   "En attente",
+						val:     weekStats.pending,
+						icon:    <Clock size={16} />,
+						iconBg:  "bg-yellow-500/10",
+						iconCol: "text-yellow-400",
+						valCol:  "text-yellow-400",
+					},
+					{
+						label:   "Couverts",
+						val:     weekStats.covers,
+						icon:    <Users size={16} />,
+						iconBg:  "bg-[#C8973A]/10",
+						iconCol: "text-[#C8973A]",
+						valCol:  "text-[#C8973A]",
+					},
+				].map(({ label, val, icon, iconBg, iconCol, valCol }) => (
+					<div
+						key={label}
+						className="bg-[#141414] border border-[#222] rounded-xl p-4 flex items-center gap-3"
+					>
+						<div className={cn("p-2 rounded-lg shrink-0", iconBg, iconCol)}>{icon}</div>
+						<div>
+							<p className={cn("text-2xl font-semibold leading-none tabular-nums", valCol)}>
+								{val}
+							</p>
+							<p className="text-[11px] text-[#5A5249] mt-1 uppercase tracking-wide">{label}</p>
+						</div>
 					</div>
 				))}
 			</div>
 
-			{/* ════════════════════════ WEEK VIEW ════════════════════════ */}
+			{/* ════════════ VUE SEMAINE ════════════ */}
 			{view === "week" && (
-				<div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
-					{/* Column headers */}
-					<div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-[#222]">
-						<div className="border-r border-[#222]" />
-						{weekDays.map((d, i) => {
-							const dr     = getDayRes(d);
-							const isT    = sameDay(d, today);
-							const nConf  = dr.filter((r) => r.status === "CONFIRMED").length;
-							const nPend  = dr.filter((r) => r.status === "PENDING").length;
-							return (
-								<div
-									key={i}
-									onClick={() => openDayView(d)}
-									className={cn(
-										"py-3 px-1 text-center border-l border-[#1a1a1a] cursor-pointer hover:bg-[#1a1a1a] transition-colors",
-										isT && "bg-[#C8973A]/5"
-									)}
-								>
-									<p className={cn("text-[10px] font-semibold uppercase tracking-wider", isT ? "text-[#C8973A]" : "text-[#5A5249]")}>
-										{FR_DAYS_SHORT[d.getDay()]}
-									</p>
-									{isT ? (
-										<div className="w-7 h-7 rounded-full bg-[#C8973A] flex items-center justify-center mx-auto mt-1">
-											<span className="text-sm font-medium text-[#0A0A0A]">{d.getDate()}</span>
-										</div>
-									) : (
-										<p className="text-base font-medium text-[#F5F0EB] mt-1">{d.getDate()}</p>
-									)}
-									<div className="flex justify-center gap-1 mt-1.5 flex-wrap">
-										{nConf > 0 && (
-											<span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400">
-												{nConf} conf.
-											</span>
-										)}
-										{nPend > 0 && (
-											<span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400">
-												{nPend} att.
-											</span>
-										)}
-									</div>
-								</div>
-							);
-						})}
-					</div>
-
-					{/* Timeline body */}
-					<div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] overflow-y-auto" style={{ maxHeight: "60vh" }}>
-						{/* Hour labels */}
-						<div className="border-r border-[#1a1a1a]">
-							{HOURS.map((h) => (
-								<div
-									key={h}
-									style={{ height: HOUR_HEIGHT }}
-									className="border-b border-[#1a1a1a] relative"
-								>
-									<span className="absolute -top-2.5 right-2 text-[10px] text-[#5A5249]">
-										{h}h
-									</span>
-								</div>
-							))}
-						</div>
-
-						{/* Day columns */}
-						{weekDays.map((d, di) => {
-							const dr = getDayRes(d);
-							const totalH = HOURS.length * HOUR_HEIGHT;
-							const isT = sameDay(d, today) && isThisWeek;
-							return (
-								<div
-									key={di}
-									className={cn(
-										"border-l border-[#1a1a1a] relative",
-										isT && "bg-[#C8973A]/[0.02]"
-									)}
-									style={{ height: totalH }}
-								>
-									{HOURS.map((h) => (
-										<div
-											key={h}
-											style={{ height: HOUR_HEIGHT }}
-											className="border-b border-[#1a1a1a] relative"
-										>
-											<div
-												className="absolute top-1/2 left-0 right-0 border-t border-[#1a1a1a] opacity-40"
-												style={{ borderStyle: "dashed" }}
-											/>
-										</div>
-									))}
-									{/* Now line */}
-									{isT && nowY !== null && (
-										<div
-											className="absolute left-0 right-0 z-10 pointer-events-none"
-											style={{ top: nowY }}
-										>
-											<div className="absolute left-0 right-0 h-px bg-[#C8973A]" />
-											<div className="absolute -left-1 -top-1.5 w-3 h-3 rounded-full bg-[#C8973A]" />
-										</div>
-									)}
-									{/* Reservations */}
-									{dr.map((r) => (
-										<ResBlock
-											key={r.id}
-											r={r}
-											onOpen={(r) =>
-												r.status === "PENDING"
-													? setConfirmResa(r)
-													: void (window.location.href = `/admin/reservations/${r.id}`)
-											}
-										/>
-									))}
-								</div>
-							);
-						})}
-					</div>
-				</div>
+				<WeekView
+					weekDays={weekDays}
+					getDayRes={getDayRes}
+					today={today}
+					onDayClick={openDayView}
+					onChipClick={handleChipClick}
+				/>
 			)}
 
-			{/* ════════════════════════ DAY VIEW ════════════════════════ */}
+			{/* ════════════ VUE JOURNÉE ════════════ */}
 			{view === "day" && (
-				<div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
-					{/* Day picker header */}
-					<div className="flex items-center justify-between px-5 py-4 border-b border-[#222] gap-4 flex-wrap">
-						<div>
-							<p className="text-base font-medium text-[#F5F0EB]">
-								{FR_DAYS_FULL[selectedDay.getDay()]} {selectedDay.getDate()} {FR_MONTHS[selectedDay.getMonth()]} {selectedDay.getFullYear()}
-							</p>
-							<p className="text-xs text-[#5A5249] mt-0.5">
-								{getDayRes(selectedDay).length} réservation{getDayRes(selectedDay).length > 1 ? "s" : ""} ·{" "}
-								{getDayRes(selectedDay).reduce((s, r) => s + r.covers, 0)} couverts
-							</p>
-						</div>
-						{/* Day selector pills */}
-						<div className="flex gap-1.5 flex-wrap">
-							{weekDays.map((d, i) => {
-								const isT   = sameDay(d, today);
-								const isSel = sameDay(d, selectedDay);
-								const cnt   = getDayRes(d).length;
-								return (
-									<button
-										key={i}
-										onClick={() => setSelectedDay(d)}
-										className={cn(
-											"flex flex-col items-center w-10 h-12 rounded-xl border transition-all",
-											isSel
-												? "bg-[#C8973A]/10 border-[#C8973A]/40 text-[#C8973A]"
-												: isT
-												? "border-[#C8973A]/20 text-[#9A8F84] hover:border-[#333]"
-												: "border-[#222] text-[#5A5249] hover:border-[#333] hover:text-[#9A8F84]"
-										)}
-									>
-										<span className="text-[9px] font-semibold uppercase mt-1.5">
-											{FR_DAYS_SHORT[d.getDay()]}
-										</span>
-										<span className={cn("text-sm font-medium", isSel ? "text-[#C8973A]" : isT ? "text-[#F5F0EB]" : "")}>
-											{d.getDate()}
-										</span>
-										{cnt > 0 && (
-											<span className="text-[8px] text-[#5A5249]">{cnt}</span>
-										)}
-									</button>
-								);
-							})}
-						</div>
-					</div>
-
-					{/* Reservations list */}
-					{getDayRes(selectedDay).length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-16 gap-3 text-[#5A5249]">
-							<CalendarDays size={28} />
-							<p className="text-sm">Aucune réservation ce jour</p>
-						</div>
-					) : (
-						<>
-							{/* Midi */}
-							{getDayRes(selectedDay).some((r) => Number(r.timeSlot.split(":")[0]) < 17) && (
-								<>
-									<div className="flex items-center gap-3 px-5 py-2">
-										<span className="text-[10px] font-semibold uppercase tracking-wider text-[#5A5249]">Service midi</span>
-										<div className="flex-1 h-px bg-[#1a1a1a]" />
-									</div>
-									{getDayRes(selectedDay)
-										.filter((r) => Number(r.timeSlot.split(":")[0]) < 17)
-										.sort((a, b) => timeToMinutes(a.timeSlot) - timeToMinutes(b.timeSlot))
-										.map((r) => (
-											<DayResCard
-												key={r.id}
-												r={r}
-												onOpen={(r) => {
-													if (r.status === "PENDING") setConfirmResa(r);
-													else window.location.href = `/admin/reservations/${r.id}`;
-												}}
-												onConfirm={setConfirmResa}
-											/>
-										))}
-								</>
-							)}
-
-							{/* Soir */}
-							{getDayRes(selectedDay).some((r) => Number(r.timeSlot.split(":")[0]) >= 17) && (
-								<>
-									<div className="flex items-center gap-3 px-5 py-2 mt-1">
-										<span className="text-[10px] font-semibold uppercase tracking-wider text-[#5A5249]">Service soir</span>
-										<div className="flex-1 h-px bg-[#1a1a1a]" />
-									</div>
-									{getDayRes(selectedDay)
-										.filter((r) => Number(r.timeSlot.split(":")[0]) >= 17)
-										.sort((a, b) => timeToMinutes(a.timeSlot) - timeToMinutes(b.timeSlot))
-										.map((r) => (
-											<DayResCard
-												key={r.id}
-												r={r}
-												onOpen={(r) => {
-													if (r.status === "PENDING") setConfirmResa(r);
-													else window.location.href = `/admin/reservations/${r.id}`;
-												}}
-												onConfirm={setConfirmResa}
-											/>
-										))}
-								</>
-							)}
-						</>
-					)}
-				</div>
+				<DayView
+					weekDays={weekDays}
+					getDayRes={getDayRes}
+					today={today}
+					selectedDay={selectedDay}
+					onSelectDay={setSelectedDay}
+					onConfirm={setConfirmResa}
+				/>
 			)}
 
-			{/* ── Confirm / assign modal ── */}
+			{/* ── Modal confirmation ── */}
 			<ConfirmModal
 				reservation={confirmResa}
 				tables={tables}
