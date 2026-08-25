@@ -540,7 +540,11 @@ function DetailPanel({
 										Réservation associée
 									</p>
 									<Link
+<<<<<<< HEAD
 										href={`/admin/reservations?id=${order.reservation.id}`}
+=======
+										href={`/admin/reservations/${order.reservation.id}`}
+>>>>>>> 5d3944cb383b071658bbba89c8dcbb36bbe0549b
 										className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
 									>
 										<div className="min-w-0">

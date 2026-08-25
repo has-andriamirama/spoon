@@ -4,7 +4,13 @@ import CommandesClient from "./commandes-client";
 export const dynamic  = "force-dynamic";
 export const metadata = { title: "Commandes — Spoon Admin" };
 
-export default async function AdminCommandesPage() {
+interface PageProps {
+	searchParams: Promise<{ order?: string }>;
+}
+
+export default async function AdminCommandesPage({ searchParams }: PageProps) {
+	const { order: initialOrderId } = await searchParams;
+
 	const orders = await prisma.serviceOrder.findMany({
 		include: {
 			table: {
@@ -16,6 +22,7 @@ export default async function AdminCommandesPage() {
 					guestFirstName: true,
 					guestLastName: true,
 					timeSlot: true,
+					covers: true,
 				},
 			},
 			items: {
@@ -26,5 +33,10 @@ export default async function AdminCommandesPage() {
 		take: 500,
 	});
 
-	return <CommandesClient orders={orders as Parameters<typeof CommandesClient>[0]["orders"]} />;
+	return (
+		<CommandesClient
+			orders={orders as Parameters<typeof CommandesClient>[0]["orders"]}
+			initialOrderId={initialOrderId}
+		/>
+	);
 }
