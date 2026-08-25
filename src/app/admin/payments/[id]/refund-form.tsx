@@ -43,10 +43,10 @@ export default function RefundForm({
 	};
 
 	return (
-		<div className="pb-5 border-t border-[#222]">
+		<div className="p-5 space-y-4">
 
 			{/* Header */}
-			<div className="px-6 py-4 border-b border-[#222]/10 flex items-center gap-3">
+			<div className="flex items-center gap-3">
 				<div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
 					<RotateCcw size={15} className="text-red-400" />
 				</div>
@@ -59,35 +59,38 @@ export default function RefundForm({
 				</div>
 			</div>
 
-			{/* Body */}
-			<div className="px-6 py-5 space-y-4">
-				<div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
-					<AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-					<p className="text-xs text-[#9A8F84]">
-						Le remboursement est traité directement via Stripe et est <strong className="text-red-400">irréversible</strong>.
-						Vérifiez le montant avant de confirmer.
-					</p>
-				</div>
-				<Input
-					label="Montant à rembourser (€)"
-					type="number"
-					step="0.01"
-					min="0.01"
-					max={maxAmount}
-					value={amount}
-					onChange={(e) => setAmount(e.target.value)}
-				/>
-				<Button
-					variant="destructive"
-					onClick={handleRefund}
-					loading={loading}
-					disabled={!isValid}
-					className="w-full"
-				>
-					<RotateCcw size={14} />
-					Rembourser {isValid ? formatPrice(parsedAmount) : ""}
-				</Button>
+			{/* Avertissement */}
+			<div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+				<AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+				<p className="text-xs text-[#9A8F84]">
+					Le remboursement est traité directement via Stripe et est{" "}
+					<strong className="text-red-400">irréversible</strong>.{" "}
+					Vérifiez le montant avant de confirmer.
+				</p>
 			</div>
+
+			{/* Champ montant */}
+			<Input
+				label="Montant à rembourser (€)"
+				type="number"
+				step="0.01"
+				min="0.01"
+				max={maxAmount}
+				value={amount}
+				onChange={(e) => setAmount(e.target.value)}
+			/>
+
+			{/* Bouton */}
+			<Button
+				variant="destructive"
+				onClick={handleRefund}
+				loading={loading}
+				disabled={!isValid}
+				className="w-full"
+			>
+				<RotateCcw size={14} />
+				Rembourser {isValid ? formatPrice(parsedAmount) : ""}
+			</Button>
 		</div>
 	);
 }

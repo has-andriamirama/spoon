@@ -343,7 +343,7 @@ function PaymentPanelContent({
 	const refundable   = payment.amount - (payment.refundedAmount ?? 0);
 
 	return (
-		<>
+		<div className="flex flex-col h-full">
 			{/* ── Header ── */}
 			<div className="flex items-center justify-between p-5 border-b border-[#222] shrink-0">
 				<div className="flex items-center gap-3 min-w-0">
@@ -509,7 +509,7 @@ function PaymentPanelContent({
 					<RefundForm paymentId={payment.id} maxAmount={refundable} />
 				</div>
 			)}
-		</>
+		</div>
 	);
 }
 
