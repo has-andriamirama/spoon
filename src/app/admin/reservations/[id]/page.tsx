@@ -351,7 +351,7 @@ export default async function AdminReservationDetailPage({
 					</div>
 				)}
 
-				{/* Commande en salle — link to /admin/commandes/[id] */}
+				{/* Commande en salle — deep-links into the side panel on /admin/commandes */}
 				{hasAddition && serviceOrder && (
 					<div className="px-6 py-4 border-b border-[#222]">
 						<div className="flex items-center justify-between mb-3">
@@ -368,7 +368,7 @@ export default async function AdminReservationDetailPage({
 						</div>
 
 						<Link
-							href={`/admin/commandes/${serviceOrder.id}`}
+							href={`/admin/commandes?order=${serviceOrder.id}`}
 							className="flex items-center justify-between px-3 py-2.5 bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors"
 						>
 							<span className="flex items-center gap-2 text-xs text-[#9A8F84]">
