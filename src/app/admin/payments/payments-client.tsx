@@ -696,41 +696,52 @@ export default function PaymentsClient({ payments }: Props) {
 				/>
 			</div>
 
-			<div className="flex flex-col gap-3 mb-4">
-				<div className="relative">
-					<Search
-						size={14}
-						className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A5249] pointer-events-none"
-					/>
-					<input
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Rechercher par client, email, Stripe ID…"
-						className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
-					/>
-				</div>
+			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
+				<div className="flex flex-col sm:flex-row gap-3">
+					<div className="relative flex-1">
+						<Search
+							size={14}
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A5249] pointer-events-none"
+						/>
+						<input
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							placeholder="Rechercher par client, email, Stripe ID…"
+							className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
+						/>
+						{search && (
+							<button
+								onClick={() => setSearch("")}
+								className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+								aria-label="Effacer"
+							>
+								<X size={14} />
+							</button>
+						)}
+					</div>
 
-				<div className="flex flex-wrap gap-2">
-					{(Object.entries(STATUS_META) as [PaymentStatus, typeof STATUS_META[string]][]).map(
-						([status, meta]) => (
-							<StatusPill
-								key={status}
-								label={meta.label}
-								count={statusCounts[status] ?? 0}
-								color={meta.color}
-								active={activeStatus === status}
-								onClick={() => handleStatusPill(status)}
-							/>
-						)
-					)}
-					{hasActiveFilters && (
-						<button
-							onClick={resetFilters}
-							className="ml-auto text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
-						>
-							Réinitialiser
-						</button>
-					)}
+					<div className="flex items-center gap-2 flex-wrap">
+						{(Object.entries(STATUS_META) as [PaymentStatus, typeof STATUS_META[string]][]).map(
+							([status, meta]) => (
+								<StatusPill
+									key={status}
+									label={meta.label}
+									count={statusCounts[status] ?? 0}
+									color={meta.color}
+									active={activeStatus === status}
+									onClick={() => handleStatusPill(status)}
+								/>
+							)
+						)}
+						{hasActiveFilters && (
+							<button
+								onClick={resetFilters}
+								className="ml-auto text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+							>
+								Réinitialiser
+							</button>
+						)}
+					</div>
 				</div>
 			</div>
 
