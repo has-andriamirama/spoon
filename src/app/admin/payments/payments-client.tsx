@@ -697,8 +697,8 @@ export default function PaymentsClient({ payments }: Props) {
 			</div>
 
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
-				<div className="flex flex-col sm:flex-row gap-3">
-					<div className="relative flex-1">
+				<div className="flex flex-row gap-3">
+					<div className="relative">
 						<Search
 							size={14}
 							className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A5249] pointer-events-none"
@@ -706,7 +706,7 @@ export default function PaymentsClient({ payments }: Props) {
 						<input
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							placeholder="Rechercher par client, email, Stripe ID…"
+							placeholder="Rechercher par client, email, Stripe ID..."
 							className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
 						/>
 						{search && (
