@@ -43,9 +43,8 @@ export default function RefundForm({
 	};
 
 	return (
-		<div className="p-5 space-y-4">
+		<div className="p-5">
 
-			{/* Header */}
 			<div className="flex items-center gap-3">
 				<div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
 					<RotateCcw size={15} className="text-red-400" />
@@ -59,7 +58,6 @@ export default function RefundForm({
 				</div>
 			</div>
 
-			{/* Avertissement */}
 			<div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
 				<AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
 				<p className="text-xs text-[#9A8F84]">

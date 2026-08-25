@@ -364,7 +364,6 @@ function DetailPanel({
 
 	return (
 		<>
-			{/* Backdrop */}
 			<div
 				onClick={onClose}
 				aria-hidden="true"
@@ -374,8 +373,6 @@ function DetailPanel({
 				)}
 			/>
 
-			{/* Panel — même structure que le panel des plats :
-			    inset-y-0 au lieu de top-0 + h-full pour une couverture full-height fiable */}
 			<aside
 				className={cn(
 					"fixed top-0 right-0 h-full w-full sm:w-[380px] z-50 flex flex-col",
@@ -389,7 +386,6 @@ function DetailPanel({
 			>
 				{payment && (
 					<>
-						{/* ── Header (fixe) ─────────────────────────────────── */}
 						<div className="flex items-center justify-between p-5 border-b border-[#222] shrink-0">
 							<div className="flex items-center gap-3 min-w-0">
 								<div className="w-10 h-10 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center text-sm font-semibold text-[#C8973A] shrink-0">
