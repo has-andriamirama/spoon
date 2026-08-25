@@ -43,7 +43,7 @@ export default function RefundForm({
 	};
 
 	return (
-		<div className="p-5">
+		<div className="p-5 space-y-4">
 
 			<div className="flex items-center gap-3">
 				<div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
@@ -67,7 +67,6 @@ export default function RefundForm({
 				</p>
 			</div>
 
-			{/* Champ montant */}
 			<Input
 				label="Montant à rembourser (€)"
 				type="number"
@@ -78,7 +77,6 @@ export default function RefundForm({
 				onChange={(e) => setAmount(e.target.value)}
 			/>
 
-			{/* Bouton */}
 			<Button
 				variant="destructive"
 				onClick={handleRefund}

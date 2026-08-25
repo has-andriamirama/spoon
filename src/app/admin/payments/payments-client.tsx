@@ -676,7 +676,7 @@ export default function PaymentsClient({ payments }: Props) {
 	const selectedPayment   = payments.find((p) => p.id === selectedId) ?? null;
 
 	return (
-		<div className="space-y-6">
+		<div className="min-h-full">
 
 			{/* ── Header ── */}
 			<div className="flex items-center justify-between gap-4">
