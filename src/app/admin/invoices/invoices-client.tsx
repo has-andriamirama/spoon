@@ -294,7 +294,7 @@ export default function InvoicesClient({ invoices }: Props) {
 		<div className="space-y-6">
 
 			{/* ── Header ── */}
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+			<div className="flex items-center justify-between gap-4">
 				<div>
 					<h1 className="font-display text-2xl text-[#F5F0EB]">Factures</h1>
 					<p className="text-sm text-[#5A5249] mt-0.5">
@@ -303,10 +303,10 @@ export default function InvoicesClient({ invoices }: Props) {
 				</div>
 				<button
 					onClick={handleExport}
-					className="flex items-center gap-2 px-4 h-9 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
+					className="flex items-center gap-2 px-3 sm:px-4 h-9 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
 				>
 					<Download size={14} />
-					Exporter
+					<span className="hidden sm:inline">Exporter</span>
 				</button>
 			</div>
 
@@ -486,23 +486,23 @@ export default function InvoicesClient({ invoices }: Props) {
 									</div>
 								</div>
 
-								<div className="flex gap-2">
+								<div className="flex items-center justify-end gap-2">
 									<Link
 										href={`/admin/invoices/${inv.id}`}
-										className="flex-1 flex items-center justify-center gap-2 h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+										className="p-2 rounded-lg border border-[#222] text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#1a1a1a] transition-colors"
+										title="Voir la facture"
 									>
-										<Eye size={12} />
-										Voir
+										<Eye size={14} />
 									</Link>
 									{inv.pdfUrl && (
 										<a
 											href={inv.pdfUrl}
 											target="_blank"
 											rel="noopener noreferrer"
-											className="flex-1 flex items-center justify-center gap-2 h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#C8973A] hover:border-[#C8973A]/30 transition-colors"
+											className="p-2 rounded-lg border border-[#222] text-[#5A5249] hover:text-[#C8973A] hover:border-[#C8973A]/30 transition-colors"
+											title="Télécharger PDF"
 										>
-											<Download size={12} />
-											PDF
+											<Download size={14} />
 										</a>
 									)}
 								</div>
