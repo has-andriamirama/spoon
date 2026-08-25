@@ -15,6 +15,9 @@ export default async function AdminPaymentsPage() {
 					guestEmail: true,
 					date: true,
 					timeSlot: true,
+					invoice: {
+						select: { id: true, invoiceNumber: true, pdfUrl: true },
+					},
 				},
 			},
 		},
