@@ -501,13 +501,12 @@ function PaymentPanelContent({
 						</Link>
 					</div>
 				)}
-
-				{/* Formulaire de remboursement */}
-				{isRefundable && refundable > 0 && (
-					<RefundForm paymentId={payment.id} maxAmount={refundable} />
-				)}
-
 			</div>
+			
+			{/* Formulaire de remboursement */}
+			{isRefundable && refundable > 0 && (
+				<RefundForm paymentId={payment.id} maxAmount={refundable} />
+			)}
 		</>
 	);
 }
