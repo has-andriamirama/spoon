@@ -640,8 +640,8 @@ export default function PaymentsClient({ payments }: Props) {
 
 			<div className="flex items-center justify-between mb-6 gap-4">
 				<div>
-					<h1 className="font-display text-2xl text-[#F5F0EB]">Paiements</h1>
-					<p className="text-sm text-[#5A5249] mt-0.5">
+					<h1 className="font-display text-3xl text-[#F5F0EB]">Paiements</h1>
+					<p className="text-sm text-[#5A5249] mt-1">
 						{payments.length} paiement{payments.length !== 1 ? "s" : ""} au total
 					</p>
 				</div>
