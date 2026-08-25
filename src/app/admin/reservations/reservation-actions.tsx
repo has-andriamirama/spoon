@@ -20,8 +20,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { ZONE_LABELS } from "@/lib/constants";
 import type { ReservationStatus, ZoneTable, PaymentStatus } from "@/types";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
 interface TableInfo {
 	id: string;
 	numero: number;
@@ -46,26 +44,19 @@ interface Props {
 	};
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
-
 export default function ReservationActions({ reservation }: Props) {
 	const router = useRouter();
 
-	// Modal states
 	const [confirmOpen,  setConfirmOpen]  = useState(false);
 	const [cancelOpen,   setCancelOpen]   = useState(false);
 
-	// Form state for confirm modal
 	const [tables,          setTables]          = useState<TableInfo[]>([]);
 	const [tablesLoading,   setTablesLoading]   = useState(false);
 	const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 	const [adminNotes,      setAdminNotes]       = useState("");
 	const [cancelReason,    setCancelReason]     = useState("");
 
-	// Loading states
 	const [loading, setLoading] = useState<string | null>(null);
-
-	// ── Helpers ──
 
 	const isPaymentBlocking =
 		reservation.payment?.status === "PENDING" ||
@@ -74,7 +65,6 @@ export default function ReservationActions({ reservation }: Props) {
 	const isPending   = reservation.status === "PENDING";
 	const isConfirmed = reservation.status === "CONFIRMED";
 
-	// ── Fetch available tables when confirm modal opens ──
 	const openConfirmModal = useCallback(async () => {
 		setConfirmOpen(true);
 		setSelectedTableId(null);
@@ -84,7 +74,6 @@ export default function ReservationActions({ reservation }: Props) {
 			const res = await fetch("/api/admin/tables");
 			const data = await res.json();
 			const all: TableInfo[] = data.data ?? [];
-			// Only show active tables with enough capacity
 			setTables(all.filter((t) => t.isActif && t.capaciteMax >= reservation.covers));
 		} catch {
 			toast.error("Impossible de charger les tables");
@@ -93,7 +82,6 @@ export default function ReservationActions({ reservation }: Props) {
 		}
 	}, [reservation.covers]);
 
-	// ── Confirm + assign table ──
 	const handleConfirm = async () => {
 		if (!selectedTableId) return;
 		setLoading("confirm");
@@ -118,7 +106,6 @@ export default function ReservationActions({ reservation }: Props) {
 		}
 	};
 
-	// ── Generic status update (NO_SHOW, COMPLETED, CANCELLED_BY_ADMIN) ──
 	const updateStatus = async (status: string, reason?: string) => {
 		setLoading(status);
 		try {
@@ -138,11 +125,8 @@ export default function ReservationActions({ reservation }: Props) {
 		}
 	};
 
-	// ─── Render ───────────────────────────────────────────────────────────────
-
 	return (
 		<>
-			{/* ── Payment blocking warnings ── */}
 			{reservation.payment?.status === "PENDING" && (
 				<div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3.5 mb-4">
 					<Clock size={14} className="text-yellow-400 shrink-0 mt-0.5" />
@@ -163,15 +147,14 @@ export default function ReservationActions({ reservation }: Props) {
 				</div>
 			)}
 
-			<div className="flex flex-col sm:flex-row gap-2">
+			<div className="flex flex-col gap-2">
 
-				{/* Confirm + assign table (PENDING only) */}
 				{isPending && !isPaymentBlocking && (
 					<Button
 						variant="primary"
 						onClick={openConfirmModal}
 						disabled={loading === "confirm"}
-						className="w-full sm:flex-1"
+						className="w-full"
 					>
 						{loading === "confirm" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -182,13 +165,12 @@ export default function ReservationActions({ reservation }: Props) {
 					</Button>
 				)}
 
-				{/* Mark no-show */}
 				{(isPending || isConfirmed) && !isPaymentBlocking && (
 					<Button
 						variant="ghost"
 						onClick={() => updateStatus("NO_SHOW")}
 						disabled={!!loading}
-						className="w-full sm:flex-1 border border-[#333]"
+						className="w-full border border-[#333]"
 					>
 						{loading === "NO_SHOW" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -199,13 +181,12 @@ export default function ReservationActions({ reservation }: Props) {
 					</Button>
 				)}
 
-				{/* Mark completed */}
 				{isConfirmed && (
 					<Button
 						variant="ghost"
 						onClick={() => updateStatus("COMPLETED")}
 						disabled={!!loading}
-						className="w-full sm:flex-1 border border-[#333]"
+						className="w-full border border-[#333]"
 					>
 						{loading === "COMPLETED" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -216,13 +197,12 @@ export default function ReservationActions({ reservation }: Props) {
 					</Button>
 				)}
 
-				{/* Cancel */}
 				{(isPending || isConfirmed) && (
 					<Button
 						variant="destructive"
 						onClick={() => { setCancelReason(""); setCancelOpen(true); }}
 						disabled={!!loading}
-						className="w-full sm:flex-1"
+						className="w-full"
 					>
 						{loading === "CANCELLED_BY_ADMIN" ? (
 							<Loader2 size={14} className="animate-spin" />
@@ -234,7 +214,6 @@ export default function ReservationActions({ reservation }: Props) {
 				)}
 			</div>
 
-			{/* ── Confirm + assign table modal ── */}
 			<Modal
 				open={confirmOpen}
 				onClose={() => setConfirmOpen(false)}
@@ -243,7 +222,6 @@ export default function ReservationActions({ reservation }: Props) {
 				className="max-w-xl"
 			>
 				<div className="space-y-5">
-					{/* Table picker */}
 					<div>
 						<p className="text-xs font-medium text-[#5A5249] mb-2">
 							Choisir une table (minimum {reservation.covers} couverts requis)
@@ -296,7 +274,6 @@ export default function ReservationActions({ reservation }: Props) {
 						)}
 					</div>
 
-					{/* Admin notes */}
 					<div>
 						<label className="text-xs text-[#5A5249] block mb-1.5">
 							Notes internes (facultatif)
@@ -304,13 +281,12 @@ export default function ReservationActions({ reservation }: Props) {
 						<textarea
 							value={adminNotes}
 							onChange={(e) => setAdminNotes(e.target.value)}
-							placeholder="Préférences de placement, notes de service…"
+							placeholder="Préférences de placement, notes de service..."
 							rows={2}
 							className="w-full bg-[#0A0A0A] border border-[#222] rounded-xl px-3 py-2.5 text-sm text-[#F5F0EB] placeholder:text-[#2a2a2a] focus:border-[#C8973A] focus:outline-none resize-none transition-colors"
 						/>
 					</div>
 
-					{/* Modal actions */}
 					<div className="flex items-center justify-end gap-3 pt-1 border-t border-[#1e1e1e]">
 						<button
 							onClick={() => setConfirmOpen(false)}
@@ -328,13 +304,12 @@ export default function ReservationActions({ reservation }: Props) {
 							) : (
 								<CheckCircle2 size={15} />
 							)}
-							{loading === "confirm" ? "Confirmation…" : "Confirmer & envoyer l'email"}
+							{loading === "confirm" ? "Confirmation..." : "Confirmer & envoyer l'email"}
 						</button>
 					</div>
 				</div>
 			</Modal>
 
-			{/* ── Cancel modal ── */}
 			<Modal
 				open={cancelOpen}
 				onClose={() => setCancelOpen(false)}
@@ -344,7 +319,7 @@ export default function ReservationActions({ reservation }: Props) {
 					label="Motif d'annulation (optionnel)"
 					value={cancelReason}
 					onChange={(e) => setCancelReason(e.target.value)}
-					placeholder="Ex : Fermeture exceptionnelle…"
+					placeholder="Ex : Fermeture exceptionnelle..."
 				/>
 				<div className="flex gap-3 mt-4">
 					<Button
