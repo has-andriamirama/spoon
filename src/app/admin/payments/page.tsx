@@ -9,12 +9,15 @@ export default async function AdminPaymentsPage() {
 		include: {
 			reservation: {
 				select: {
-					id: true,
+					id:             true,
 					guestFirstName: true,
-					guestLastName: true,
-					guestEmail: true,
-					date: true,
-					timeSlot: true,
+					guestLastName:  true,
+					guestEmail:     true,
+					date:           true,
+					timeSlot:       true,
+					invoice: {
+						select: { id: true, invoiceNumber: true, pdfUrl: true },
+					},
 				},
 			},
 		},

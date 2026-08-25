@@ -9,11 +9,14 @@ export default async function AdminInvoicesPage() {
 		include: {
 			reservation: {
 				select: {
-					id: true,
+					id:             true,
 					guestFirstName: true,
-					guestLastName: true,
-					date: true,
-					timeSlot: true,
+					guestLastName:  true,
+					date:           true,
+					timeSlot:       true,
+					payment: {
+						select: { id: true, status: true, amount: true, type: true },
+					},
 				},
 			},
 		},
