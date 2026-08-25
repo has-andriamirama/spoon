@@ -697,7 +697,7 @@ export default function PaymentsClient({ payments }: Props) {
 			</div>
 
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
-				<div className="flex flex-col sm:flex-row gap-3">
+				<div className="flex flex-col gap-3">
 					<div className="relative flex-1">
 						<Search
 							size={14}
