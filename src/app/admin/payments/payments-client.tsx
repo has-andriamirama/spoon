@@ -327,193 +327,13 @@ function InfoRow({
 	);
 }
 
-// ─── PaymentPanelContent ──────────────────────────────────────────────────────
-
-function PaymentPanelContent({
-	payment,
-	onClose,
-}: {
-	payment: Payment;
-	onClose: () => void;
-}) {
-	const fullName  = `${payment.reservation.guestFirstName} ${payment.reservation.guestLastName}`;
-	const initials  = getInitials(payment.reservation.guestFirstName, payment.reservation.guestLastName);
-	const meta      = STATUS_META[payment.status];
-	const isRefundable = payment.status === "PAID";
-	const refundable   = payment.amount - (payment.refundedAmount ?? 0);
-
-	return (
-		<div className="flex flex-col h-full">
-			{/* ── Header ── */}
-			<div className="flex items-center justify-between p-5 border-b border-[#222] shrink-0">
-				<div className="flex items-center gap-3 min-w-0">
-					<div className="w-10 h-10 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center text-sm font-semibold text-[#C8973A] shrink-0">
-						{initials}
-					</div>
-					<div className="min-w-0">
-						<p className="text-sm font-semibold text-[#F5F0EB] truncate">{fullName}</p>
-						<p className="text-xs text-[#5A5249] truncate">{payment.reservation.guestEmail}</p>
-					</div>
-				</div>
-				<div className="flex items-center gap-2 shrink-0 ml-2">
-					<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
-						{meta?.label ?? payment.status}
-					</Badge>
-					<button
-						onClick={onClose}
-						className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#222] transition-colors"
-						aria-label="Fermer le panneau"
-					>
-						<X size={16} />
-					</button>
-				</div>
-			</div>
-
-			{/* ── Body ── */}
-			<div className="flex-1 overflow-y-auto p-5 space-y-5">
-
-				{/* Key info 2×2 */}
-				<div className="grid grid-cols-2 gap-2">
-					{[
-						{
-							label:      "Montant",
-							value:      formatPrice(payment.amount),
-							valueClass: "text-[#C8973A] font-bold text-sm",
-						},
-						{
-							label:      "Type",
-							value:      PAYMENT_TYPE_LABELS[payment.type] ?? payment.type,
-							valueClass: "text-[#F5F0EB]",
-						},
-						{
-							label:      "Payé le",
-							value:      payment.paidAt ? formatDateTime(payment.paidAt) : "—",
-							valueClass: payment.paidAt ? "text-[#F5F0EB]" : "text-[#5A5249] italic",
-						},
-						{
-							label:      "Remboursé le",
-							value:      payment.refundedAt ? formatDateTime(payment.refundedAt) : "—",
-							valueClass: payment.refundedAt ? "text-blue-400" : "text-[#5A5249] italic",
-						},
-					].map(({ label, value, valueClass }) => (
-						<div
-							key={label}
-							className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] px-3 py-2.5"
-						>
-							<p className="text-[10px] text-[#5A5249] mb-1">{label}</p>
-							<p className={cn("text-xs font-medium leading-tight", valueClass)}>{value}</p>
-						</div>
-					))}
-				</div>
-
-				{/* Remboursement partiel */}
-				{payment.refundedAmount != null && payment.refundedAmount > 0 && (
-					<div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-blue-500/5 border border-blue-500/10">
-						<span className="text-xs text-[#5A5249]">Montant remboursé</span>
-						<span className="text-xs font-semibold text-blue-400">
-							−{formatPrice(payment.refundedAmount)}
-						</span>
-					</div>
-				)}
-
-				{/* Stripe */}
-				<Section title="Informations Stripe">
-					<InfoRow
-						label="Référence"
-						value={`#${payment.id.slice(-8).toUpperCase()}`}
-						valueClass="font-mono text-[#9A8F84] text-[11px]"
-					/>
-					{payment.stripePaymentIntentId && (
-						<InfoRow
-							label="Payment Intent"
-							value={`…${payment.stripePaymentIntentId.slice(-14)}`}
-							valueClass="font-mono text-[11px]"
-						/>
-					)}
-					{payment.stripeChargeId && (
-						<InfoRow
-							label="Charge ID"
-							value={`…${payment.stripeChargeId.slice(-14)}`}
-							valueClass="font-mono text-[11px]"
-						/>
-					)}
-					{payment.failureReason && (
-						<InfoRow
-							label="Raison d'échec"
-							value={payment.failureReason}
-							valueClass="text-red-400 text-[11px]"
-						/>
-					)}
-					<InfoRow
-						label="Créé le"
-						value={formatDateTime(payment.createdAt)}
-						valueClass="text-[#9A8F84]"
-					/>
-				</Section>
-
-				{/* Réservation liée */}
-				<div>
-					<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
-						Réservation liée
-					</p>
-					<Link
-						href={`/admin/reservations/${payment.reservation.id}`}
-						className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
-					>
-						<div className="min-w-0">
-							<p className="text-sm text-[#F5F0EB] font-medium truncate">{fullName}</p>
-							<p className="text-xs text-[#5A5249] mt-0.5">
-								{formatDate(payment.reservation.date, "dd MMMM yyyy")} · {payment.reservation.timeSlot}
-							</p>
-						</div>
-						<ExternalLink
-							size={14}
-							className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
-						/>
-					</Link>
-				</div>
-
-				{/* Facture associée */}
-				{payment.reservation.invoice && (
-					<div>
-						<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
-							Facture associée
-						</p>
-						<Link
-							href={`/admin/invoices/${payment.reservation.invoice.id}`}
-							className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
-						>
-							<div className="flex items-center gap-3 min-w-0">
-								<div className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#222] flex items-center justify-center shrink-0">
-									<Receipt size={14} className="text-[#9A8F84]" />
-								</div>
-								<div className="min-w-0">
-									<p className="text-sm text-[#F5F0EB] font-medium font-mono truncate">
-										{payment.reservation.invoice.invoiceNumber}
-									</p>
-									<p className="text-xs text-[#5A5249]">Voir la facture</p>
-								</div>
-							</div>
-							<ExternalLink
-								size={14}
-								className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
-							/>
-						</Link>
-					</div>
-				)}
-			</div>
-
-			{/* ── Formulaire de remboursement ── */}
-			{isRefundable && refundable > 0 && (
-				<div className="shrink-0 border-t border-[#222]">
-					<RefundForm paymentId={payment.id} maxAmount={refundable} />
-				</div>
-			)}
-		</div>
-	);
-}
-
 // ─── DetailPanel ──────────────────────────────────────────────────────────────
+//
+// Structure identique au panel des plats :
+//   aside (fixed inset-y-0, flex flex-col)
+//     ├── header  (shrink-0)       ← fixe en haut
+//     ├── body    (flex-1, scroll) ← scrollable
+//     └── footer  (shrink-0)       ← fixe en bas (formulaire de remboursement)
 
 function DetailPanel({
 	payment,
@@ -535,6 +355,13 @@ function DetailPanel({
 
 	const isOpen = !!payment;
 
+	/* données calculées une seule fois ici, utilisées dans header + footer */
+	const fullName     = payment ? `${payment.reservation.guestFirstName} ${payment.reservation.guestLastName}` : "";
+	const initials     = payment ? getInitials(payment.reservation.guestFirstName, payment.reservation.guestLastName) : "";
+	const meta         = payment ? STATUS_META[payment.status] : null;
+	const isRefundable = payment?.status === "PAID";
+	const refundable   = payment ? payment.amount - (payment.refundedAmount ?? 0) : 0;
+
 	return (
 		<>
 			{/* Backdrop */}
@@ -547,10 +374,11 @@ function DetailPanel({
 				)}
 			/>
 
-			{/* Panel */}
+			{/* Panel — même structure que le panel des plats :
+			    inset-y-0 au lieu de top-0 + h-full pour une couverture full-height fiable */}
 			<aside
 				className={cn(
-					"fixed top-0 right-0 h-full w-full sm:w-[420px] z-50 flex flex-col",
+					"fixed inset-y-0 right-0 w-full sm:w-[420px] z-50 flex flex-col",
 					"bg-[#141414] border-l border-[#222] shadow-2xl",
 					"transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
 					isOpen ? "translate-x-0" : "translate-x-full"
@@ -559,7 +387,175 @@ function DetailPanel({
 				role="dialog"
 				aria-modal="true"
 			>
-				{payment && <PaymentPanelContent payment={payment} onClose={onClose} />}
+				{payment && (
+					<>
+						{/* ── Header (fixe) ─────────────────────────────────── */}
+						<div className="flex items-center justify-between p-5 border-b border-[#222] shrink-0">
+							<div className="flex items-center gap-3 min-w-0">
+								<div className="w-10 h-10 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center text-sm font-semibold text-[#C8973A] shrink-0">
+									{initials}
+								</div>
+								<div className="min-w-0">
+									<p className="text-sm font-semibold text-[#F5F0EB] truncate">{fullName}</p>
+									<p className="text-xs text-[#5A5249] truncate">{payment.reservation.guestEmail}</p>
+								</div>
+							</div>
+							<div className="flex items-center gap-2 shrink-0 ml-2">
+								<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
+									{meta?.label ?? payment.status}
+								</Badge>
+								<button
+									onClick={onClose}
+									className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#222] transition-colors"
+									aria-label="Fermer le panneau"
+								>
+									<X size={16} />
+								</button>
+							</div>
+						</div>
+
+						{/* ── Body (scrollable) ─────────────────────────────── */}
+						<div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+							{/* Key info 2×2 */}
+							<div className="grid grid-cols-2 gap-2">
+								{[
+									{
+										label:      "Montant",
+										value:      formatPrice(payment.amount),
+										valueClass: "text-[#C8973A] font-bold text-sm",
+									},
+									{
+										label:      "Type",
+										value:      PAYMENT_TYPE_LABELS[payment.type] ?? payment.type,
+										valueClass: "text-[#F5F0EB]",
+									},
+									{
+										label:      "Payé le",
+										value:      payment.paidAt ? formatDateTime(payment.paidAt) : "—",
+										valueClass: payment.paidAt ? "text-[#F5F0EB]" : "text-[#5A5249] italic",
+									},
+									{
+										label:      "Remboursé le",
+										value:      payment.refundedAt ? formatDateTime(payment.refundedAt) : "—",
+										valueClass: payment.refundedAt ? "text-blue-400" : "text-[#5A5249] italic",
+									},
+								].map(({ label, value, valueClass }) => (
+									<div
+										key={label}
+										className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] px-3 py-2.5"
+									>
+										<p className="text-[10px] text-[#5A5249] mb-1">{label}</p>
+										<p className={cn("text-xs font-medium leading-tight", valueClass)}>{value}</p>
+									</div>
+								))}
+							</div>
+
+							{/* Remboursement partiel */}
+							{payment.refundedAmount != null && payment.refundedAmount > 0 && (
+								<div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-blue-500/5 border border-blue-500/10">
+									<span className="text-xs text-[#5A5249]">Montant remboursé</span>
+									<span className="text-xs font-semibold text-blue-400">
+										−{formatPrice(payment.refundedAmount)}
+									</span>
+								</div>
+							)}
+
+							{/* Stripe */}
+							<Section title="Informations Stripe">
+								<InfoRow
+									label="Référence"
+									value={`#${payment.id.slice(-8).toUpperCase()}`}
+									valueClass="font-mono text-[#9A8F84] text-[11px]"
+								/>
+								{payment.stripePaymentIntentId && (
+									<InfoRow
+										label="Payment Intent"
+										value={`…${payment.stripePaymentIntentId.slice(-14)}`}
+										valueClass="font-mono text-[11px]"
+									/>
+								)}
+								{payment.stripeChargeId && (
+									<InfoRow
+										label="Charge ID"
+										value={`…${payment.stripeChargeId.slice(-14)}`}
+										valueClass="font-mono text-[11px]"
+									/>
+								)}
+								{payment.failureReason && (
+									<InfoRow
+										label="Raison d'échec"
+										value={payment.failureReason}
+										valueClass="text-red-400 text-[11px]"
+									/>
+								)}
+								<InfoRow
+									label="Créé le"
+									value={formatDateTime(payment.createdAt)}
+									valueClass="text-[#9A8F84]"
+								/>
+							</Section>
+
+							{/* Réservation liée */}
+							<div>
+								<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+									Réservation liée
+								</p>
+								<Link
+									href={`/admin/reservations/${payment.reservation.id}`}
+									className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
+								>
+									<div className="min-w-0">
+										<p className="text-sm text-[#F5F0EB] font-medium truncate">{fullName}</p>
+										<p className="text-xs text-[#5A5249] mt-0.5">
+											{formatDate(payment.reservation.date, "dd MMMM yyyy")} · {payment.reservation.timeSlot}
+										</p>
+									</div>
+									<ExternalLink
+										size={14}
+										className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
+									/>
+								</Link>
+							</div>
+
+							{/* Facture associée */}
+							{payment.reservation.invoice && (
+								<div>
+									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+										Facture associée
+									</p>
+									<Link
+										href={`/admin/invoices/${payment.reservation.invoice.id}`}
+										className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
+									>
+										<div className="flex items-center gap-3 min-w-0">
+											<div className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#222] flex items-center justify-center shrink-0">
+												<Receipt size={14} className="text-[#9A8F84]" />
+											</div>
+											<div className="min-w-0">
+												<p className="text-sm text-[#F5F0EB] font-medium font-mono truncate">
+													{payment.reservation.invoice.invoiceNumber}
+												</p>
+												<p className="text-xs text-[#5A5249]">Voir la facture</p>
+											</div>
+										</div>
+										<ExternalLink
+											size={14}
+											className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
+										/>
+									</Link>
+								</div>
+							)}
+						</div>
+
+						{/* ── Footer fixe — formulaire de remboursement ─────── */}
+						{isRefundable && refundable > 0 && (
+							<div className="shrink-0 border-t border-[#222]">
+								<RefundForm paymentId={payment.id} maxAmount={refundable} />
+							</div>
+						)}
+					</>
+				)}
 			</aside>
 		</>
 	);
