@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 			type: "new_reservation",
 			title: "Nouvelle réservation (paiement en cours)",
 			message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${timeSlot} (${covers} couvert${covers > 1 ? "s" : ""})`,
-			link: `/admin/reservations/${reservation.id}`,
+			link: `/admin/reservations?id=${reservation.id}`,
 		});
 
 		// Création de la session Stripe Checkout

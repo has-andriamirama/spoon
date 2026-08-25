@@ -47,7 +47,7 @@ export default function RefundForm({
 
 			<div className="flex items-center gap-3">
 				<div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-					<RotateCcw size={15} className="text-red-400" />
+					<RotateCcw size={14} className="text-red-400" />
 				</div>
 				<div>
 					<h2 className="font-display text-base text-red-400">Initier un remboursement</h2>

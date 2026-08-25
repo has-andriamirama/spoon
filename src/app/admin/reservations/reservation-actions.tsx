@@ -163,21 +163,6 @@ export default function ReservationActions({ reservation }: Props) {
 				</div>
 			)}
 
-			{/*
-			  ── Action buttons ──
-			  CORRECTIF MOBILE : utilisation du composant <Button> du projet avec
-			  w-full (mobile) + sm:flex-1 (desktop) au lieu de flex-1 seul.
-
-			  CAUSE DU BUG : dans un conteneur flex-col (mobile), flex-1 applique
-			  flex-basis:0% sur l'axe VERTICAL (la hauteur). Cela écrase h-10 et
-			  rend les boutons très minces car flex-basis prend la priorité sur
-			  la propriété height dans le contexte flexbox.
-			  En flex-row (desktop sm+), flex-1 s'applique à la largeur uniquement,
-			  d'où l'absence du problème sur desktop.
-
-			  SOLUTION : w-full sur mobile (affecte uniquement la largeur, h-10
-			  reste souverain) + sm:flex-1 sur desktop (flex-basis sur la largeur).
-			*/}
 			<div className="flex flex-col sm:flex-row gap-2">
 
 				{/* Confirm + assign table (PENDING only) */}

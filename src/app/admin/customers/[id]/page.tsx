@@ -62,7 +62,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
 										<td className="px-5 py-3.5 text-sm text-[#9A8F84]">{r.covers}</td>
 										<td className="px-5 py-3.5"><Badge variant={variantMap[status.color]}>{status.label}</Badge></td>
 										<td className="px-5 py-3.5 text-sm text-[#9A8F84]">{r.payment?.status === "PAID" ? <span className="text-green-400">{formatPrice(r.payment.amount)}</span> : "—"}</td>
-										<td className="px-5 py-3.5"><Link href={`/admin/reservations/${r.id}`} className="text-xs text-[#C8973A] hover:underline">Voir</Link></td>
+										<td className="px-5 py-3.5"><Link href={`/admin/reservations?id=${r.id}`} className="text-xs text-[#C8973A] hover:underline">Voir</Link></td>
 									</tr>
 								);
 							})}

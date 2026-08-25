@@ -538,7 +538,7 @@ export default function PlanDeSalleClient({ initialData, date }: Props) {
 										</div>
 										<div className="flex items-center gap-1 shrink-0 ml-2">
 											<Link
-												href={`/admin/reservations/${r.id}`}
+												href={`/admin/reservations?id=${r.id}`}
 												className="p-1 text-[#333] hover:text-[#9A8F84] opacity-0 group-hover:opacity-100 transition-all"
 												title="Voir la réservation"
 											>

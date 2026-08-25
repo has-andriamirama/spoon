@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
 	Search,
 	Plus,
 	CalendarDays,
 	X,
-	Eye,
 	XCircle,
 	Loader2,
 	ChevronDown,
@@ -21,20 +20,46 @@ import {
 	AlertCircle,
 	ChevronLeft,
 	ChevronRight,
+	Mail,
+	Phone,
+	ExternalLink,
+	Receipt,
+	ConciergeBell,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { cn, formatDate, getInitials } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatPrice, getInitials } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RESERVATION_STATUSES, PAYMENT_STATUSES, ZONE_LABELS } from "@/lib/constants";
 import type { Payment, ReservationStatus, ZoneTable } from "@/types";
+import ReservationActions from "./reservation-actions";
 
 interface TableInfo {
 	id: string;
 	numero: number;
 	zone: ZoneTable;
+}
+
+interface InvoiceInfo {
+	id: string;
+	invoiceNumber: string;
+	pdfUrl: string | null;
+}
+
+interface CustomerInfo {
+	id: string;
+	firstName: string;
+	lastName: string;
+	email: string;
+}
+
+interface ServiceOrderInfo {
+	id: string;
+	status: string;
+	totalAmount: number;
+	items: { id: string }[];
 }
 
 interface Reservation {
@@ -54,9 +79,14 @@ interface Reservation {
 	cancellationReason: string | null;
 	cancelledAt: Date | null;
 	confirmedAt: Date | null;
+	completedAt: Date | null;
+	tableAssignedAt: Date | null;
 	createdAt: Date;
 	table: TableInfo | null;
 	payment: Payment | null;
+	invoice: InvoiceInfo | null;
+	user: CustomerInfo | null;
+	serviceOrder: ServiceOrderInfo | null;
 }
 
 interface Props {
@@ -72,7 +102,21 @@ const BADGE_VARIANT: Record<string, "yellow" | "green" | "red" | "gray" | "orang
 	blue: "blue",
 };
 
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+	DEPOSIT: "Acompte",
+	FULL:    "Paiement complet",
+	NONE:    "Sans paiement",
+};
+
+const SERVICE_STATUS_LABELS: Record<string, { label: string; color: "yellow" | "green" | "red" | "gray" | "orange" | "blue" }> = {
+	OUVERTE:           { label: "En cours",          color: "blue"   },
+	ADDITION_DEMANDEE: { label: "Addition demandée", color: "yellow" },
+	PAYEE:             { label: "Payée",             color: "green"  },
+	ANNULEE:           { label: "Annulée",           color: "red"    },
+};
+
 const CANCELLABLE_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED"];
+const ACTIVE_STATUSES: ReservationStatus[] = ["PENDING", "CONFIRMED"];
 const PER_PAGE = 10;
 
 type SortKey = "date" | "name" | "covers" | "status";
@@ -262,14 +306,45 @@ function InfoRow({
 	);
 }
 
+function LinkRow({
+	href,
+	icon: Icon,
+	label,
+	sub,
+}: {
+	href: string;
+	icon: React.ElementType;
+	label: string;
+	sub?: string;
+}) {
+	return (
+		<Link
+			href={href}
+			className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
+		>
+			<div className="flex items-center gap-3 min-w-0">
+				<div className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#222] flex items-center justify-center shrink-0">
+					<Icon size={14} className="text-[#9A8F84]" />
+				</div>
+				<div className="min-w-0">
+					<p className="text-sm text-[#F5F0EB] font-medium truncate">{label}</p>
+					{sub && <p className="text-xs text-[#5A5249] mt-0.5 truncate">{sub}</p>}
+				</div>
+			</div>
+			<ExternalLink
+				size={14}
+				className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
+			/>
+		</Link>
+	);
+}
+
 function DetailPanel({
 	reservation,
 	onClose,
-	onCancel,
 }: {
 	reservation: Reservation | null;
 	onClose: () => void;
-	onCancel: (r: Reservation) => void;
 }) {
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
@@ -280,11 +355,7 @@ function DetailPanel({
 	}, [onClose]);
 
 	useEffect(() => {
-		if (reservation) {
-			document.body.style.overflow = "hidden";
-		} else {
-			document.body.style.overflow = "";
-		}
+		document.body.style.overflow = reservation ? "hidden" : "";
 		return () => {
 			document.body.style.overflow = "";
 		};
@@ -292,6 +363,8 @@ function DetailPanel({
 
 	const r = reservation;
 	const isOpen = !!r;
+	const isActive = !!r && ACTIVE_STATUSES.includes(r.status);
+	const hasAddition = !!r?.serviceOrder && r.serviceOrder.status !== "ANNULEE";
 
 	return (
 		<>
@@ -306,7 +379,7 @@ function DetailPanel({
 
 			<aside
 				className={cn(
-					"fixed top-0 right-0 h-full w-full sm:w-[380px] z-50 flex flex-col",
+					"fixed top-0 right-0 h-full w-full sm:w-[400px] z-50 flex flex-col",
 					"bg-[#141414] border-l border-[#222] shadow-2xl",
 					"transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
 					isOpen ? "translate-x-0" : "translate-x-full"
@@ -326,7 +399,9 @@ function DetailPanel({
 									<p className="text-sm font-semibold text-[#F5F0EB] truncate">
 										{r.guestFirstName} {r.guestLastName}
 									</p>
-									<p className="text-xs text-[#5A5249] truncate">{r.guestEmail}</p>
+									<p className="text-xs text-[#5A5249] truncate">
+										Réf. #{r.id.slice(-8).toUpperCase()}
+									</p>
 								</div>
 							</div>
 							<button
@@ -374,10 +449,36 @@ function DetailPanel({
 								)}
 							</Section>
 
-							<Section title="Contact">
-								<InfoRow label="Email" value={r.guestEmail} />
-								<InfoRow label="Téléphone" value={r.guestPhone} />
-							</Section>
+							<div>
+								<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+									Contact
+								</p>
+								<div className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] divide-y divide-[#1a1a1a] overflow-hidden">
+									<a
+										href={`mailto:${r.guestEmail}`}
+										className="flex items-center gap-2 px-3 py-2.5 text-xs text-[#F5F0EB] hover:text-[#C8973A] transition-colors"
+									>
+										<Mail size={13} className="text-[#5A5249] shrink-0" />
+										<span className="truncate">{r.guestEmail}</span>
+									</a>
+									<a
+										href={`tel:${r.guestPhone}`}
+										className="flex items-center gap-2 px-3 py-2.5 text-xs text-[#F5F0EB] hover:text-[#C8973A] transition-colors"
+									>
+										<Phone size={13} className="text-[#5A5249] shrink-0" />
+										<span className="truncate">{r.guestPhone}</span>
+									</a>
+								</div>
+							</div>
+
+							{r.user && (
+								<LinkRow
+									href={`/admin/customers/${r.user.id}`}
+									icon={Users}
+									label={`${r.user.firstName} ${r.user.lastName}`}
+									sub="Compte client — voir la fiche"
+								/>
+							)}
 
 							{(r.notes || r.allergies || r.adminNotes || r.cancellationReason) && (
 								<Section title="Notes">
@@ -396,6 +497,78 @@ function DetailPanel({
 								</Section>
 							)}
 
+							{r.payment && (
+								<div>
+									<div className="flex items-center justify-between mb-2">
+										<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249]">
+											Acompte &amp; paiement
+										</p>
+										<Badge variant={BADGE_VARIANT[PAYMENT_STATUSES[r.payment.status].color]} className="text-[10px]">
+											{PAYMENT_STATUSES[r.payment.status].label}
+										</Badge>
+									</div>
+									<div className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] divide-y divide-[#1a1a1a] overflow-hidden">
+										<InfoRow
+											label="Type"
+											value={PAYMENT_TYPE_LABELS[r.payment.type] ?? r.payment.type}
+										/>
+										<InfoRow label="Montant" value={formatPrice(r.payment.amount)} valueClass="font-semibold text-[#C8973A]" />
+										{r.payment.paidAt && (
+											<InfoRow label="Payé le" value={formatDateTime(r.payment.paidAt)} />
+										)}
+										{r.payment.refundedAmount != null && r.payment.refundedAmount > 0 && (
+											<InfoRow label="Remboursé" value={formatPrice(r.payment.refundedAmount)} valueClass="text-blue-400" />
+										)}
+										{r.payment.refundedAt && (
+											<InfoRow label="Remboursé le" value={formatDateTime(r.payment.refundedAt)} valueClass="text-blue-400" />
+										)}
+										{r.payment.stripePaymentIntentId && (
+											<InfoRow
+												label="Stripe ID"
+												value={`…${r.payment.stripePaymentIntentId.slice(-14)}`}
+												valueClass="font-mono text-[10px] text-[#5A5249]"
+											/>
+										)}
+										{r.payment.failureReason && (
+											<InfoRow label="Motif d'échec" value={r.payment.failureReason} valueClass="text-red-400" />
+										)}
+									</div>
+
+									{r.invoice && (
+										<div className="mt-3">
+											<LinkRow
+												href={`/admin/invoices/${r.invoice.id}`}
+												icon={Receipt}
+												label={`Facture #${r.invoice.invoiceNumber}`}
+												sub="Voir la facture"
+											/>
+										</div>
+									)}
+								</div>
+							)}
+
+							{hasAddition && r.serviceOrder && (
+								<div>
+									<div className="flex items-center justify-between mb-2">
+										<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249]">
+											Commande en salle
+										</p>
+										<Badge
+											variant={BADGE_VARIANT[SERVICE_STATUS_LABELS[r.serviceOrder.status]?.color ?? "gray"]}
+											className="text-[10px]"
+										>
+											{SERVICE_STATUS_LABELS[r.serviceOrder.status]?.label ?? r.serviceOrder.status}
+										</Badge>
+									</div>
+									<LinkRow
+										href={`/admin/commandes?order=${r.serviceOrder.id}`}
+										icon={ConciergeBell}
+										label={`${r.serviceOrder.items.length} plat${r.serviceOrder.items.length !== 1 ? "s" : ""}`}
+										sub={formatPrice(r.serviceOrder.totalAmount)}
+									/>
+								</div>
+							)}
+
 							<Section title="Historique">
 								<InfoRow
 									label="Créée le"
@@ -405,6 +578,18 @@ function DetailPanel({
 									<InfoRow
 										label="Confirmée le"
 										value={formatDate(r.confirmedAt, "dd/MM/yyyy à HH:mm")}
+									/>
+								)}
+								{r.tableAssignedAt && (
+									<InfoRow
+										label="Table assignée le"
+										value={formatDate(r.tableAssignedAt, "dd/MM/yyyy à HH:mm")}
+									/>
+								)}
+								{r.completedAt && (
+									<InfoRow
+										label="Terminée le"
+										value={formatDate(r.completedAt, "dd/MM/yyyy à HH:mm")}
 									/>
 								)}
 								{r.cancelledAt && (
@@ -421,24 +606,18 @@ function DetailPanel({
 							</Section>
 						</div>
 
-						<div className="p-5 border-t border-[#222] flex gap-3 shrink-0">
-							<Link
-								href={`/admin/reservations/${r.id}`}
-								className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
-							>
-								<Eye size={14} />
-								Ouvrir la fiche
-							</Link>
-							{CANCELLABLE_STATUSES.includes(r.status) && (
-								<button
-									onClick={() => onCancel(r)}
-									className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg border border-red-500/20 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-								>
-									<XCircle size={14} />
-									Annuler
-								</button>
-							)}
-						</div>
+						{isActive && (
+							<div className="p-5 border-t border-[#222] shrink-0">
+								<ReservationActions
+									reservation={{
+										id: r.id,
+										status: r.status,
+										covers: r.covers,
+										payment: r.payment,
+									}}
+								/>
+							</div>
+						)}
 					</>
 				)}
 			</aside>
@@ -519,6 +698,7 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 
 export default function AdminReservationsClient({ reservations }: Props) {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 
 	const [search, setSearch] = useState("");
 	const [activeStatus, setActiveStatus] = useState<ReservationStatus | null>(null);
@@ -533,6 +713,13 @@ export default function AdminReservationsClient({ reservations }: Props) {
 	const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null);
 	const [cancelReason, setCancelReason] = useState("");
 	const [cancelling, setCancelling] = useState(false);
+
+	// Deep-link support: /admin/reservations?id=xxx opens the side panel directly
+	// (used by notifications, invoices, customer & commandes pages instead of a dedicated route).
+	useEffect(() => {
+		const idParam = searchParams.get("id");
+		if (idParam) setSelectedId(idParam);
+	}, [searchParams]);
 
 	const today = useMemo(() => {
 		const d = new Date();
@@ -645,7 +832,6 @@ export default function AdminReservationsClient({ reservations }: Props) {
 	const openCancel = useCallback((r: Reservation) => {
 		setCancelTarget(r);
 		setCancelReason("");
-		setSelectedId(null);
 	}, []);
 
 	const closeCancel = useCallback(() => {
@@ -715,6 +901,13 @@ export default function AdminReservationsClient({ reservations }: Props) {
 
 	const hasActiveFilters = !!(search || activeStatus || dateFilter || coversFilter);
 	const selectedReservation = reservations.find((r) => r.id === selectedId) ?? null;
+
+	const closePanel = useCallback(() => {
+		setSelectedId(null);
+		if (searchParams.get("id")) {
+			router.replace("/admin/reservations");
+		}
+	}, [router, searchParams]);
 
 	function buildPageList(current: number, total: number): (number | "…")[] {
 		const pages: (number | "…")[] = [];
@@ -895,7 +1088,7 @@ export default function AdminReservationsClient({ reservations }: Props) {
 			</div>
 
 			<div className="hidden lg:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
-				<div className="grid grid-cols-[2fr_1.3fr_0.55fr_0.65fr_1fr_0.9fr_88px] items-center px-5 py-3 border-b border-[#1a1a1a]">
+				<div className="grid grid-cols-[2fr_1.3fr_0.55fr_0.65fr_1fr_0.9fr_56px] items-center px-5 py-3 border-b border-[#1a1a1a]">
 					<SortBtn label="Client"     sortKey="name"    current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Date & heure" sortKey="date"  current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Couverts"   sortKey="covers"  current={sortKey} dir={sortDir} onClick={handleSortClick} />
@@ -925,7 +1118,7 @@ export default function AdminReservationsClient({ reservations }: Props) {
 									tabIndex={0}
 									onKeyDown={(e) => e.key === "Enter" && setSelectedId(r.id)}
 									className={cn(
-										"group grid grid-cols-[2fr_1.3fr_0.55fr_0.65fr_1fr_0.9fr_88px] items-center px-5 py-4 cursor-pointer transition-colors",
+										"group grid grid-cols-[2fr_1.3fr_0.55fr_0.65fr_1fr_0.9fr_56px] items-center px-5 py-4 cursor-pointer transition-colors",
 										selectedId === r.id
 											? "bg-[#C8973A]/5"
 											: "hover:bg-[#1a1a1a]"
@@ -991,14 +1184,6 @@ export default function AdminReservationsClient({ reservations }: Props) {
 									</div>
 
 									<div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-										<Link
-											href={`/admin/reservations/${r.id}`}
-											onClick={(e) => e.stopPropagation()}
-											title="Ouvrir la fiche"
-											className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
-										>
-											<Eye size={14} />
-										</Link>
 										{CANCELLABLE_STATUSES.includes(r.status) && (
 											<button
 												onClick={(e) => {
@@ -1089,28 +1274,18 @@ export default function AdminReservationsClient({ reservations }: Props) {
 											<span className="text-xs text-[#333] italic">Table non assignée</span>
 										)}
 									</div>
-									<div className="flex items-center gap-1 shrink-0">
-										<Link
-											href={`/admin/reservations/${r.id}`}
-											onClick={(e) => e.stopPropagation()}
-											className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all"
-											title="Ouvrir"
+									{CANCELLABLE_STATUSES.includes(r.status) && (
+										<button
+											onClick={(e) => {
+												e.stopPropagation();
+												openCancel(r);
+											}}
+											title="Annuler"
+											className="p-1.5 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/30 transition-all shrink-0"
 										>
-											<Eye size={14} />
-										</Link>
-										{CANCELLABLE_STATUSES.includes(r.status) && (
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													openCancel(r);
-												}}
-												title="Annuler"
-												className="p-1.5 rounded-lg text-[#5A5249] hover:text-red-400 hover:bg-red-950/30 transition-all"
-											>
-												<XCircle size={14} />
-											</button>
-										)}
-									</div>
+											<XCircle size={14} />
+										</button>
+									)}
 								</div>
 							</div>
 						);
@@ -1166,8 +1341,7 @@ export default function AdminReservationsClient({ reservations }: Props) {
 
 			<DetailPanel
 				reservation={selectedReservation}
-				onClose={() => setSelectedId(null)}
-				onCancel={openCancel}
+				onClose={closePanel}
 			/>
 
 			<Modal

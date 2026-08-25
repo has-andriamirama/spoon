@@ -78,7 +78,7 @@ export default async function AdminDashboardPage() {
 					</div>
 					<div className="space-y-3">
 						{recentRes.map(r => (
-							<Link key={r.id} href={`/admin/reservations/${r.id}`} className="flex items-center justify-between py-2 border-b border-[#1a1a1a] last:border-0 hover:opacity-80 transition-opacity">
+							<Link key={r.id} href={`/admin/reservations?id=${r.id}`} className="flex items-center justify-between py-2 border-b border-[#1a1a1a] last:border-0 hover:opacity-80 transition-opacity">
 								<div>
 									<p className="text-sm text-[#F5F0EB] font-medium">{r.guestFirstName} {r.guestLastName}</p>
 									<p className="text-xs text-[#5A5249]">{formatDate(r.date)} · {r.timeSlot} · {r.covers} couvert{r.covers > 1 ? "s" : ""}</p>

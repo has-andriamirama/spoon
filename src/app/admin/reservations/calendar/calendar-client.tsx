@@ -462,7 +462,7 @@ function DayCard({
 						</button>
 					)}
 					<Link
-						href={`/admin/reservations/${r.id}`}
+						href={`/admin/reservations?id=${r.id}`}
 						onClick={(e) => e.stopPropagation()}
 						className="text-[11px] text-[#5A5249] hover:text-[#9A8F84] px-2 py-1.5 rounded-lg hover:bg-[#252525] transition-all"
 					>
@@ -710,7 +710,7 @@ function DayView({
 
 	const openRes = (r: Reservation) => {
 		if (r.status === "PENDING") onConfirm(r);
-		else window.location.href = `/admin/reservations/${r.id}`;
+		else window.location.href = `/admin/reservations?id=${r.id}`;
 	};
 
 	return (
@@ -941,7 +941,7 @@ export default function CalendarClient({ reservations, tables }: Props) {
 	// Ouvre la modal de confirmation ou redirige vers la fiche
 	const handleChipClick = useCallback((r: Reservation) => {
 		if (r.status === "PENDING") setConfirmResa(r);
-		else window.location.href = `/admin/reservations/${r.id}`;
+		else window.location.href = `/admin/reservations?id=${r.id}`;
 	}, []);
 
 	// ── Rendu ──────────────────────────────────────────────────────────────────

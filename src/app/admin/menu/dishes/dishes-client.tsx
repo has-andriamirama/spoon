@@ -518,13 +518,13 @@ export default function DishesClient({ dishes, categories }: Props) {
 	const hasActiveFilters = !!(search || activeCategoryId || availFilter !== "all" || specialFilter);
 	const selectedDish = dishes.find((d) => d.id === selectedId) ?? null;
 
-	function buildPageList(current: number, total: number): (number | "…")[] {
-		const pages: (number | "…")[] = [];
+	function buildPageList(current: number, total: number): (number | "...")[] {
+		const pages: (number | "...")[] = [];
 		const nums = Array.from({ length: total }, (_, i) => i + 1).filter(
 			(p) => p === 1 || p === total || Math.abs(p - current) <= 1
 		);
 		nums.forEach((p, i) => {
-			if (i > 0 && p - (nums[i - 1] as number) > 1) pages.push("…");
+			if (i > 0 && p - (nums[i - 1] as number) > 1) pages.push("...");
 			pages.push(p);
 		});
 		return pages;
@@ -825,8 +825,8 @@ export default function DishesClient({ dishes, categories }: Props) {
 							</PgBtn>
 
 							{buildPageList(page, totalPages).map((p, i) =>
-								p === "…" ? (
-									<span key={`ellipsis-${i}`} className="px-1 text-xs text-[#5A5249]">…</span>
+								p === "..." ? (
+									<span key={`ellipsis-${i}`} className="px-1 text-xs text-[#5A5249]">...</span>
 								) : (
 									<PgBtn key={p} active={p === page} onClick={() => setPage(p as number)}>
 										{p}

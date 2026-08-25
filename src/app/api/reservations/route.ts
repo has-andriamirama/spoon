@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 			type: "new_reservation",
 			title: "Nouvelle réservation",
 			message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${timeSlot} (${covers} couvert${covers > 1 ? "s" : ""})`,
-			link: `/admin/reservations/${reservation.id}`,
+			link: `/admin/reservations?id=${reservation.id}`,
 		});
 
 		await broadcastReservationUpdate(reservation.id, reservation.userId);

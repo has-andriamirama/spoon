@@ -466,7 +466,7 @@ function DetailPanel({
 									Réservation liée
 								</p>
 								<Link
-									href={`/admin/reservations/${payment.reservation.id}`}
+									href={`/admin/reservations?id=${payment.reservation.id}`}
 									className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
 								>
 									<div className="min-w-0">

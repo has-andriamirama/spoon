@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 					type: "payment_received",
 					title: "Paiement reçu — à confirmer",
 					message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${formatPrice(amount)} · En attente de votre confirmation`,
-					link: `/admin/reservations/${reservationId}`,
+					link: `/admin/reservations?id=${reservationId}`,
 				});
 			}
 		}
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
 					type: "payment_failed",
 					title: "Paiement échoué — session expirée",
 					message: `${reservation.guestFirstName} ${reservation.guestLastName} — Session expirée sans paiement`,
-					link: `/admin/reservations/${reservationId}`,
+					link: `/admin/reservations?id=${reservationId}`,
 				});
 			}
 		}
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
 					type: "payment_received",
 					title: "Paiement reçu — à confirmer",
 					message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${formatPrice(amount)} · En attente de votre confirmation`,
-					link: `/admin/reservations/${reservationId}`,
+					link: `/admin/reservations?id=${reservationId}`,
 				});
 			}
 		}

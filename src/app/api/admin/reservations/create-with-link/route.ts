@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 			type: "new_reservation",
 			title: "Réservation admin — Lien de paiement envoyé",
 			message: `${reservation.guestFirstName} ${reservation.guestLastName} — ${timeSlot} · ${covers} couvert${covers > 1 ? "s" : ""} · En attente de paiement`,
-			link: `/admin/reservations/${reservation.id}`,
+			link: `/admin/reservations?id=${reservation.id}`,
 		});
 
 		const depositAmount = covers * DEPOSIT_PER_COVER;

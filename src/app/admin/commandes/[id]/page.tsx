@@ -206,7 +206,7 @@ export default async function CommandeDetailPage({
 							Réservation associée
 						</p>
 						<Link
-							href={`/admin/reservations/${order.reservation.id}`}
+							href={`/admin/reservations?id=${order.reservation.id}`}
 							className="flex items-center justify-between px-3 py-2.5 bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors"
 						>
 							<span className="flex items-center gap-2 text-xs text-[#9A8F84]">

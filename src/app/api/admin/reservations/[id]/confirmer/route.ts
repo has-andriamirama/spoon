@@ -113,7 +113,7 @@ export async function PATCH(
 			type: "reservation_confirmed",
 			title: "Réservation confirmée",
 			message: `${updated.guestFirstName} ${updated.guestLastName} — Table ${table.numero} (${updated.timeSlot})`,
-			link: `/admin/reservations/${id}`,
+			link: `/admin/reservations?id=${id}`,
 		});
 
 		await broadcastReservationUpdate(id, updated.userId);

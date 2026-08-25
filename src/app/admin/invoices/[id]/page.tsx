@@ -192,7 +192,7 @@ export default async function AdminInvoiceDetailPage({
 						</p>
 
 						<Link
-							href={`/admin/reservations/${invoice.reservation.id}`}
+							href={`/admin/reservations?id=${invoice.reservation.id}`}
 							className="flex items-center justify-between gap-3 p-3 rounded-lg bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
 						>
 							<div className="flex items-center gap-3 min-w-0">
