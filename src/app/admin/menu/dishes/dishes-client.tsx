@@ -544,7 +544,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 					href="/admin/menu/dishes/new"
 					className="flex items-center gap-2 h-9 px-3 sm:px-4 bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold rounded-lg transition-colors"
 				>
-					<Plus size={15} />
+					<Plus size={14} />
 					<span className="hidden sm:inline">Ajouter</span>
 				</Link>
 			</div>
@@ -584,7 +584,7 @@ export default function DishesClient({ dishes, categories }: Props) {
 				<div className="flex flex-col sm:flex-row gap-3">
 					<div className="relative flex-1">
 						<Search
-							size={15}
+							size={14}
 							className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A5249] pointer-events-none"
 						/>
 						<input
