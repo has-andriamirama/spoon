@@ -503,9 +503,9 @@ function PaymentPanelContent({
 				)}
 			</div>
 
-			{/* ── Footer : formulaire de remboursement ── */}
+			{/* ── Footer fixe : formulaire de remboursement ── */}
 			{isRefundable && refundable > 0 && (
-				<div className="shrink-0">
+				<div className="shrink-0 border-t border-[#222]">
 					<RefundForm paymentId={payment.id} maxAmount={refundable} />
 				</div>
 			)}
