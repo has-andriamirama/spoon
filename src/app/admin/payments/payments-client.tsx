@@ -412,10 +412,10 @@ export default function PaymentsClient({ payments }: Props) {
 				</div>
 				<button
 					onClick={handleExport}
-					className="flex items-center gap-2 px-4 h-9 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
+					className="flex items-center gap-2 px-3 sm:px-4 h-9 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
 				>
 					<Download size={14} />
-					Exporter
+					<span className="hidden sm:inline">Exporter</span>
 				</button>
 			</div>
 
@@ -612,19 +612,17 @@ export default function PaymentsClient({ payments }: Props) {
 								key={p.id}
 								className="bg-[#141414] border border-[#222] rounded-xl p-4 space-y-3"
 							>
-								<div className="flex items-start justify-between gap-3">
-									<div className="min-w-0">
-										<p className="text-sm font-medium text-[#F5F0EB] truncate">
-											<Highlight text={fullName} query={search} />
-										</p>
-										<p className="text-xs text-[#5A5249] mt-0.5 truncate">
-											{formatDate(p.reservation.date, "dd/MM/yyyy")} · {p.reservation.timeSlot}
-										</p>
-									</div>
-									<Badge variant={meta?.color ?? "gray"} className="text-[11px] shrink-0">
-										{meta?.label ?? p.status}
-									</Badge>
+								{/* Top: nom + date, sans badge */}
+								<div className="min-w-0">
+									<p className="text-sm font-medium text-[#F5F0EB] truncate">
+										<Highlight text={fullName} query={search} />
+									</p>
+									<p className="text-xs text-[#5A5249] mt-0.5 truncate">
+										{formatDate(p.reservation.date, "dd/MM/yyyy")} · {p.reservation.timeSlot}
+									</p>
 								</div>
+
+								{/* Info boxes */}
 								<div className="grid grid-cols-3 gap-2">
 									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
 										<p className="text-[10px] text-[#5A5249] mb-0.5">Montant</p>
@@ -645,15 +643,20 @@ export default function PaymentsClient({ payments }: Props) {
 										</p>
 									</div>
 								</div>
-								{p.status === "PAID" && (
+
+								{/* Bottom: badge gauche, icône droite */}
+								<div className="flex items-center justify-between gap-2">
+									<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
+										{meta?.label ?? p.status}
+									</Badge>
 									<Link
 										href={`/admin/payments/${p.id}`}
-										className="flex items-center justify-center gap-2 w-full h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+										className="p-2 rounded-lg border border-[#222] text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#1a1a1a] transition-colors"
+										title="Voir le détail"
 									>
-										<Eye size={12} />
-										Voir le détail
+										<Eye size={14} />
 									</Link>
-								)}
+								</div>
 							</div>
 						);
 					})
