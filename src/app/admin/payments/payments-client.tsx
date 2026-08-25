@@ -736,8 +736,9 @@ export default function PaymentsClient({ payments }: Props) {
 						{hasActiveFilters && (
 							<button
 								onClick={resetFilters}
-								className="ml-auto text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+								className="ml-auto flex items-center gap-1 text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
 							>
+								<X size={12} />
 								Réinitialiser
 							</button>
 						)}
