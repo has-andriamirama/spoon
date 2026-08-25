@@ -46,7 +46,7 @@ export default function RefundForm({
 		<div className="pb-5 border-t border-[#222]">
 
 			{/* Header */}
-			<div className="px-6 py-4 border-b border-red-500/10 flex items-center gap-3">
+			<div className="px-6 py-4 border-b border-[#222]/10 flex items-center gap-3">
 				<div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
 					<RotateCcw size={15} className="text-red-400" />
 				</div>
