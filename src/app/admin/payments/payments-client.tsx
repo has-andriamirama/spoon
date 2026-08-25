@@ -378,7 +378,7 @@ function DetailPanel({
 			    inset-y-0 au lieu de top-0 + h-full pour une couverture full-height fiable */}
 			<aside
 				className={cn(
-					"fixed inset-y-0 right-0 w-full sm:w-[420px] z-50 flex flex-col",
+					"fixed top-0 right-0 h-full w-full sm:w-[380px] z-50 flex flex-col",
 					"bg-[#141414] border-l border-[#222] shadow-2xl",
 					"transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
 					isOpen ? "translate-x-0" : "translate-x-full"
