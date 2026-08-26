@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import PaymentsClient from "./payments-client";
+import PaymentsClient, { type UnifiedPayment } from "./payments-client";
 
 export const dynamic  = "force-dynamic";
 export const metadata = { title: "Paiements — Spoon Admin" };
@@ -11,7 +11,8 @@ interface PageProps {
 export default async function AdminPaymentsPage({ searchParams }: PageProps) {
 	const { id: initialPaymentId } = await searchParams;
 
-	const payments = await prisma.payment.findMany({
+	// ── 1. Acomptes de réservation (Stripe) ──────────────────────────────
+	const deposits = await prisma.payment.findMany({
 		include: {
 			reservation: {
 				select: {
@@ -31,10 +32,88 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps) {
 		take: 500,
 	});
 
-	return (
-		<PaymentsClient
-			payments={payments as Parameters<typeof PaymentsClient>[0]["payments"]}
-			initialPaymentId={initialPaymentId}
-		/>
+	// ── 2. Additions encaissées (commandes en salle, réglées sur place) ──
+	const encaissements = await prisma.serviceOrder.findMany({
+		where: { status: "PAYEE" },
+		include: {
+			table: { select: { numero: true } },
+			reservation: {
+				select: {
+					id: true,
+					guestEmail: true,
+					invoice: {
+						select: { id: true, invoiceNumber: true, pdfUrl: true },
+					},
+				},
+			},
+			_count: { select: { items: true } },
+		},
+		orderBy: { closedAt: "desc" },
+		take: 500,
+	});
+
+	// ── 3. Fusion en une liste unique de "paiements" ─────────────────────
+	const depositPayments: UnifiedPayment[] = deposits.map((p) => {
+		return {
+			id: p.id,
+			kind: "DEPOSIT",
+			amount: p.amount,
+			currency: p.currency,
+			type: p.type,
+			paymentMethod: null,
+			status: p.status,
+			refundedAmount: p.refundedAmount,
+			stripePaymentIntentId: p.stripePaymentIntentId,
+			stripeChargeId: p.stripeChargeId,
+			paidAt: p.paidAt,
+			refundedAt: p.refundedAt,
+			failureReason: p.failureReason,
+			createdAt: p.createdAt,
+			updatedAt: p.updatedAt,
+			guestName: `${p.reservation.guestFirstName} ${p.reservation.guestLastName}`.trim(),
+			guestEmail: p.reservation.guestEmail,
+			date: p.reservation.date,
+			timeSlot: p.reservation.timeSlot,
+			reservationId: p.reservation.id,
+			invoice: p.reservation.invoice,
+			serviceOrderId: null,
+			serviceType: null,
+			tableNumero: null,
+			itemsCount: null,
+		};
+	});
+
+	const additionPayments: UnifiedPayment[] = encaissements.map((o) => ({
+		id: `so_${o.id}`,
+		kind: "ADDITION",
+		amount: o.totalAmount,
+		currency: "eur",
+		type: null,
+		paymentMethod: o.paymentMethod,
+		status: "PAID",
+		refundedAmount: null,
+		stripePaymentIntentId: null,
+		stripeChargeId: null,
+		paidAt: o.closedAt,
+		refundedAt: null,
+		failureReason: null,
+		createdAt: o.closedAt ?? o.openedAt,
+		updatedAt: o.updatedAt,
+		guestName: o.guestName,
+		guestEmail: o.reservation?.guestEmail ?? null,
+		date: o.closedAt ?? o.openedAt,
+		timeSlot: null,
+		reservationId: o.reservationId,
+		invoice: o.reservation?.invoice ?? null,
+		serviceOrderId: o.id,
+		serviceType: o.type,
+		tableNumero: o.table.numero,
+		itemsCount: o._count.items,
+	}));
+
+	const payments = [...depositPayments, ...additionPayments].sort(
+		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 	);
+
+	return <PaymentsClient payments={payments} initialPaymentId={initialPaymentId} />;
 }

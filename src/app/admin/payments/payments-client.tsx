@@ -19,10 +19,12 @@ import {
 	X,
 	ExternalLink,
 	Receipt,
+	Wallet,
+	TableProperties,
 } from "lucide-react";
-import { cn, formatDate, formatDateTime, formatPrice, getInitials } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { PaymentStatus, PaymentType } from "@/types";
+import type { PaymentStatus, PaymentType, PaymentMethodService, ServiceType } from "@/types";
 import RefundForm from "./[id]/refund-form";
 
 interface InvoiceInfo {
@@ -31,21 +33,20 @@ interface InvoiceInfo {
 	pdfUrl: string | null;
 }
 
-interface ReservationInfo {
-	id: string;
-	guestFirstName: string;
-	guestLastName: string;
-	guestEmail: string;
-	date: Date;
-	timeSlot: string;
-	invoice: InvoiceInfo | null;
-}
+export type PaymentKind = "DEPOSIT" | "ADDITION";
 
-interface Payment {
+/**
+ * Une entrée unifiée du registre des paiements.
+ * - kind = "DEPOSIT"  → acompte de réservation encaissé via Stripe (table `Payment`)
+ * - kind = "ADDITION" → addition de commande encaissée en salle (table `ServiceOrder`, statut PAYEE)
+ */
+export interface UnifiedPayment {
 	id: string;
+	kind: PaymentKind;
 	amount: number;
 	currency: string;
-	type: PaymentType;
+	type: PaymentType | null;
+	paymentMethod: PaymentMethodService | null;
 	status: PaymentStatus;
 	refundedAmount: number | null;
 	stripePaymentIntentId: string | null;
@@ -55,11 +56,20 @@ interface Payment {
 	failureReason: string | null;
 	createdAt: Date;
 	updatedAt: Date;
-	reservation: ReservationInfo;
+	guestName: string;
+	guestEmail: string | null;
+	date: Date;
+	timeSlot: string | null;
+	reservationId: string | null;
+	invoice: InvoiceInfo | null;
+	serviceOrderId: string | null;
+	serviceType: ServiceType | null;
+	tableNumero: number | null;
+	itemsCount: number | null;
 }
 
 interface Props {
-	payments: Payment[];
+	payments: UnifiedPayment[];
 	initialPaymentId?: string;
 }
 
@@ -67,6 +77,23 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 	DEPOSIT: "Acompte",
 	FULL:    "Paiement complet",
 	NONE:    "Sans paiement",
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+	CB:           "Carte bancaire",
+	ESPECES:      "Espèces",
+	CHEQUE:       "Chèque",
+	TICKET_RESTO: "Ticket-restaurant",
+};
+
+const SERVICE_TYPE_LABELS: Record<string, string> = {
+	RESERVATION: "Réservation",
+	WALK_IN:     "Sur place",
+};
+
+const KIND_META: Record<PaymentKind, { label: string; badge: "gold" | "orange" }> = {
+	DEPOSIT:  { label: "Acompte réservation", badge: "gold"   },
+	ADDITION: { label: "Addition",            badge: "orange" },
 };
 
 const STATUS_META: Record<
@@ -82,10 +109,18 @@ const STATUS_META: Record<
 };
 
 const PER_PAGE = 10;
-const GRID_COLS = "grid-cols-[1.4fr_1fr_0.8fr_0.7fr_1fr_0.8fr]";
+const GRID_COLS = "grid-cols-[1.3fr_1fr_0.8fr_1fr_0.8fr_1fr]";
 
 type SortKey = "date" | "amount" | "status" | "client";
 type SortDir = "asc" | "desc";
+type KindFilter = "ALL" | PaymentKind;
+
+function getInitialsFromName(name: string): string {
+	const parts = name.trim().split(/\s+/).filter(Boolean);
+	if (parts.length === 0) return "?";
+	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+	return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+}
 
 function Highlight({ text, query }: { text: string; query: string }) {
 	if (!query.trim()) return <>{text}</>;
@@ -197,6 +232,8 @@ function StatusPill({
 			? "bg-red-500/10 border-red-500/30 text-red-400"
 			: color === "blue"
 			? "bg-blue-500/10 border-blue-500/30 text-blue-400"
+			: color === "orange"
+			? "bg-orange-500/10 border-orange-500/30 text-orange-400"
 			: "bg-[#C8973A]/10 border-[#C8973A]/30 text-[#C8973A]";
 
 	return (
@@ -248,14 +285,14 @@ function PgBtn({
 	);
 }
 
-function buildPageList(current: number, total: number): (number | "...")[] {
+function buildPageList(current: number, total: number): (number | "…")[] {
 	if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-	const pages: (number | "...")[] = [1];
-	if (current > 3) pages.push("...");
+	const pages: (number | "…")[] = [1];
+	if (current > 3) pages.push("…");
 	for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
 		pages.push(p);
 	}
-	if (current < total - 2) pages.push("...");
+	if (current < total - 2) pages.push("…");
 	pages.push(total);
 	return pages;
 }
@@ -315,7 +352,7 @@ function DetailPanel({
 	payment,
 	onClose,
 }: {
-	payment: Payment | null;
+	payment: UnifiedPayment | null;
 	onClose: () => void;
 }) {
 	useEffect(() => {
@@ -331,10 +368,11 @@ function DetailPanel({
 
 	const isOpen = !!payment;
 
-	const fullName     = payment ? `${payment.reservation.guestFirstName} ${payment.reservation.guestLastName}` : "";
-	const initials     = payment ? getInitials(payment.reservation.guestFirstName, payment.reservation.guestLastName) : "";
+	const isDeposit    = payment?.kind === "DEPOSIT";
+	const initials     = payment ? getInitialsFromName(payment.guestName) : "";
 	const meta         = payment ? STATUS_META[payment.status] : null;
-	const isRefundable = payment?.status === "PAID";
+	const kindMeta     = payment ? KIND_META[payment.kind] : null;
+	const isRefundable = isDeposit && payment?.status === "PAID";
 	const refundable   = payment ? payment.amount - (payment.refundedAmount ?? 0) : 0;
 
 	return (
@@ -367,8 +405,10 @@ function DetailPanel({
 									{initials}
 								</div>
 								<div className="min-w-0">
-									<p className="text-sm font-semibold text-[#F5F0EB] truncate">{fullName}</p>
-									<p className="text-xs text-[#5A5249] truncate">{payment.reservation.guestEmail}</p>
+									<p className="text-sm font-semibold text-[#F5F0EB] truncate">{payment.guestName}</p>
+									<p className="text-xs text-[#5A5249] truncate">
+										{payment.guestEmail ?? "Client sur place"}
+									</p>
 								</div>
 							</div>
 							<div className="flex items-center gap-2 shrink-0 ml-2">
@@ -387,6 +427,17 @@ function DetailPanel({
 
 						<div className="flex-1 overflow-y-auto p-5 space-y-5">
 
+							<div className="flex items-center gap-2">
+								<Badge variant={kindMeta?.badge ?? "gray"} className="text-[11px]">
+									{kindMeta?.label}
+								</Badge>
+								{payment.kind === "ADDITION" && payment.serviceType && (
+									<Badge variant="default" className="text-[11px]">
+										{SERVICE_TYPE_LABELS[payment.serviceType] ?? payment.serviceType}
+									</Badge>
+								)}
+							</div>
+
 							<div className="grid grid-cols-2 gap-2">
 								{[
 									{
@@ -395,8 +446,10 @@ function DetailPanel({
 										valueClass: "text-[#C8973A] font-bold text-sm",
 									},
 									{
-										label:      "Type",
-										value:      PAYMENT_TYPE_LABELS[payment.type] ?? payment.type,
+										label:      isDeposit ? "Type" : "Mode de paiement",
+										value:      isDeposit
+											? PAYMENT_TYPE_LABELS[payment.type ?? ""] ?? payment.type
+											: PAYMENT_METHOD_LABELS[payment.paymentMethod ?? ""] ?? "—",
 										valueClass: "text-[#F5F0EB]",
 									},
 									{
@@ -405,9 +458,13 @@ function DetailPanel({
 										valueClass: payment.paidAt ? "text-[#F5F0EB]" : "text-[#5A5249] italic",
 									},
 									{
-										label:      "Remboursé le",
-										value:      payment.refundedAt ? formatDateTime(payment.refundedAt) : "—",
-										valueClass: payment.refundedAt ? "text-blue-400" : "text-[#5A5249] italic",
+										label:      isDeposit ? "Remboursé le" : "Table",
+										value:      isDeposit
+											? (payment.refundedAt ? formatDateTime(payment.refundedAt) : "—")
+											: (payment.tableNumero != null ? `Table ${payment.tableNumero}` : "—"),
+										valueClass: isDeposit
+											? (payment.refundedAt ? "text-blue-400" : "text-[#5A5249] italic")
+											: "text-[#F5F0EB]",
 									},
 								].map(({ label, value, valueClass }) => (
 									<div
@@ -420,7 +477,7 @@ function DetailPanel({
 								))}
 							</div>
 
-							{payment.refundedAmount != null && payment.refundedAmount > 0 && (
+							{isDeposit && payment.refundedAmount != null && payment.refundedAmount > 0 && (
 								<div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-blue-500/5 border border-blue-500/10">
 									<span className="text-xs text-[#5A5249]">Montant remboursé</span>
 									<span className="text-xs font-semibold text-blue-400">
@@ -429,68 +486,120 @@ function DetailPanel({
 								</div>
 							)}
 
-							<Section title="Informations Stripe">
-								<InfoRow
-									label="Référence"
-									value={`#${payment.id.slice(-8).toUpperCase()}`}
-									valueClass="font-mono text-[#9A8F84] text-[11px]"
-								/>
-								{payment.stripePaymentIntentId && (
+							{isDeposit ? (
+								<Section title="Informations Stripe">
 									<InfoRow
-										label="Payment Intent"
-										value={`...${payment.stripePaymentIntentId.slice(-14)}`}
-										valueClass="font-mono text-[11px]"
+										label="Référence"
+										value={`#${payment.id.slice(-8).toUpperCase()}`}
+										valueClass="font-mono text-[#9A8F84] text-[11px]"
 									/>
-								)}
-								{payment.stripeChargeId && (
+									{payment.stripePaymentIntentId && (
+										<InfoRow
+											label="Payment Intent"
+											value={`…${payment.stripePaymentIntentId.slice(-14)}`}
+											valueClass="font-mono text-[11px]"
+										/>
+									)}
+									{payment.stripeChargeId && (
+										<InfoRow
+											label="Charge ID"
+											value={`…${payment.stripeChargeId.slice(-14)}`}
+											valueClass="font-mono text-[11px]"
+										/>
+									)}
+									{payment.failureReason && (
+										<InfoRow
+											label="Raison d'échec"
+											value={payment.failureReason}
+											valueClass="text-red-400 text-[11px]"
+										/>
+									)}
 									<InfoRow
-										label="Charge ID"
-										value={`...${payment.stripeChargeId.slice(-14)}`}
-										valueClass="font-mono text-[11px]"
+										label="Créé le"
+										value={formatDateTime(payment.createdAt)}
+										valueClass="text-[#9A8F84]"
 									/>
-								)}
-								{payment.failureReason && (
+								</Section>
+							) : (
+								<Section title="Détails de l'addition">
 									<InfoRow
-										label="Raison d'échec"
-										value={payment.failureReason}
-										valueClass="text-red-400 text-[11px]"
+										label="Référence"
+										value={`#${(payment.serviceOrderId ?? payment.id).slice(-8).toUpperCase()}`}
+										valueClass="font-mono text-[#9A8F84] text-[11px]"
 									/>
-								)}
-								<InfoRow
-									label="Créé le"
-									value={formatDateTime(payment.createdAt)}
-									valueClass="text-[#9A8F84]"
-								/>
-							</Section>
+									<InfoRow
+										label="Articles"
+										value={payment.itemsCount != null ? `${payment.itemsCount} article${payment.itemsCount !== 1 ? "s" : ""}` : "—"}
+										valueClass="text-[#9A8F84]"
+									/>
+									<InfoRow
+										label="Encaissé le"
+										value={formatDateTime(payment.createdAt)}
+										valueClass="text-[#9A8F84]"
+									/>
+								</Section>
+							)}
 
-							<div>
-								<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
-									Réservation liée
-								</p>
-								<Link
-									href={`/admin/reservations?id=${payment.reservation.id}`}
-									className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
-								>
-									<div className="min-w-0">
-										<p className="text-sm text-[#F5F0EB] font-medium truncate">{fullName}</p>
-										<p className="text-xs text-[#5A5249] mt-0.5">
-											{formatDate(payment.reservation.date, "dd MMMM yyyy")} · {payment.reservation.timeSlot}
-										</p>
-									</div>
-									<ExternalLink
-										size={14}
-										className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
-									/>
-								</Link>
-							</div>
+							{payment.kind === "ADDITION" && payment.serviceOrderId && (
+								<div>
+									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+										Commande liée
+									</p>
+									<Link
+										href={`/admin/commandes/${payment.serviceOrderId}`}
+										className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
+									>
+										<div className="flex items-center gap-3 min-w-0">
+											<div className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#222] flex items-center justify-center shrink-0">
+												<TableProperties size={14} className="text-[#9A8F84]" />
+											</div>
+											<div className="min-w-0">
+												<p className="text-sm text-[#F5F0EB] font-medium truncate">
+													Table {payment.tableNumero ?? "—"} · {payment.guestName}
+												</p>
+												<p className="text-xs text-[#5A5249] mt-0.5">Voir la commande</p>
+											</div>
+										</div>
+										<ExternalLink
+											size={14}
+											className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
+										/>
+									</Link>
+								</div>
+							)}
 
-							{payment.reservation.invoice && (
+							{payment.reservationId && (
+								<div>
+									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+										Réservation liée
+									</p>
+									<Link
+										href={`/admin/reservations?id=${payment.reservationId}`}
+										className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
+									>
+										<div className="min-w-0">
+											<p className="text-sm text-[#F5F0EB] font-medium truncate">{payment.guestName}</p>
+											<p className="text-xs text-[#5A5249] mt-0.5">
+												{isDeposit
+													? `${formatDate(payment.date, "dd MMMM yyyy")} · ${payment.timeSlot}`
+													: formatDate(payment.date, "dd MMMM yyyy")}
+											</p>
+										</div>
+										<ExternalLink
+											size={14}
+											className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
+										/>
+									</Link>
+								</div>
+							)}
+
+							{payment.invoice && (
 								<div>
 									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
 										Facture associée
 									</p>
 									<Link
-										href={`/admin/invoices?id=${payment.reservation.invoice.id}`}
+										href={`/admin/invoices?id=${payment.invoice.id}`}
 										className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
 									>
 										<div className="flex items-center gap-3 min-w-0">
@@ -499,7 +608,7 @@ function DetailPanel({
 											</div>
 											<div className="min-w-0">
 												<p className="text-sm text-[#F5F0EB] font-medium font-mono truncate">
-													{payment.reservation.invoice.invoiceNumber}
+													{payment.invoice.invoiceNumber}
 												</p>
 												<p className="text-xs text-[#5A5249]">Voir la facture</p>
 											</div>
@@ -530,6 +639,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 
 	const [search,        setSearch]        = useState("");
 	const [activeStatus,  setActiveStatus]  = useState<PaymentStatus | null>(null);
+	const [kindFilter,    setKindFilter]    = useState<KindFilter>("ALL");
 	const [sortKey,       setSortKey]       = useState<SortKey>("date");
 	const [sortDir,       setSortDir]       = useState<SortDir>("desc");
 	const [page,          setPage]          = useState(1);
@@ -547,15 +657,21 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 	}, []);
 
 	const stats = useMemo(() => {
-		const paid     = payments.filter((p) => p.status === "PAID");
-		const refunded = payments.filter((p) => p.status === "REFUNDED" || p.status === "PARTIALLY_REFUNDED");
+		const paid      = payments.filter((p) => p.status === "PAID");
+		const refunded  = payments.filter((p) => p.status === "REFUNDED" || p.status === "PARTIALLY_REFUNDED");
+		const deposits  = payments.filter((p) => p.kind === "DEPOSIT");
+		const additions = payments.filter((p) => p.kind === "ADDITION");
 		return {
-			total:     payments.length,
-			pending:   payments.filter((p) => p.status === "PENDING").length,
-			paid:      paid.length,
-			refunded:  refunded.length,
-			failed:    payments.filter((p) => p.status === "FAILED").length,
-			totalPaid: paid.reduce((s, p) => s + p.amount, 0),
+			total:          payments.length,
+			pending:        payments.filter((p) => p.status === "PENDING").length,
+			paid:           paid.length,
+			refunded:       refunded.length,
+			failed:         payments.filter((p) => p.status === "FAILED").length,
+			totalPaid:      paid.reduce((s, p) => s + p.amount, 0),
+			depositsCount:  deposits.length,
+			depositsTotal:  deposits.filter((p) => p.status === "PAID").reduce((s, p) => s + p.amount, 0),
+			additionsCount: additions.length,
+			additionsTotal: additions.reduce((s, p) => s + p.amount, 0),
 		};
 	}, [payments]);
 
@@ -570,14 +686,15 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 
 		let result = payments.filter((p) => {
 			if (q) {
-				const fullName = `${p.reservation.guestFirstName} ${p.reservation.guestLastName}`;
 				const stripeId = p.stripePaymentIntentId ?? "";
-				const haystack = [fullName, p.reservation.guestEmail, stripeId]
+				const tableRef = p.tableNumero != null ? `table ${p.tableNumero}` : "";
+				const haystack = [p.guestName, p.guestEmail ?? "", stripeId, tableRef]
 					.join(" ")
 					.toLowerCase();
 				if (!haystack.includes(q)) return false;
 			}
 			if (activeStatus && p.status !== activeStatus) return false;
+			if (kindFilter !== "ALL" && p.kind !== kindFilter) return false;
 			return true;
 		});
 
@@ -586,18 +703,14 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 			if (sortKey === "date")   cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 			if (sortKey === "amount") cmp = a.amount - b.amount;
 			if (sortKey === "status") cmp = a.status.localeCompare(b.status);
-			if (sortKey === "client") {
-				const na = `${a.reservation.guestLastName} ${a.reservation.guestFirstName}`;
-				const nb = `${b.reservation.guestLastName} ${b.reservation.guestFirstName}`;
-				cmp = na.localeCompare(nb, "fr");
-			}
+			if (sortKey === "client") cmp = a.guestName.localeCompare(b.guestName, "fr");
 			return sortDir === "asc" ? cmp : -cmp;
 		});
 
 		return result;
-	}, [payments, search, activeStatus, sortKey, sortDir]);
+	}, [payments, search, activeStatus, kindFilter, sortKey, sortDir]);
 
-	useEffect(() => { setPage(1); }, [search, activeStatus, sortKey, sortDir]);
+	useEffect(() => { setPage(1); }, [search, activeStatus, kindFilter, sortKey, sortDir]);
 
 	const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
 	const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -614,23 +727,34 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 		setActiveStatus((prev) => (prev === s ? null : s));
 	}, []);
 
+	const handleKindClick = useCallback((k: KindFilter) => {
+		setKindFilter((prev) => (prev === k ? "ALL" : k));
+	}, []);
+
 	const resetFilters = useCallback(() => {
 		setSearch("");
 		setActiveStatus(null);
+		setKindFilter("ALL");
 	}, []);
 
 	const handleExport = useCallback(() => {
-		const headers = ["Client", "Email", "Date réservation", "Montant (€)", "Type", "Statut", "Stripe ID", "Payé le", "Remboursé le"];
+		const headers = [
+			"Client", "Email", "Date", "Montant (€)", "Genre", "Type / Mode",
+			"Statut", "Table", "Référence Stripe", "Payé le",
+		];
 		const rows = filtered.map((p) => [
-			`${p.reservation.guestFirstName} ${p.reservation.guestLastName}`,
-			p.reservation.guestEmail,
-			formatDate(p.reservation.date, "dd/MM/yyyy"),
+			p.guestName,
+			p.guestEmail ?? "",
+			formatDate(p.date, "dd/MM/yyyy"),
 			p.amount.toFixed(2),
-			PAYMENT_TYPE_LABELS[p.type] ?? p.type,
+			KIND_META[p.kind].label,
+			p.kind === "DEPOSIT"
+				? (PAYMENT_TYPE_LABELS[p.type ?? ""] ?? p.type ?? "")
+				: (PAYMENT_METHOD_LABELS[p.paymentMethod ?? ""] ?? ""),
 			STATUS_META[p.status]?.label ?? p.status,
+			p.tableNumero != null ? `Table ${p.tableNumero}` : "",
 			p.stripePaymentIntentId ?? "",
 			p.paidAt ? formatDateTime(p.paidAt) : "",
-			p.refundedAt ? formatDateTime(p.refundedAt) : "",
 		]);
 		const csv = [headers, ...rows]
 			.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
@@ -647,7 +771,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 		URL.revokeObjectURL(url);
 	}, [filtered]);
 
-	const hasActiveFilters  = !!(search || activeStatus);
+	const hasActiveFilters  = !!(search || activeStatus || kindFilter !== "ALL");
 	const selectedPayment   = payments.find((p) => p.id === selectedId) ?? null;
 
 	return (
@@ -658,6 +782,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 					<h1 className="font-display text-3xl text-[#F5F0EB]">Paiements</h1>
 					<p className="text-sm text-[#5A5249] mt-1">
 						{payments.length} paiement{payments.length !== 1 ? "s" : ""} au total
+						· acomptes et additions confondus
 					</p>
 				</div>
 				<button
@@ -671,19 +796,29 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 
 			<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
 				<StatCard
-					label="Total paiements"
-					value={stats.total}
-					icon={CreditCard}
-					iconColor="bg-[#1a1a1a] text-[#9A8F84]"
-				/>
-				<StatCard
-					label="Payés"
-					value={stats.paid}
-					sub={stats.totalPaid > 0 ? formatPrice(stats.totalPaid) : undefined}
+					label="Total encaissé"
+					value={formatPrice(stats.totalPaid)}
+					sub={`${stats.paid} paiement${stats.paid !== 1 ? "s" : ""}`}
 					icon={CheckCircle2}
 					iconColor="bg-green-500/10 text-green-400"
-					active={activeStatus === "PAID"}
-					onClick={() => handleStatusPill("PAID")}
+				/>
+				<StatCard
+					label="Acomptes"
+					value={stats.depositsCount}
+					sub={stats.depositsTotal > 0 ? formatPrice(stats.depositsTotal) : undefined}
+					icon={CreditCard}
+					iconColor="bg-[#C8973A]/10 text-[#C8973A]"
+					active={kindFilter === "DEPOSIT"}
+					onClick={() => handleKindClick("DEPOSIT")}
+				/>
+				<StatCard
+					label="Additions"
+					value={stats.additionsCount}
+					sub={stats.additionsTotal > 0 ? formatPrice(stats.additionsTotal) : undefined}
+					icon={Wallet}
+					iconColor="bg-orange-500/10 text-orange-400"
+					active={kindFilter === "ADDITION"}
+					onClick={() => handleKindClick("ADDITION")}
 				/>
 				<StatCard
 					label="En attente"
@@ -701,14 +836,6 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 					active={activeStatus === "REFUNDED"}
 					onClick={() => handleStatusPill("REFUNDED")}
 				/>
-				<StatCard
-					label="Échoués"
-					value={stats.failed}
-					icon={XCircle}
-					iconColor="bg-red-500/10 text-red-400"
-					active={activeStatus === "FAILED"}
-					onClick={() => handleStatusPill("FAILED")}
-				/>
 			</div>
 
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
@@ -721,7 +848,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 						<input
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							placeholder="Rechercher par client, email, Stripe ID..."
+							placeholder="Rechercher par client, email, table, Stripe ID..."
 							className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
 						/>
 						{search && (
@@ -736,6 +863,21 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 					</div>
 
 					<div className="flex items-center gap-2 flex-wrap">
+						<StatusPill
+							label="Acomptes"
+							count={stats.depositsCount}
+							color="gray"
+							active={kindFilter === "DEPOSIT"}
+							onClick={() => handleKindClick("DEPOSIT")}
+						/>
+						<StatusPill
+							label="Additions"
+							count={stats.additionsCount}
+							color="orange"
+							active={kindFilter === "ADDITION"}
+							onClick={() => handleKindClick("ADDITION")}
+						/>
+						<span className="w-px h-5 bg-[#222] mx-1" />
 						{(Object.entries(STATUS_META) as [PaymentStatus, typeof STATUS_META[string]][]).map(
 							([status, meta]) => (
 								<StatusPill
@@ -772,7 +914,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 					</div>
 					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
 					<SortBtn label="Statut"  sortKey="status" current={sortKey} dir={sortDir} onClick={handleSortClick} />
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Stripe ID</span>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Référence</span>
 				</div>
 
 				{paginated.length === 0 ? (
@@ -780,9 +922,9 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 				) : (
 					<div className="divide-y divide-[#1a1a1a]">
 						{paginated.map((p) => {
-							const meta     = STATUS_META[p.status];
-							const fullName = `${p.reservation.guestFirstName} ${p.reservation.guestLastName}`;
-							const isSelected = selectedId === p.id;
+							const meta        = STATUS_META[p.status];
+							const kindMeta    = KIND_META[p.kind];
+							const isSelected  = selectedId === p.id;
 							return (
 								<div
 									key={p.id}
@@ -798,19 +940,19 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 								>
 									<div className="min-w-0">
 										<span className="text-sm text-[#F5F0EB] block truncate">
-											<Highlight text={fullName} query={search} />
+											<Highlight text={p.guestName} query={search} />
 										</span>
 										<span className="text-xs text-[#5A5249] block truncate">
-											<Highlight text={p.reservation.guestEmail} query={search} />
+											{p.guestEmail ? <Highlight text={p.guestEmail} query={search} /> : "Client sur place"}
 										</span>
 									</div>
 
 									<div>
 										<span className="text-sm text-[#F5F0EB]">
-											{formatDate(p.reservation.date, "dd/MM/yyyy")}
+											{formatDate(p.date, "dd/MM/yyyy")}
 										</span>
 										<span className="block text-xs text-[#5A5249]">
-											{p.reservation.timeSlot}
+											{p.kind === "DEPOSIT" ? p.timeSlot : formatDateTime(p.date).split(" à ")[1]}
 										</span>
 									</div>
 
@@ -825,9 +967,16 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 										)}
 									</div>
 
-									<span className="text-xs text-[#9A8F84]">
-										{PAYMENT_TYPE_LABELS[p.type] ?? p.type}
-									</span>
+									<div>
+										<Badge variant={kindMeta.badge} className="text-[10px]">
+											{kindMeta.label}
+										</Badge>
+										<span className="block text-[11px] text-[#5A5249] mt-1">
+											{p.kind === "DEPOSIT"
+												? (PAYMENT_TYPE_LABELS[p.type ?? ""] ?? p.type)
+												: (PAYMENT_METHOD_LABELS[p.paymentMethod ?? ""] ?? "—")}
+										</span>
+									</div>
 
 									<div>
 										<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
@@ -836,9 +985,13 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 									</div>
 
 									<span className="text-xs font-mono text-[#5A5249]">
-										{p.stripePaymentIntentId
-											? <Highlight text={`...${p.stripePaymentIntentId.slice(-10)}`} query={search} />
-											: "—"}
+										{p.kind === "DEPOSIT"
+											? (p.stripePaymentIntentId
+												? <Highlight text={`...${p.stripePaymentIntentId.slice(-10)}`} query={search} />
+												: "—")
+											: (p.tableNumero != null
+												? <Highlight text={`Table ${p.tableNumero}`} query={search} />
+												: "—")}
 									</span>
 								</div>
 							);
@@ -853,8 +1006,8 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
 				) : (
 					paginated.map((p) => {
-						const meta     = STATUS_META[p.status];
-						const fullName = `${p.reservation.guestFirstName} ${p.reservation.guestLastName}`;
+						const meta       = STATUS_META[p.status];
+						const kindMeta   = KIND_META[p.kind];
 						const isSelected = selectedId === p.id;
 						return (
 							<div
@@ -870,13 +1023,20 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 										: "bg-[#141414] border-[#222] hover:border-[#333] hover:bg-[#1a1a1a]"
 								)}
 							>
-								<div className="min-w-0">
-									<p className="text-sm font-medium text-[#F5F0EB] truncate">
-										<Highlight text={fullName} query={search} />
-									</p>
-									<p className="text-xs text-[#5A5249] mt-0.5 truncate">
-										{formatDate(p.reservation.date, "dd/MM/yyyy")} · {p.reservation.timeSlot}
-									</p>
+								<div className="flex items-start justify-between gap-2">
+									<div className="min-w-0">
+										<p className="text-sm font-medium text-[#F5F0EB] truncate">
+											<Highlight text={p.guestName} query={search} />
+										</p>
+										<p className="text-xs text-[#5A5249] mt-0.5 truncate">
+											{p.kind === "DEPOSIT"
+												? `${formatDate(p.date, "dd/MM/yyyy")} · ${p.timeSlot}`
+												: formatDateTime(p.date)}
+										</p>
+									</div>
+									<Badge variant={kindMeta.badge} className="text-[10px] shrink-0">
+										{kindMeta.label}
+									</Badge>
 								</div>
 
 								<div className="grid grid-cols-3 gap-2">
@@ -887,15 +1047,23 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 										</p>
 									</div>
 									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
-										<p className="text-[10px] text-[#5A5249] mb-0.5">Type</p>
-										<p className="text-xs font-medium text-[#F5F0EB]">
-											{PAYMENT_TYPE_LABELS[p.type] ?? p.type}
+										<p className="text-[10px] text-[#5A5249] mb-0.5">
+											{p.kind === "DEPOSIT" ? "Type" : "Mode"}
+										</p>
+										<p className="text-xs font-medium text-[#F5F0EB] truncate">
+											{p.kind === "DEPOSIT"
+												? (PAYMENT_TYPE_LABELS[p.type ?? ""] ?? p.type)
+												: (PAYMENT_METHOD_LABELS[p.paymentMethod ?? ""] ?? "—")}
 										</p>
 									</div>
 									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
-										<p className="text-[10px] text-[#5A5249] mb-0.5">Stripe</p>
+										<p className="text-[10px] text-[#5A5249] mb-0.5">
+											{p.kind === "DEPOSIT" ? "Stripe" : "Table"}
+										</p>
 										<p className="text-xs font-mono text-[#5A5249] truncate">
-											{p.stripePaymentIntentId ? `...${p.stripePaymentIntentId.slice(-8)}` : "—"}
+											{p.kind === "DEPOSIT"
+												? (p.stripePaymentIntentId ? `…${p.stripePaymentIntentId.slice(-8)}` : "—")
+												: (p.tableNumero != null ? `T${p.tableNumero}` : "—")}
 										</p>
 									</div>
 								</div>
@@ -927,8 +1095,8 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 							<ChevronLeft size={14} />
 						</PgBtn>
 						{buildPageList(page, totalPages).map((p, i) =>
-							p === "..." ? (
-								<span key={`ellipsis-${i}`} className="text-xs text-[#5A5249] px-1">...</span>
+							p === "…" ? (
+								<span key={`ellipsis-${i}`} className="text-xs text-[#5A5249] px-1">…</span>
 							) : (
 								<PgBtn key={p} active={page === p} onClick={() => setPage(p as number)}>
 									{p}
