@@ -537,7 +537,7 @@ function DetailPanel({
 									{r.invoice && (
 										<div className="mt-3">
 											<LinkRow
-												href={`/admin/invoices/${r.invoice.id}`}
+												href={`/admin/invoices?id=${r.invoice.id}`}
 												icon={Receipt}
 												label={`Facture #${r.invoice.invoiceNumber}`}
 												sub="Voir la facture"
