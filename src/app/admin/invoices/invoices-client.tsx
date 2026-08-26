@@ -26,8 +26,6 @@ import { cn, formatDate, formatDateTime, formatPrice, getInitials } from "@/lib/
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUSES } from "@/lib/constants";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface PaymentInfo {
 	id: string;
 	status: keyof typeof PAYMENT_STATUSES;
@@ -79,15 +77,11 @@ const BADGE_VARIANT: Record<string, "yellow" | "green" | "red" | "gray" | "orang
 	blue:   "blue",
 };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const PER_PAGE = 10;
 const GRID_COLS = "grid-cols-[1fr_1.3fr_1fr_0.8fr_0.7fr_0.7fr_44px]";
 
 type SortKey = "date" | "amount" | "number" | "client";
 type SortDir = "asc" | "desc";
-
-// ─── Highlight ────────────────────────────────────────────────────────────────
 
 function Highlight({ text, query }: { text: string; query: string }) {
 	if (!query.trim()) return <>{text}</>;
@@ -107,8 +101,6 @@ function Highlight({ text, query }: { text: string; query: string }) {
 		</>
 	);
 }
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
 	label,
@@ -136,8 +128,6 @@ function StatCard({
 		</div>
 	);
 }
-
-// ─── SortBtn ──────────────────────────────────────────────────────────────────
 
 function SortBtn({
 	label,
@@ -168,8 +158,6 @@ function SortBtn({
 	);
 }
 
-// ─── PgBtn ────────────────────────────────────────────────────────────────────
-
 function PgBtn({
 	children,
 	active,
@@ -198,19 +186,17 @@ function PgBtn({
 	);
 }
 
-function buildPageList(current: number, total: number): (number | "…")[] {
+function buildPageList(current: number, total: number): (number | "...")[] {
 	if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-	const pages: (number | "…")[] = [1];
-	if (current > 3) pages.push("…");
+	const pages: (number | "...")[] = [1];
+	if (current > 3) pages.push("...");
 	for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
 		pages.push(p);
 	}
-	if (current < total - 2) pages.push("…");
+	if (current < total - 2) pages.push("...");
 	pages.push(total);
 	return pages;
 }
-
-// ─── EmptyState ───────────────────────────────────────────────────────────────
 
 function EmptyState({ onReset }: { onReset?: () => void }) {
 	return (
@@ -230,8 +216,6 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 		</div>
 	);
 }
-
-// ─── Detail panel building blocks ─────────────────────────────────────────────
 
 function InfoRow({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
 	return (
@@ -289,8 +273,6 @@ function LinkRow({
 		</Link>
 	);
 }
-
-// ─── DetailPanel ──────────────────────────────────────────────────────────────
 
 function DetailPanel({
 	invoice,
@@ -475,8 +457,6 @@ function DetailPanel({
 	);
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	const router = useRouter();
 
@@ -486,18 +466,13 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	const [page,       setPage]       = useState(1);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 
-	// Deep-link support: /admin/invoices?id=xxx opens the panel on load, with the slide-in
-	// animation (selectedId starts at null and is only set after the first paint), then the
-	// URL is cleaned up. Used by the reservation/payment side panels instead of a dedicated route.
 	useEffect(() => {
 		if (initialInvoiceId) {
 			setSelectedId(initialInvoiceId);
 			router.replace("/admin/invoices", { scroll: false });
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// ── Stats ──
 	const stats = useMemo(() => ({
 		total:    invoices.length,
 		totalHT:  invoices.reduce((s, i) => s + i.amount, 0),
@@ -506,7 +481,6 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 		hasPdf:   invoices.filter((i) => !!i.pdfUrl).length,
 	}), [invoices]);
 
-	// ── Filtered + sorted ──
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
 
@@ -542,7 +516,6 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
 	const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-	// ── Handlers ──
 	const handleSortClick = useCallback(
 		(key: SortKey) => {
 			if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -590,7 +563,6 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	return (
 		<div className="min-h-full">
 
-			{/* ── Header ── */}
 			<div className="flex items-start justify-between mb-6 gap-4">
 				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">Factures</h1>
@@ -607,7 +579,6 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				</button>
 			</div>
 
-			{/* ── Stats ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 				<StatCard
 					label="Total factures"
@@ -635,7 +606,6 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				/>
 			</div>
 
-			{/* ── Search ── */}
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4">
 				<div className="relative">
 					<Search
@@ -645,7 +615,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 					<input
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Rechercher par N° facture, client, email…"
+						placeholder="Rechercher par N° facture, client, email..."
 						className="w-full h-9 pl-9 pr-9 rounded-lg bg-[#0A0A0A] border border-[#222] text-sm text-[#F5F0EB] placeholder:text-[#5A5249] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
 					/>
 					{search && (
@@ -660,7 +630,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				</div>
 			</div>
 
-			{/* ── Desktop Table ── */}
+			{/* ── Desktop ── */}
 			<div className="hidden lg:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 
 				<div className={cn("grid items-center px-5 py-3 border-b border-[#1a1a1a]", GRID_COLS)}>
@@ -694,12 +664,10 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 										selectedId === inv.id ? "bg-[#C8973A]/5" : "hover:bg-[#1a1a1a]"
 									)}
 								>
-									{/* N° */}
 									<span className="text-sm font-mono font-medium text-[#F5F0EB]">
 										<Highlight text={inv.invoiceNumber} query={search} />
 									</span>
 
-									{/* Client */}
 									<div className="min-w-0">
 										<span className="text-sm text-[#F5F0EB] block truncate">
 											<Highlight text={fullName} query={search} />
@@ -709,29 +677,24 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 										</span>
 									</div>
 
-									{/* Date */}
 									<span className="text-sm text-[#9A8F84]">
 										{formatDate(inv.issuedAt, "dd/MM/yyyy")}
 									</span>
 
-									{/* HT */}
 									<span className="text-sm text-[#9A8F84] tabular-nums">
 										{formatPrice(inv.amount)}
 									</span>
 
-									{/* TVA */}
 									<span className="text-sm text-[#9A8F84] tabular-nums">
 										{formatPrice(inv.taxAmount)}
 									</span>
 
-									{/* TTC */}
 									<div className="text-right">
 										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
 											{formatPrice(inv.totalAmount)}
 										</span>
 									</div>
 
-									{/* PDF quick download */}
 									<div className="flex items-center justify-end">
 										{inv.pdfUrl ? (
 											<a
@@ -755,7 +718,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				)}
 			</div>
 
-			{/* ── Mobile Cards ── */}
+			{/* ── Mobile ── */}
 			<div className="lg:hidden space-y-3">
 				{paginated.length === 0 ? (
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
@@ -833,8 +796,8 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 							<ChevronLeft size={14} />
 						</PgBtn>
 						{buildPageList(page, totalPages).map((p, i) =>
-							p === "…" ? (
-								<span key={`ellipsis-${i}`} className="text-xs text-[#5A5249] px-1">…</span>
+							p === "..." ? (
+								<span key={`ellipsis-${i}`} className="text-xs text-[#5A5249] px-1">...</span>
 							) : (
 								<PgBtn key={p} active={page === p} onClick={() => setPage(p as number)}>
 									{p}

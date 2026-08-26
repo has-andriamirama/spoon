@@ -248,14 +248,14 @@ function PgBtn({
 	);
 }
 
-function buildPageList(current: number, total: number): (number | "…")[] {
+function buildPageList(current: number, total: number): (number | "...")[] {
 	if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-	const pages: (number | "…")[] = [1];
-	if (current > 3) pages.push("…");
+	const pages: (number | "...")[] = [1];
+	if (current > 3) pages.push("...");
 	for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
 		pages.push(p);
 	}
-	if (current < total - 2) pages.push("…");
+	if (current < total - 2) pages.push("...");
 	pages.push(total);
 	return pages;
 }
@@ -438,14 +438,14 @@ function DetailPanel({
 								{payment.stripePaymentIntentId && (
 									<InfoRow
 										label="Payment Intent"
-										value={`…${payment.stripePaymentIntentId.slice(-14)}`}
+										value={`...${payment.stripePaymentIntentId.slice(-14)}`}
 										valueClass="font-mono text-[11px]"
 									/>
 								)}
 								{payment.stripeChargeId && (
 									<InfoRow
 										label="Charge ID"
-										value={`…${payment.stripeChargeId.slice(-14)}`}
+										value={`...${payment.stripeChargeId.slice(-14)}`}
 										valueClass="font-mono text-[11px]"
 									/>
 								)}
@@ -895,7 +895,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
 										<p className="text-[10px] text-[#5A5249] mb-0.5">Stripe</p>
 										<p className="text-xs font-mono text-[#5A5249] truncate">
-											{p.stripePaymentIntentId ? `…${p.stripePaymentIntentId.slice(-8)}` : "—"}
+											{p.stripePaymentIntentId ? `...${p.stripePaymentIntentId.slice(-8)}` : "—"}
 										</p>
 									</div>
 								</div>
@@ -927,8 +927,8 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 							<ChevronLeft size={14} />
 						</PgBtn>
 						{buildPageList(page, totalPages).map((p, i) =>
-							p === "…" ? (
-								<span key={`ellipsis-${i}`} className="text-xs text-[#5A5249] px-1">…</span>
+							p === "..." ? (
+								<span key={`ellipsis-${i}`} className="text-xs text-[#5A5249] px-1">...</span>
 							) : (
 								<PgBtn key={p} active={page === p} onClick={() => setPage(p as number)}>
 									{p}
