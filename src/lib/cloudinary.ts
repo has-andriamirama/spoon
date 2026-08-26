@@ -14,14 +14,46 @@ export async function deleteCloudinaryImage(publicId: string): Promise<void> {
 }
 
 /**
+ * Sépare un chemin complet ("spoon/invoices/templates/deposit/mon-template-123")
+ * en `{ folder, filename }`.
+ *
+ * IMPORTANT — pourquoi c'est nécessaire :
+ * Sur les comptes Cloudinary en mode "Dynamic Folder" (le mode par défaut pour
+ * tout compte créé depuis juillet 2023), le dossier affiché dans la Media
+ * Library N'EST PLUS déduit automatiquement des "/" présents dans `public_id`
+ * pour les ressources `resource_type: "raw"` — contrairement aux ressources
+ * `image`/`video`. Si on ne passe QUE `public_id` (même avec des "/"), le
+ * fichier est bien accessible via son URL (le chemin fait partie du
+ * public_id), mais Cloudinary le place à la racine de la Media Library au
+ * lieu du dossier attendu (ex. `spoon/invoices/templates/...`) : c'est
+ * exactement le symptôme "le fichier existe mais n'est pas au bon endroit".
+ *
+ * Pour être fiable sur TOUS les modes de compte (Fixed ET Dynamic Folder), on
+ * passe désormais explicitement `folder` en plus d'un `public_id` qui ne
+ * contient que le nom de fichier final. Cloudinary reconstruit alors
+ * lui-même le chemin complet (`folder + "/" + public_id`) dans le
+ * `public_id` renvoyé — donc les appels suivants (fetch, update, destroy) qui
+ * réutilisent ce `public_id` complet continuent de fonctionner sans rien
+ * changer côté appelant.
+ */
+function splitCloudinaryPath(fullPath: string): { folder: string; filename: string } {
+	const normalized = fullPath.replace(/^\/+/, "").replace(/\/+$/, "");
+	const lastSlash = normalized.lastIndexOf("/");
+	if (lastSlash === -1) {
+		return { folder: "", filename: normalized };
+	}
+	return {
+		folder: normalized.slice(0, lastSlash),
+		filename: normalized.slice(lastSlash + 1),
+	};
+}
+
+/**
  * Upload d'un contenu texte (HTML de template, par ex.) vers Cloudinary en tant
  * que fichier "raw".
  *
  * `publicId` doit être le chemin COMPLET (dossier inclus), ex.
- * "spoon/invoices/templates/deposit/mon-template-123". On ne passe jamais
- * `folder` en plus de `public_id` : Cloudinary concatène les deux, ce qui
- * dupliquerait le chemin sur un écrasement (overwrite) où `publicId` contient
- * déjà le dossier renvoyé par un précédent upload.
+ * "spoon/invoices/templates/deposit/mon-template-123".
  */
 export async function uploadRawTextToCloudinary(
 	content: string,
@@ -29,10 +61,15 @@ export async function uploadRawTextToCloudinary(
 ): Promise<{ url: string; publicId: string }> {
 	const base64 = Buffer.from(content, "utf-8").toString("base64");
 	const dataUri = `data:text/html;base64,${base64}`;
+	const { folder, filename } = splitCloudinaryPath(publicId);
 
 	const result = await cloudinary.uploader.upload(dataUri, {
 		resource_type: "raw",
-		public_id: publicId,
+		public_id: filename,
+		folder: folder || undefined,
+		asset_folder: folder || undefined,
+		use_filename: false,
+		unique_filename: false,
 		overwrite: true,
 		format: "html",
 	});
@@ -48,11 +85,17 @@ export async function uploadRawBufferToCloudinary(
 	buffer: Buffer,
 	publicId: string
 ): Promise<{ url: string; publicId: string }> {
+	const { folder, filename } = splitCloudinaryPath(publicId);
+
 	return new Promise((resolve, reject) => {
 		const uploadStream = cloudinary.uploader.upload_stream(
 			{
 				resource_type: "raw",
-				public_id: publicId,
+				public_id: filename,
+				folder: folder || undefined,
+				asset_folder: folder || undefined,
+				use_filename: false,
+				unique_filename: false,
 				overwrite: true,
 				format: "pdf",
 			},

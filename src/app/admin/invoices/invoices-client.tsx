@@ -23,8 +23,11 @@ import {
 	Percent,
 	TableProperties,
 	FileCode2,
+	RefreshCw,
+	Loader2,
 } from "lucide-react";
-import { cn, formatDate, formatDateTime, formatPrice } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { cn, formatDate, formatDateTime, formatPrice, getErrorMessage } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUSES } from "@/lib/constants";
 
@@ -316,9 +319,13 @@ function LinkRow({
 function DetailPanel({
 	invoice,
 	onClose,
+	onRegeneratePdf,
+	regeneratingId,
 }: {
 	invoice: Invoice | null;
 	onClose: () => void;
+	onRegeneratePdf: (invoice: Invoice) => void;
+	regeneratingId: string | null;
 }) {
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
@@ -437,7 +444,11 @@ function DetailPanel({
 								<InfoRow label="N° Facture" value={inv.invoiceNumber} valueClass="font-mono" />
 								<InfoRow label="Créée le" value={formatDateTime(inv.createdAt)} />
 								{!inv.pdfUrl && (
-									<InfoRow label="PDF" value="Non disponible" valueClass="italic text-[#5A5249]" />
+									<InfoRow
+										label="PDF"
+										value="Non disponible — échec de génération"
+										valueClass="italic text-[#5A5249]"
+									/>
 								)}
 							</Section>
 
@@ -501,8 +512,8 @@ function DetailPanel({
 							)}
 						</div>
 
-						{inv.pdfUrl && (
-							<div className="p-5 border-t border-[#222] shrink-0">
+						<div className="p-5 border-t border-[#222] shrink-0">
+							{inv.pdfUrl ? (
 								<a
 									href={inv.pdfUrl}
 									target="_blank"
@@ -512,8 +523,21 @@ function DetailPanel({
 									<Download size={14} />
 									Télécharger le PDF
 								</a>
-							</div>
-						)}
+							) : (
+								<button
+									onClick={() => onRegeneratePdf(inv)}
+									disabled={regeneratingId === inv.id}
+									className="w-full flex items-center justify-center gap-2 h-9 rounded-lg border border-[#C8973A]/30 text-[#C8973A] hover:bg-[#C8973A]/10 text-sm font-semibold transition-colors disabled:opacity-60"
+								>
+									{regeneratingId === inv.id ? (
+										<Loader2 size={14} className="animate-spin" />
+									) : (
+										<RefreshCw size={14} />
+									)}
+									{regeneratingId === inv.id ? "Génération en cours…" : "Régénérer le PDF"}
+								</button>
+							)}
+						</div>
 					</>
 				)}
 			</aside>
@@ -530,6 +554,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	const [sortDir,    setSortDir]    = useState<SortDir>("desc");
 	const [page,       setPage]       = useState(1);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (initialInvoiceId) {
@@ -633,6 +658,26 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	const closePanel = useCallback(() => {
 		setSelectedId(null);
 	}, []);
+
+	const handleRegeneratePdf = useCallback(
+		async (invoice: Invoice) => {
+			setRegeneratingId(invoice.id);
+			try {
+				const res = await fetch(`/api/invoices/${invoice.id}/pdf`, { method: "POST" });
+				if (!res.ok) {
+					const err = await res.json().catch(() => null);
+					throw new Error(err?.error ?? "Échec de la génération du PDF");
+				}
+				toast.success("PDF généré avec succès");
+				router.refresh();
+			} catch (error) {
+				toast.error(getErrorMessage(error, "Erreur lors de la génération du PDF"));
+			} finally {
+				setRegeneratingId(null);
+			}
+		},
+		[router]
+	);
 
 	return (
 		<div className="min-h-full">
@@ -938,7 +983,12 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				</div>
 			)}
 
-			<DetailPanel invoice={selectedInvoice} onClose={closePanel} />
+			<DetailPanel
+				invoice={selectedInvoice}
+				onClose={closePanel}
+				onRegeneratePdf={handleRegeneratePdf}
+				regeneratingId={regeneratingId}
+			/>
 		</div>
 	);
 }

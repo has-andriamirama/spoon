@@ -63,7 +63,17 @@ async function generateInvoicePdfSafely(invoiceId: string): Promise<void> {
 	try {
 		await generateInvoicePdf(invoiceId);
 	} catch (error) {
-		console.error(`[invoice.service] échec génération PDF pour la facture ${invoiceId}:`, error);
+		// Best-effort assumé : on ne relance jamais l'erreur ici pour ne pas
+		// casser un flux de paiement. Mais on journalise le message ET la
+		// pile complète — avant ce correctif, un échec Chromium/Cloudinary
+		// était totalement invisible (la facture restait avec pdfUrl = null,
+		// sans aucun log exploitable). L'admin peut régénérer le PDF depuis
+		// /admin/invoices une fois la cause corrigée (voir bouton
+		// "Régénérer le PDF" sur les factures sans PDF).
+		const message = error instanceof Error ? error.stack ?? error.message : String(error);
+		console.error(
+			`[invoice.service] échec génération PDF pour la facture ${invoiceId} :\n${message}`
+		);
 	}
 }
 

@@ -5,6 +5,11 @@ import { generateAdditionInvoice } from "@/services/invoice.service";
 import { sendAdditionReceipt } from "@/services/email.service";
 
 export const dynamic = "force-dynamic";
+// La génération du PDF de facture d'addition (Puppeteer + Chromium) peut
+// dépasser le timeout par défaut d'une fonction Vercel — voir le même
+// commentaire dans /api/webhooks/stripe/route.ts.
+export const maxDuration = 60;
+export const runtime = "nodejs";
 
 // POST — encaisser le paiement d'une commande
 export async function POST(

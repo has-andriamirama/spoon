@@ -6,6 +6,12 @@ import { sendPaymentConfirmation } from "@/services/email.service";
 import { createAdminNotification, broadcastReservationUpdate } from "@/services/notification.service";
 import { formatPrice } from "@/lib/utils";
 
+// Voir commentaire équivalent dans /api/webhooks/stripe/route.ts : la
+// génération du PDF de facture (Puppeteer + Chromium) a besoin de plus que le
+// timeout par défaut d'une fonction Vercel.
+export const maxDuration = 60;
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
 	try {
 		const { sessionId, reservationId } = await request.json();

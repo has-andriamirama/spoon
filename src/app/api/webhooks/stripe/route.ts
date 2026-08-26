@@ -9,6 +9,14 @@ import { createAdminNotification } from "@/services/notification.service";
 import { formatPrice } from "@/lib/utils";
 import type Stripe from "stripe";
 
+// La génération du PDF (lancement de Chromium headless via Puppeteer) peut
+// facilement dépasser les 10-15s par défaut d'une fonction Vercel, ce qui
+// tue la requête AVANT l'upload Cloudinary : la facture reste alors créée en
+// base mais sans PDF, sans la moindre erreur visible. 60s laisse une marge
+// confortable pour un cold start Chromium + upload Cloudinary.
+export const maxDuration = 60;
+export const runtime = "nodejs";
+
 const TERMINAL_PAID_STATUSES = ["PAID", "REFUNDED", "PARTIALLY_REFUNDED"] as const;
 
 export async function POST(request: Request) {
