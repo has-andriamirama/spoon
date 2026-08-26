@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
 	Search,
@@ -14,11 +15,25 @@ import {
 	ChevronsUpDown,
 	ChevronLeft,
 	ChevronRight,
-	Eye,
+	X,
+	Mail,
+	ExternalLink,
+	Users,
+	CreditCard,
+	Percent,
 } from "lucide-react";
-import { cn, formatDate, formatPrice } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatPrice, getInitials } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { PAYMENT_STATUSES } from "@/lib/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface PaymentInfo {
+	id: string;
+	status: keyof typeof PAYMENT_STATUSES;
+	amount: number;
+	type: string;
+}
 
 interface ReservationInfo {
 	id: string;
@@ -26,6 +41,14 @@ interface ReservationInfo {
 	guestLastName: string;
 	date: Date;
 	timeSlot: string;
+	payment: PaymentInfo | null;
+}
+
+interface CustomerInfo {
+	id: string;
+	firstName: string;
+	lastName: string;
+	email: string;
 }
 
 interface Invoice {
@@ -39,16 +62,27 @@ interface Invoice {
 	issuedAt: Date;
 	createdAt: Date;
 	reservation: ReservationInfo;
+	user: CustomerInfo | null;
 }
 
 interface Props {
 	invoices: Invoice[];
+	initialInvoiceId?: string;
 }
+
+const BADGE_VARIANT: Record<string, "yellow" | "green" | "red" | "gray" | "orange" | "blue"> = {
+	yellow: "yellow",
+	green:  "green",
+	red:    "red",
+	gray:   "gray",
+	orange: "orange",
+	blue:   "blue",
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PER_PAGE = 10;
-const GRID_COLS = "grid-cols-[1fr_1.3fr_1fr_0.8fr_0.7fr_0.7fr_88px]";
+const GRID_COLS = "grid-cols-[1fr_1.3fr_1fr_0.8fr_0.7fr_0.7fr_44px]";
 
 type SortKey = "date" | "amount" | "number" | "client";
 type SortDir = "asc" | "desc";
@@ -197,13 +231,271 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 	);
 }
 
+// ─── Detail panel building blocks ─────────────────────────────────────────────
+
+function InfoRow({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
+	return (
+		<div className="flex items-start justify-between gap-3 px-3 py-2.5">
+			<span className="text-xs text-[#5A5249] shrink-0">{label}</span>
+			<span className={cn("text-xs text-[#F5F0EB] text-right break-words min-w-0", valueClass)}>
+				{value}
+			</span>
+		</div>
+	);
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+	return (
+		<div>
+			<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+				{title}
+			</p>
+			<div className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] divide-y divide-[#1a1a1a] overflow-hidden">
+				{children}
+			</div>
+		</div>
+	);
+}
+
+function LinkRow({
+	href,
+	icon: Icon,
+	label,
+	sub,
+}: {
+	href: string;
+	icon: React.ElementType;
+	label: string;
+	sub?: string;
+}) {
+	return (
+		<Link
+			href={href}
+			className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
+		>
+			<div className="flex items-center gap-3 min-w-0">
+				<div className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#222] flex items-center justify-center shrink-0">
+					<Icon size={14} className="text-[#9A8F84]" />
+				</div>
+				<div className="min-w-0">
+					<p className="text-sm text-[#F5F0EB] font-medium truncate">{label}</p>
+					{sub && <p className="text-xs text-[#5A5249] mt-0.5 truncate">{sub}</p>}
+				</div>
+			</div>
+			<ExternalLink
+				size={14}
+				className="text-[#5A5249] group-hover:text-[#C8973A] shrink-0 transition-colors"
+			/>
+		</Link>
+	);
+}
+
+// ─── DetailPanel ──────────────────────────────────────────────────────────────
+
+function DetailPanel({
+	invoice,
+	onClose,
+}: {
+	invoice: Invoice | null;
+	onClose: () => void;
+}) {
+	useEffect(() => {
+		const handler = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", handler);
+		return () => window.removeEventListener("keydown", handler);
+	}, [onClose]);
+
+	useEffect(() => {
+		document.body.style.overflow = invoice ? "hidden" : "";
+		return () => {
+			document.body.style.overflow = "";
+		};
+	}, [invoice]);
+
+	const inv = invoice;
+	const isOpen = !!inv;
+	const fullName = inv ? `${inv.reservation.guestFirstName} ${inv.reservation.guestLastName}` : "";
+	const initials = inv ? getInitials(inv.reservation.guestFirstName, inv.reservation.guestLastName) : "";
+
+	return (
+		<>
+			<div
+				onClick={onClose}
+				aria-hidden="true"
+				className={cn(
+					"fixed inset-0 bg-black/60 z-40 transition-opacity duration-200",
+					isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+				)}
+			/>
+
+			<aside
+				className={cn(
+					"fixed top-0 right-0 h-full w-full sm:w-[400px] z-50 flex flex-col",
+					"bg-[#141414] border-l border-[#222] shadow-2xl",
+					"transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+					isOpen ? "translate-x-0" : "translate-x-full"
+				)}
+				aria-label="Détail de la facture"
+				role="dialog"
+				aria-modal="true"
+			>
+				{inv && (
+					<>
+						<div className="flex items-center justify-between p-5 border-b border-[#222] shrink-0">
+							<div className="flex items-center gap-3 min-w-0">
+								<div className="w-10 h-10 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center text-sm font-semibold text-[#C8973A] shrink-0">
+									{initials}
+								</div>
+								<div className="min-w-0">
+									<p className="text-sm font-semibold text-[#F5F0EB] truncate">
+										Facture {inv.invoiceNumber}
+									</p>
+									<p className="text-xs text-[#5A5249] truncate">{fullName}</p>
+								</div>
+							</div>
+							<button
+								onClick={onClose}
+								className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#222] transition-colors shrink-0 ml-2"
+								aria-label="Fermer le panneau"
+							>
+								<X size={16} />
+							</button>
+						</div>
+
+						<div className="flex-1 overflow-y-auto p-5 space-y-5">
+							<div className="grid grid-cols-2 gap-3">
+								{[
+									{ icon: CreditCard,  label: "Total TTC",       value: formatPrice(inv.totalAmount), accent: true },
+									{ icon: Receipt,     label: "Montant HT",      value: formatPrice(inv.amount) },
+									{ icon: Percent,     label: "TVA",             value: formatPrice(inv.taxAmount) },
+									{ icon: CalendarDays, label: "Date d'émission", value: formatDate(inv.issuedAt, "dd/MM/yyyy") },
+								].map(({ icon: Icon, label, value, accent }) => (
+									<div
+										key={label}
+										className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] px-3 py-2.5"
+									>
+										<div className="flex items-center gap-1.5 mb-1">
+											<Icon size={11} className="text-[#5A5249]" />
+											<span className="text-[10px] font-semibold uppercase tracking-wider text-[#5A5249]">
+												{label}
+											</span>
+										</div>
+										<p
+											className={cn(
+												"text-sm font-medium leading-tight",
+												accent ? "text-[#C8973A]" : "text-[#F5F0EB]"
+											)}
+										>
+											{value}
+										</p>
+									</div>
+								))}
+							</div>
+
+							<Section title="Client">
+								<div className="flex items-center gap-2 px-3 py-2.5">
+									<Mail size={13} className="text-[#5A5249] shrink-0" />
+									<a
+										href={`mailto:${inv.guestEmail}`}
+										className="text-xs text-[#F5F0EB] hover:text-[#C8973A] truncate transition-colors"
+									>
+										{inv.guestEmail}
+									</a>
+								</div>
+								<InfoRow label="N° Facture" value={inv.invoiceNumber} valueClass="font-mono" />
+								<InfoRow label="Créée le" value={formatDateTime(inv.createdAt)} />
+								{!inv.pdfUrl && (
+									<InfoRow label="PDF" value="Non disponible" valueClass="italic text-[#5A5249]" />
+								)}
+							</Section>
+
+							{inv.user && (
+								<LinkRow
+									href={`/admin/customers/${inv.user.id}`}
+									icon={Users}
+									label={`${inv.user.firstName} ${inv.user.lastName}`}
+									sub="Compte client — voir la fiche"
+								/>
+							)}
+
+							<div>
+								<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+									Réservation liée
+								</p>
+								<LinkRow
+									href={`/admin/reservations?id=${inv.reservation.id}`}
+									icon={CalendarDays}
+									label={fullName}
+									sub={`${formatDate(inv.reservation.date, "dd MMMM yyyy")} · ${inv.reservation.timeSlot}`}
+								/>
+							</div>
+
+							{inv.reservation.payment && (
+								<div>
+									<div className="flex items-center justify-between mb-2">
+										<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249]">
+											Paiement lié
+										</p>
+										<Badge
+											variant={BADGE_VARIANT[PAYMENT_STATUSES[inv.reservation.payment.status].color]}
+											className="text-[10px]"
+										>
+											{PAYMENT_STATUSES[inv.reservation.payment.status].label}
+										</Badge>
+									</div>
+									<LinkRow
+										href={`/admin/payments?id=${inv.reservation.payment.id}`}
+										icon={CreditCard}
+										label={formatPrice(inv.reservation.payment.amount)}
+										sub="Voir le paiement"
+									/>
+								</div>
+							)}
+						</div>
+
+						{inv.pdfUrl && (
+							<div className="p-5 border-t border-[#222] shrink-0">
+								<a
+									href={inv.pdfUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="w-full flex items-center justify-center gap-2 h-9 rounded-lg bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-sm font-semibold transition-colors"
+								>
+									<Download size={14} />
+									Télécharger le PDF
+								</a>
+							</div>
+						)}
+					</>
+				)}
+			</aside>
+		</>
+	);
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function InvoicesClient({ invoices }: Props) {
-	const [search,  setSearch]  = useState("");
-	const [sortKey, setSortKey] = useState<SortKey>("date");
-	const [sortDir, setSortDir] = useState<SortDir>("desc");
-	const [page,    setPage]    = useState(1);
+export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
+	const router = useRouter();
+
+	const [search,     setSearch]     = useState("");
+	const [sortKey,    setSortKey]    = useState<SortKey>("date");
+	const [sortDir,    setSortDir]    = useState<SortDir>("desc");
+	const [page,       setPage]       = useState(1);
+	const [selectedId, setSelectedId] = useState<string | null>(null);
+
+	// Deep-link support: /admin/invoices?id=xxx opens the panel on load, with the slide-in
+	// animation (selectedId starts at null and is only set after the first paint), then the
+	// URL is cleaned up. Used by the reservation/payment side panels instead of a dedicated route.
+	useEffect(() => {
+		if (initialInvoiceId) {
+			setSelectedId(initialInvoiceId);
+			router.replace("/admin/invoices", { scroll: false });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	// ── Stats ──
 	const stats = useMemo(() => ({
@@ -289,34 +581,39 @@ export default function InvoicesClient({ invoices }: Props) {
 	}, [filtered]);
 
 	const hasActiveFilters = !!search;
+	const selectedInvoice = invoices.find((i) => i.id === selectedId) ?? null;
+
+	const closePanel = useCallback(() => {
+		setSelectedId(null);
+	}, []);
 
 	return (
-		<div className="space-y-6">
+		<div className="min-h-full">
 
 			{/* ── Header ── */}
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+			<div className="flex items-start justify-between mb-6 gap-4">
 				<div>
-					<h1 className="font-display text-2xl text-[#F5F0EB]">Factures</h1>
-					<p className="text-sm text-[#5A5249] mt-0.5">
+					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">Factures</h1>
+					<p className="text-sm text-[#5A5249] mt-1">
 						{invoices.length} facture{invoices.length !== 1 ? "s" : ""} émise{invoices.length !== 1 ? "s" : ""}
 					</p>
 				</div>
 				<button
 					onClick={handleExport}
-					className="flex items-center gap-2 px-4 h-9 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
+					className="flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
 				>
 					<Download size={14} />
-					Exporter
+					<span className="hidden sm:inline">Exporter</span>
 				</button>
 			</div>
 
 			{/* ── Stats ── */}
-			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 				<StatCard
 					label="Total factures"
 					value={stats.total}
 					icon={FileText}
-					iconColor="bg-[#1a1a1a] text-[#9A8F84]"
+					iconColor="bg-[#222] text-[#9A8F84]"
 				/>
 				<StatCard
 					label="Total TTC encaissé"
@@ -339,23 +636,34 @@ export default function InvoicesClient({ invoices }: Props) {
 			</div>
 
 			{/* ── Search ── */}
-			<div className="relative">
-				<Search
-					size={14}
-					className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A5249] pointer-events-none"
-				/>
-				<input
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-					placeholder="Rechercher par N° facture, client, email…"
-					className="w-full pl-9 pr-4 h-9 bg-[#0A0A0A] border border-[#222] rounded-lg text-sm text-[#F5F0EB] placeholder-[#333] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
-				/>
+			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4">
+				<div className="relative">
+					<Search
+						size={15}
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A5249] pointer-events-none"
+					/>
+					<input
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="Rechercher par N° facture, client, email…"
+						className="w-full h-9 pl-9 pr-9 rounded-lg bg-[#0A0A0A] border border-[#222] text-sm text-[#F5F0EB] placeholder:text-[#5A5249] focus:border-[#C8973A] focus:ring-1 focus:ring-[#C8973A] outline-none transition-colors"
+					/>
+					{search && (
+						<button
+							onClick={() => setSearch("")}
+							className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+							aria-label="Effacer la recherche"
+						>
+							<X size={14} />
+						</button>
+					)}
+				</div>
 			</div>
 
 			{/* ── Desktop Table ── */}
-			<div className="hidden md:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
+			<div className="hidden lg:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 
-				<div className={cn("grid items-center px-5 py-3 border-b border-[#222] bg-[#141414]", GRID_COLS)}>
+				<div className={cn("grid items-center px-5 py-3 border-b border-[#1a1a1a]", GRID_COLS)}>
 					<SortBtn label="N° Facture" sortKey="number" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Client"     sortKey="client" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Date"       sortKey="date"   current={sortKey} dir={sortDir} onClick={handleSortClick} />
@@ -364,7 +672,7 @@ export default function InvoicesClient({ invoices }: Props) {
 					<div className="flex justify-end">
 						<SortBtn label="TTC" sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					</div>
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] text-right">Actions</span>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249] text-right">PDF</span>
 				</div>
 
 				{paginated.length === 0 ? (
@@ -376,9 +684,14 @@ export default function InvoicesClient({ invoices }: Props) {
 							return (
 								<div
 									key={inv.id}
+									onClick={() => setSelectedId(inv.id)}
+									role="button"
+									tabIndex={0}
+									onKeyDown={(e) => e.key === "Enter" && setSelectedId(inv.id)}
 									className={cn(
-										"group grid items-center px-5 py-3.5 hover:bg-[#1a1a1a] transition-colors",
-										GRID_COLS
+										"group grid items-center px-5 py-3.5 cursor-pointer transition-colors",
+										GRID_COLS,
+										selectedId === inv.id ? "bg-[#C8973A]/5" : "hover:bg-[#1a1a1a]"
 									)}
 								>
 									{/* N° */}
@@ -418,26 +731,22 @@ export default function InvoicesClient({ invoices }: Props) {
 										</span>
 									</div>
 
-									{/* Actions */}
-									<div className="flex items-center justify-end gap-1">
-										{inv.pdfUrl && (
+									{/* PDF quick download */}
+									<div className="flex items-center justify-end">
+										{inv.pdfUrl ? (
 											<a
 												href={inv.pdfUrl}
 												target="_blank"
 												rel="noopener noreferrer"
+												onClick={(e) => e.stopPropagation()}
 												className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-all opacity-0 group-hover:opacity-100"
 												title="Télécharger PDF"
 											>
 												<Download size={14} />
 											</a>
+										) : (
+											<span className="text-sm text-[#333]">—</span>
 										)}
-										<Link
-											href={`/admin/invoices/${inv.id}`}
-											className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#9A8F84] hover:bg-[#252525] transition-all opacity-0 group-hover:opacity-100"
-											title="Voir la facture"
-										>
-											<Eye size={14} />
-										</Link>
 									</div>
 								</div>
 							);
@@ -447,7 +756,7 @@ export default function InvoicesClient({ invoices }: Props) {
 			</div>
 
 			{/* ── Mobile Cards ── */}
-			<div className="md:hidden space-y-3">
+			<div className="lg:hidden space-y-3">
 				{paginated.length === 0 ? (
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
 				) : (
@@ -456,7 +765,16 @@ export default function InvoicesClient({ invoices }: Props) {
 						return (
 							<div
 								key={inv.id}
-								className="bg-[#141414] border border-[#222] rounded-xl p-4 space-y-3"
+								onClick={() => setSelectedId(inv.id)}
+								role="button"
+								tabIndex={0}
+								onKeyDown={(e) => e.key === "Enter" && setSelectedId(inv.id)}
+								className={cn(
+									"bg-[#141414] border rounded-xl p-4 space-y-3 cursor-pointer transition-colors",
+									selectedId === inv.id
+										? "border-[#C8973A]/30 bg-[#C8973A]/5"
+										: "border-[#222] hover:border-[#333] hover:bg-[#1a1a1a]"
+								)}
 							>
 								<div className="flex items-start justify-between gap-3">
 									<div className="min-w-0">
@@ -486,26 +804,18 @@ export default function InvoicesClient({ invoices }: Props) {
 									</div>
 								</div>
 
-								<div className="flex gap-2">
-									<Link
-										href={`/admin/invoices/${inv.id}`}
-										className="flex-1 flex items-center justify-center gap-2 h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+								{inv.pdfUrl && (
+									<a
+										href={inv.pdfUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										onClick={(e) => e.stopPropagation()}
+										className="flex items-center justify-center gap-2 h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#C8973A] hover:border-[#C8973A]/30 transition-colors"
 									>
-										<Eye size={12} />
-										Voir
-									</Link>
-									{inv.pdfUrl && (
-										<a
-											href={inv.pdfUrl}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="flex-1 flex items-center justify-center gap-2 h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#C8973A] hover:border-[#C8973A]/30 transition-colors"
-										>
-											<Download size={12} />
-											PDF
-										</a>
-									)}
-								</div>
+										<Download size={12} />
+										PDF
+									</a>
+								)}
 							</div>
 						);
 					})
@@ -514,7 +824,7 @@ export default function InvoicesClient({ invoices }: Props) {
 
 			{/* ── Pagination ── */}
 			{totalPages > 1 && (
-				<div className="flex items-center justify-between gap-4 pt-2">
+				<div className="flex items-center justify-between gap-4 pt-4">
 					<p className="text-xs text-[#5A5249] shrink-0">
 						{filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
 					</p>
@@ -537,6 +847,8 @@ export default function InvoicesClient({ invoices }: Props) {
 					</div>
 				</div>
 			)}
+
+			<DetailPanel invoice={selectedInvoice} onClose={closePanel} />
 		</div>
 	);
 }
