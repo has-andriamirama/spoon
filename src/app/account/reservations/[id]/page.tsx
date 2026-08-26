@@ -35,7 +35,10 @@ export default async function ReservationDetailPage({
 
 	const reservation = await prisma.reservation.findFirst({
 		where: { id, userId: session.user.id },
-		include: { payment: true, invoice: true },
+		include: {
+			payment: { include: { invoice: true } },
+			serviceOrder: { include: { invoice: true } },
+		},
 	});
 	if (!reservation) notFound();
 
@@ -158,13 +161,30 @@ export default async function ReservationDetailPage({
 						</div>
 					)}
 
-					{reservation.invoice && (
+					{reservation.payment?.invoice && (
 						<div className="bg-[#141414] border border-[#222] rounded-xl p-6">
-							<h2 className="font-display text-xl text-[#F5F0EB] mb-3">Facture</h2>
-							<p className="text-sm text-[#9A8F84] mb-3">N° {reservation.invoice.invoiceNumber}</p>
-							{reservation.invoice.pdfUrl && (
+							<h2 className="font-display text-xl text-[#F5F0EB] mb-3">Facture d&apos;acompte</h2>
+							<p className="text-sm text-[#9A8F84] mb-3">N° {reservation.payment.invoice.invoiceNumber}</p>
+							{reservation.payment.invoice.pdfUrl && (
 								<a
-									href={reservation.invoice.pdfUrl}
+									href={reservation.payment.invoice.pdfUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-2 text-sm text-[#C8973A] hover:underline"
+								>
+									Télécharger la facture PDF
+								</a>
+							)}
+						</div>
+					)}
+
+					{reservation.serviceOrder?.invoice && (
+						<div className="bg-[#141414] border border-[#222] rounded-xl p-6">
+							<h2 className="font-display text-xl text-[#F5F0EB] mb-3">Facture d&apos;addition</h2>
+							<p className="text-sm text-[#9A8F84] mb-3">N° {reservation.serviceOrder.invoice.invoiceNumber}</p>
+							{reservation.serviceOrder.invoice.pdfUrl && (
+								<a
+									href={reservation.serviceOrder.invoice.pdfUrl}
 									target="_blank"
 									rel="noopener noreferrer"
 									className="inline-flex items-center gap-2 text-sm text-[#C8973A] hover:underline"

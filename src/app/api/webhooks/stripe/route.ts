@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
-import { generateInvoice } from "@/services/invoice.service";
+import { generateDepositInvoice } from "@/services/invoice.service";
 import {
 	sendPaymentConfirmation,
 } from "@/services/email.service";
@@ -72,16 +72,11 @@ export async function POST(request: Request) {
 
 			if (reservation) {
 				let invoiceNumber: string | undefined;
-				const existingInvoice = await prisma.invoice.findUnique({ where: { reservationId } });
-				if (!existingInvoice) {
-					try {
-						const invoice = await generateInvoice(reservationId);
-						invoiceNumber = invoice.invoiceNumber;
-					} catch (err) {
-						console.error("[stripe/webhook] Erreur génération facture :", err);
-					}
-				} else {
-					invoiceNumber = existingInvoice.invoiceNumber;
+				try {
+					const invoice = await generateDepositInvoice(reservationId);
+					invoiceNumber = invoice.invoiceNumber;
+				} catch (err) {
+					console.error("[stripe/webhook] Erreur génération facture :", err);
 				}
 
 				if (invoiceNumber) {
@@ -205,16 +200,11 @@ export async function POST(request: Request) {
 
 			if (reservation) {
 				let invoiceNumber: string | undefined;
-				const existingInvoice = await prisma.invoice.findUnique({ where: { reservationId } });
-				if (!existingInvoice) {
-					try {
-						const invoice = await generateInvoice(reservationId);
-						invoiceNumber = invoice.invoiceNumber;
-					} catch (err) {
-						console.error("[stripe/webhook] Erreur génération facture (payment_intent.succeeded) :", err);
-					}
-				} else {
-					invoiceNumber = existingInvoice.invoiceNumber;
+				try {
+					const invoice = await generateDepositInvoice(reservationId);
+					invoiceNumber = invoice.invoiceNumber;
+				} catch (err) {
+					console.error("[stripe/webhook] Erreur génération facture (payment_intent.succeeded) :", err);
 				}
 
 				if (invoiceNumber) {

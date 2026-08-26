@@ -21,25 +21,37 @@ import {
 	Users,
 	CreditCard,
 	Percent,
+	TableProperties,
 } from "lucide-react";
-import { cn, formatDate, formatDateTime, formatPrice, getInitials } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUSES } from "@/lib/constants";
+
+type InvoiceType = "DEPOSIT" | "ADDITION";
+
+interface ReservationRef {
+	id: string;
+	guestFirstName: string;
+	guestLastName: string;
+	date: Date;
+	timeSlot: string;
+}
 
 interface PaymentInfo {
 	id: string;
 	status: keyof typeof PAYMENT_STATUSES;
 	amount: number;
 	type: string;
+	reservation: ReservationRef | null;
 }
 
-interface ReservationInfo {
+interface ServiceOrderInfo {
 	id: string;
-	guestFirstName: string;
-	guestLastName: string;
-	date: Date;
-	timeSlot: string;
-	payment: PaymentInfo | null;
+	guestName: string;
+	paymentMethod: string | null;
+	closedAt: Date | null;
+	table: { numero: number };
+	reservation: ReservationRef | null;
 }
 
 interface CustomerInfo {
@@ -52,14 +64,17 @@ interface CustomerInfo {
 interface Invoice {
 	id: string;
 	invoiceNumber: string;
-	guestEmail: string;
+	type: InvoiceType;
+	guestEmail: string | null;
+	guestName: string | null;
 	amount: number;
 	taxAmount: number;
 	totalAmount: number;
 	pdfUrl: string | null;
 	issuedAt: Date;
 	createdAt: Date;
-	reservation: ReservationInfo;
+	payment: PaymentInfo | null;
+	serviceOrder: ServiceOrderInfo | null;
 	user: CustomerInfo | null;
 }
 
@@ -77,11 +92,34 @@ const BADGE_VARIANT: Record<string, "yellow" | "green" | "red" | "gray" | "orang
 	blue:   "blue",
 };
 
+const TYPE_META: Record<InvoiceType, { label: string; badge: "gold" | "orange" }> = {
+	DEPOSIT:  { label: "Acompte réservation", badge: "gold"   },
+	ADDITION: { label: "Addition",            badge: "orange" },
+};
+
 const PER_PAGE = 10;
 const GRID_COLS = "grid-cols-[1fr_1.3fr_1fr_0.8fr_0.7fr_0.7fr_44px]";
 
 type SortKey = "date" | "amount" | "number" | "client";
 type SortDir = "asc" | "desc";
+type TypeFilter = "ALL" | InvoiceType;
+
+function invoiceDisplay(inv: Invoice) {
+	const reservation = inv.payment?.reservation ?? inv.serviceOrder?.reservation ?? null;
+	const name = reservation
+		? `${reservation.guestFirstName} ${reservation.guestLastName}`
+		: inv.serviceOrder?.guestName ?? inv.guestName ?? "Client";
+	const email = inv.guestEmail ?? inv.user?.email ?? null;
+	const tableNumero = inv.serviceOrder?.table.numero ?? null;
+	return { name, email, reservation, tableNumero };
+}
+
+function getInitialsFromName(name: string): string {
+	const parts = name.trim().split(/\s+/).filter(Boolean);
+	if (parts.length === 0) return "?";
+	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+	return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+}
 
 function Highlight({ text, query }: { text: string; query: string }) {
 	if (!query.trim()) return <>{text}</>;
@@ -298,8 +336,9 @@ function DetailPanel({
 
 	const inv = invoice;
 	const isOpen = !!inv;
-	const fullName = inv ? `${inv.reservation.guestFirstName} ${inv.reservation.guestLastName}` : "";
-	const initials = inv ? getInitials(inv.reservation.guestFirstName, inv.reservation.guestLastName) : "";
+	const display = inv ? invoiceDisplay(inv) : null;
+	const initials = display ? getInitialsFromName(display.name) : "";
+	const typeMeta = inv ? TYPE_META[inv.type] : null;
 
 	return (
 		<>
@@ -323,7 +362,7 @@ function DetailPanel({
 				role="dialog"
 				aria-modal="true"
 			>
-				{inv && (
+				{inv && display && typeMeta && (
 					<>
 						<div className="flex items-center justify-between p-5 border-b border-[#222] shrink-0">
 							<div className="flex items-center gap-3 min-w-0">
@@ -334,7 +373,7 @@ function DetailPanel({
 									<p className="text-sm font-semibold text-[#F5F0EB] truncate">
 										Facture {inv.invoiceNumber}
 									</p>
-									<p className="text-xs text-[#5A5249] truncate">{fullName}</p>
+									<p className="text-xs text-[#5A5249] truncate">{display.name}</p>
 								</div>
 							</div>
 							<button
@@ -347,6 +386,10 @@ function DetailPanel({
 						</div>
 
 						<div className="flex-1 overflow-y-auto p-5 space-y-5">
+							<Badge variant={typeMeta.badge} className="text-[10px]">
+								{typeMeta.label}
+							</Badge>
+
 							<div className="grid grid-cols-2 gap-3">
 								{[
 									{ icon: CreditCard,  label: "Total TTC",       value: formatPrice(inv.totalAmount), accent: true },
@@ -377,15 +420,19 @@ function DetailPanel({
 							</div>
 
 							<Section title="Client">
-								<div className="flex items-center gap-2 px-3 py-2.5">
-									<Mail size={13} className="text-[#5A5249] shrink-0" />
-									<a
-										href={`mailto:${inv.guestEmail}`}
-										className="text-xs text-[#F5F0EB] hover:text-[#C8973A] truncate transition-colors"
-									>
-										{inv.guestEmail}
-									</a>
-								</div>
+								{display.email ? (
+									<div className="flex items-center gap-2 px-3 py-2.5">
+										<Mail size={13} className="text-[#5A5249] shrink-0" />
+										<a
+											href={`mailto:${display.email}`}
+											className="text-xs text-[#F5F0EB] hover:text-[#C8973A] truncate transition-colors"
+										>
+											{display.email}
+										</a>
+									</div>
+								) : (
+									<InfoRow label="Email" value="Client sur place — non renseigné" valueClass="italic text-[#5A5249]" />
+								)}
 								<InfoRow label="N° Facture" value={inv.invoiceNumber} valueClass="font-mono" />
 								<InfoRow label="Créée le" value={formatDateTime(inv.createdAt)} />
 								{!inv.pdfUrl && (
@@ -402,35 +449,51 @@ function DetailPanel({
 								/>
 							)}
 
-							<div>
-								<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
-									Réservation liée
-								</p>
-								<LinkRow
-									href={`/admin/reservations?id=${inv.reservation.id}`}
-									icon={CalendarDays}
-									label={fullName}
-									sub={`${formatDate(inv.reservation.date, "dd MMMM yyyy")} · ${inv.reservation.timeSlot}`}
-								/>
-							</div>
+							{display.reservation && (
+								<div>
+									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+										Réservation liée
+									</p>
+									<LinkRow
+										href={`/admin/reservations?id=${display.reservation.id}`}
+										icon={CalendarDays}
+										label={display.name}
+										sub={`${formatDate(display.reservation.date, "dd MMMM yyyy")} · ${display.reservation.timeSlot}`}
+									/>
+								</div>
+							)}
 
-							{inv.reservation.payment && (
+							{inv.type === "DEPOSIT" && inv.payment && (
 								<div>
 									<div className="flex items-center justify-between mb-2">
 										<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249]">
 											Paiement lié
 										</p>
 										<Badge
-											variant={BADGE_VARIANT[PAYMENT_STATUSES[inv.reservation.payment.status].color]}
+											variant={BADGE_VARIANT[PAYMENT_STATUSES[inv.payment.status].color]}
 											className="text-[10px]"
 										>
-											{PAYMENT_STATUSES[inv.reservation.payment.status].label}
+											{PAYMENT_STATUSES[inv.payment.status].label}
 										</Badge>
 									</div>
 									<LinkRow
-										href={`/admin/payments?id=${inv.reservation.payment.id}`}
+										href={`/admin/payments?id=${inv.payment.id}`}
 										icon={CreditCard}
-										label={formatPrice(inv.reservation.payment.amount)}
+										label={formatPrice(inv.payment.amount)}
+										sub="Voir le paiement"
+									/>
+								</div>
+							)}
+
+							{inv.type === "ADDITION" && inv.serviceOrder && (
+								<div>
+									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+										Addition liée
+									</p>
+									<LinkRow
+										href={`/admin/payments?id=so_${inv.serviceOrder.id}`}
+										icon={TableProperties}
+										label={`Table ${inv.serviceOrder.table.numero}`}
 										sub="Voir le paiement"
 									/>
 								</div>
@@ -461,6 +524,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	const router = useRouter();
 
 	const [search,     setSearch]     = useState("");
+	const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
 	const [sortKey,    setSortKey]    = useState<SortKey>("date");
 	const [sortDir,    setSortDir]    = useState<SortDir>("desc");
 	const [page,       setPage]       = useState(1);
@@ -471,23 +535,26 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 			setSelectedId(initialInvoiceId);
 			router.replace("/admin/invoices", { scroll: false });
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const stats = useMemo(() => ({
-		total:    invoices.length,
-		totalHT:  invoices.reduce((s, i) => s + i.amount, 0),
-		totalTVA: invoices.reduce((s, i) => s + i.taxAmount, 0),
-		totalTTC: invoices.reduce((s, i) => s + i.totalAmount, 0),
-		hasPdf:   invoices.filter((i) => !!i.pdfUrl).length,
+		total:         invoices.length,
+		totalHT:       invoices.reduce((s, i) => s + i.amount, 0),
+		totalTVA:      invoices.reduce((s, i) => s + i.taxAmount, 0),
+		totalTTC:      invoices.reduce((s, i) => s + i.totalAmount, 0),
+		depositsCount:  invoices.filter((i) => i.type === "DEPOSIT").length,
+		additionsCount: invoices.filter((i) => i.type === "ADDITION").length,
 	}), [invoices]);
 
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
 
 		let result = invoices.filter((inv) => {
+			if (typeFilter !== "ALL" && inv.type !== typeFilter) return false;
 			if (q) {
-				const fullName = `${inv.reservation.guestFirstName} ${inv.reservation.guestLastName}`;
-				const haystack = [fullName, inv.guestEmail, inv.invoiceNumber]
+				const { name, email } = invoiceDisplay(inv);
+				const haystack = [name, email ?? "", inv.invoiceNumber]
 					.join(" ")
 					.toLowerCase();
 				if (!haystack.includes(q)) return false;
@@ -501,17 +568,15 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 			if (sortKey === "amount") cmp = a.totalAmount - b.totalAmount;
 			if (sortKey === "number") cmp = a.invoiceNumber.localeCompare(b.invoiceNumber);
 			if (sortKey === "client") {
-				const na = `${a.reservation.guestLastName} ${a.reservation.guestFirstName}`;
-				const nb = `${b.reservation.guestLastName} ${b.reservation.guestFirstName}`;
-				cmp = na.localeCompare(nb, "fr");
+				cmp = invoiceDisplay(a).name.localeCompare(invoiceDisplay(b).name, "fr");
 			}
 			return sortDir === "asc" ? cmp : -cmp;
 		});
 
 		return result;
-	}, [invoices, search, sortKey, sortDir]);
+	}, [invoices, search, typeFilter, sortKey, sortDir]);
 
-	useEffect(() => { setPage(1); }, [search, sortKey, sortDir]);
+	useEffect(() => { setPage(1); }, [search, typeFilter, sortKey, sortDir]);
 
 	const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
 	const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -524,20 +589,29 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 		[sortKey]
 	);
 
-	const resetFilters = useCallback(() => { setSearch(""); }, []);
+	const handleTypeClick = useCallback((k: InvoiceType) => {
+		setTypeFilter((cur) => (cur === k ? "ALL" : k));
+	}, []);
+
+	const resetFilters = useCallback(() => { setSearch(""); setTypeFilter("ALL"); }, []);
+	const hasActiveFilters = !!search || typeFilter !== "ALL";
 
 	const handleExport = useCallback(() => {
-		const headers = ["N° Facture", "Client", "Email", "Date émission", "Montant HT (€)", "TVA (€)", "Total TTC (€)", "PDF"];
-		const rows = filtered.map((inv) => [
-			inv.invoiceNumber,
-			`${inv.reservation.guestFirstName} ${inv.reservation.guestLastName}`,
-			inv.guestEmail,
-			formatDate(inv.issuedAt, "dd/MM/yyyy"),
-			inv.amount.toFixed(2),
-			inv.taxAmount.toFixed(2),
-			inv.totalAmount.toFixed(2),
-			inv.pdfUrl ?? "",
-		]);
+		const headers = ["N° Facture", "Type", "Client", "Email", "Date émission", "Montant HT (€)", "TVA (€)", "Total TTC (€)", "PDF"];
+		const rows = filtered.map((inv) => {
+			const { name, email } = invoiceDisplay(inv);
+			return [
+				inv.invoiceNumber,
+				TYPE_META[inv.type].label,
+				name,
+				email ?? "",
+				formatDate(inv.issuedAt, "dd/MM/yyyy"),
+				inv.amount.toFixed(2),
+				inv.taxAmount.toFixed(2),
+				inv.totalAmount.toFixed(2),
+				inv.pdfUrl ?? "",
+			];
+		});
 		const csv = [headers, ...rows]
 			.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
 			.join("\n");
@@ -553,7 +627,6 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 		URL.revokeObjectURL(url);
 	}, [filtered]);
 
-	const hasActiveFilters = !!search;
 	const selectedInvoice = invoices.find((i) => i.id === selectedId) ?? null;
 
 	const closePanel = useCallback(() => {
@@ -606,7 +679,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				/>
 			</div>
 
-			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4">
+			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
 				<div className="relative">
 					<Search
 						size={15}
@@ -628,6 +701,46 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 						</button>
 					)}
 				</div>
+
+				<div className="flex items-center gap-2 flex-wrap">
+					<button
+						onClick={() => handleTypeClick("DEPOSIT")}
+						className={cn(
+							"flex items-center gap-1.5 px-3 h-8 rounded-full border text-xs font-medium transition-all whitespace-nowrap",
+							typeFilter === "DEPOSIT"
+								? "bg-[#C8973A]/10 border-[#C8973A]/30 text-[#C8973A]"
+								: "border-[#222] text-[#5A5249] hover:border-[#333] hover:text-[#9A8F84]"
+						)}
+					>
+						Acomptes
+						<span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold", typeFilter === "DEPOSIT" ? "bg-white/10" : "bg-[#1a1a1a] text-[#5A5249]")}>
+							{stats.depositsCount}
+						</span>
+					</button>
+					<button
+						onClick={() => handleTypeClick("ADDITION")}
+						className={cn(
+							"flex items-center gap-1.5 px-3 h-8 rounded-full border text-xs font-medium transition-all whitespace-nowrap",
+							typeFilter === "ADDITION"
+								? "bg-orange-500/10 border-orange-500/30 text-orange-400"
+								: "border-[#222] text-[#5A5249] hover:border-[#333] hover:text-[#9A8F84]"
+						)}
+					>
+						Additions
+						<span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold", typeFilter === "ADDITION" ? "bg-white/10" : "bg-[#1a1a1a] text-[#5A5249]")}>
+							{stats.additionsCount}
+						</span>
+					</button>
+					{hasActiveFilters && (
+						<button
+							onClick={resetFilters}
+							className="ml-auto flex items-center gap-1 text-xs text-[#5A5249] hover:text-[#9A8F84] transition-colors"
+						>
+							<X size={12} />
+							Réinitialiser
+						</button>
+					)}
+				</div>
 			</div>
 
 			{/* ── Desktop ── */}
@@ -637,8 +750,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 					<SortBtn label="N° Facture" sortKey="number" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Client"     sortKey="client" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Date"       sortKey="date"   current={sortKey} dir={sortDir} onClick={handleSortClick} />
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">HT</span>
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">TVA</span>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
 					<div className="flex justify-end">
 						<SortBtn label="TTC" sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					</div>
@@ -650,7 +762,8 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				) : (
 					<div className="divide-y divide-[#1a1a1a]">
 						{paginated.map((inv) => {
-							const fullName = `${inv.reservation.guestFirstName} ${inv.reservation.guestLastName}`;
+							const { name, email } = invoiceDisplay(inv);
+							const typeMeta = TYPE_META[inv.type];
 							return (
 								<div
 									key={inv.id}
@@ -670,10 +783,10 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 
 									<div className="min-w-0">
 										<span className="text-sm text-[#F5F0EB] block truncate">
-											<Highlight text={fullName} query={search} />
+											<Highlight text={name} query={search} />
 										</span>
 										<span className="text-xs text-[#5A5249] block truncate">
-											<Highlight text={inv.guestEmail} query={search} />
+											{email ? <Highlight text={email} query={search} /> : "Client sur place"}
 										</span>
 									</div>
 
@@ -681,13 +794,11 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 										{formatDate(inv.issuedAt, "dd/MM/yyyy")}
 									</span>
 
-									<span className="text-sm text-[#9A8F84] tabular-nums">
-										{formatPrice(inv.amount)}
-									</span>
-
-									<span className="text-sm text-[#9A8F84] tabular-nums">
-										{formatPrice(inv.taxAmount)}
-									</span>
+									<div>
+										<Badge variant={typeMeta.badge} className="text-[10px]">
+											{typeMeta.label}
+										</Badge>
+									</div>
 
 									<div className="text-right">
 										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
@@ -724,7 +835,8 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
 				) : (
 					paginated.map((inv) => {
-						const fullName = `${inv.reservation.guestFirstName} ${inv.reservation.guestLastName}`;
+						const { name, email } = invoiceDisplay(inv);
+						const typeMeta = TYPE_META[inv.type];
 						return (
 							<div
 								key={inv.id}
@@ -745,15 +857,20 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 											<Highlight text={inv.invoiceNumber} query={search} />
 										</p>
 										<p className="text-sm font-medium text-[#F5F0EB] mt-0.5 truncate">
-											<Highlight text={fullName} query={search} />
+											<Highlight text={name} query={search} />
 										</p>
 										<p className="text-xs text-[#5A5249] mt-0.5">
 											{formatDate(inv.issuedAt, "dd/MM/yyyy")}
 										</p>
 									</div>
-									<span className="text-base font-semibold text-[#C8973A] tabular-nums shrink-0">
-										{formatPrice(inv.totalAmount)}
-									</span>
+									<div className="flex flex-col items-end gap-1.5 shrink-0">
+										<span className="text-base font-semibold text-[#C8973A] tabular-nums">
+											{formatPrice(inv.totalAmount)}
+										</span>
+										<Badge variant={typeMeta.badge} className="text-[10px]">
+											{typeMeta.label}
+										</Badge>
+									</div>
 								</div>
 
 								<div className="grid grid-cols-2 gap-2">

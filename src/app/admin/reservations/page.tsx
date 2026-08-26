@@ -9,11 +9,14 @@ export const metadata = { title: "Réservations — Admin" };
 export default async function AdminReservationsPage() {
 	const reservations = await prisma.reservation.findMany({
 		include: {
-			payment: true,
-			table: { select: { id: true, numero: true, zone: true } },
-			invoice: {
-				select: { id: true, invoiceNumber: true, pdfUrl: true },
+			payment: {
+				include: {
+					invoice: {
+						select: { id: true, invoiceNumber: true, pdfUrl: true },
+					},
+				},
 			},
+			table: { select: { id: true, numero: true, zone: true } },
 			user: {
 				select: { id: true, firstName: true, lastName: true, email: true },
 			},
@@ -23,6 +26,9 @@ export default async function AdminReservationsPage() {
 					status: true,
 					totalAmount: true,
 					items: { select: { id: true } },
+					invoice: {
+						select: { id: true, invoiceNumber: true, pdfUrl: true },
+					},
 				},
 			},
 		},

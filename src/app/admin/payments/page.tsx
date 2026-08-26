@@ -11,7 +11,6 @@ interface PageProps {
 export default async function AdminPaymentsPage({ searchParams }: PageProps) {
 	const { id: initialPaymentId } = await searchParams;
 
-	// ── 1. Acomptes de réservation (Stripe) ──────────────────────────────
 	const deposits = await prisma.payment.findMany({
 		include: {
 			reservation: {
@@ -22,29 +21,25 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps) {
 					guestEmail: true,
 					date: true,
 					timeSlot: true,
-					invoice: {
-						select: { id: true, invoiceNumber: true, pdfUrl: true },
-					},
 				},
+			},
+			invoice: {
+				select: { id: true, invoiceNumber: true, pdfUrl: true },
 			},
 		},
 		orderBy: { createdAt: "desc" },
 		take: 500,
 	});
 
-	// ── 2. Additions encaissées (commandes en salle, réglées sur place) ──
 	const encaissements = await prisma.serviceOrder.findMany({
 		where: { status: "PAYEE" },
 		include: {
 			table: { select: { numero: true } },
 			reservation: {
-				select: {
-					id: true,
-					guestEmail: true,
-					invoice: {
-						select: { id: true, invoiceNumber: true, pdfUrl: true },
-					},
-				},
+				select: { id: true, guestEmail: true },
+			},
+			invoice: {
+				select: { id: true, invoiceNumber: true, pdfUrl: true },
 			},
 			_count: { select: { items: true } },
 		},
@@ -52,7 +47,6 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps) {
 		take: 500,
 	});
 
-	// ── 3. Fusion en une liste unique de "paiements" ─────────────────────
 	const depositPayments: UnifiedPayment[] = deposits.map((p) => {
 		return {
 			id: p.id,
@@ -75,7 +69,7 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps) {
 			date: p.reservation.date,
 			timeSlot: p.reservation.timeSlot,
 			reservationId: p.reservation.id,
-			invoice: p.reservation.invoice,
+			invoice: p.invoice,
 			serviceOrderId: null,
 			serviceType: null,
 			tableNumero: null,
@@ -104,7 +98,7 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps) {
 		date: o.closedAt ?? o.openedAt,
 		timeSlot: null,
 		reservationId: o.reservationId,
-		invoice: o.reservation?.invoice ?? null,
+		invoice: o.invoice,
 		serviceOrderId: o.id,
 		serviceType: o.type,
 		tableNumero: o.table.numero,

@@ -24,7 +24,7 @@ export type {
 
 export type ReservationWithPayment = Reservation & {
 	payment: Payment | null;
-	invoice: Invoice | null;
+	invoices: Invoice[];
 	user: Pick<User, "id" | "firstName" | "lastName" | "email"> | null;
 };
 

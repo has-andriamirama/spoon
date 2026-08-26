@@ -60,6 +60,7 @@ interface ServiceOrderInfo {
 	status: string;
 	totalAmount: number;
 	items: { id: string }[];
+	invoice: InvoiceInfo | null;
 }
 
 interface Reservation {
@@ -83,8 +84,7 @@ interface Reservation {
 	tableAssignedAt: Date | null;
 	createdAt: Date;
 	table: TableInfo | null;
-	payment: Payment | null;
-	invoice: InvoiceInfo | null;
+	payment: (Payment & { invoice: InvoiceInfo | null }) | null;
 	user: CustomerInfo | null;
 	serviceOrder: ServiceOrderInfo | null;
 }
@@ -534,12 +534,12 @@ function DetailPanel({
 										)}
 									</div>
 
-									{r.invoice && (
+									{r.payment.invoice && (
 										<div className="mt-3">
 											<LinkRow
-												href={`/admin/invoices?id=${r.invoice.id}`}
+												href={`/admin/invoices?id=${r.payment.invoice.id}`}
 												icon={Receipt}
-												label={`Facture #${r.invoice.invoiceNumber}`}
+												label={`Facture #${r.payment.invoice.invoiceNumber}`}
 												sub="Voir la facture"
 											/>
 										</div>
@@ -566,6 +566,16 @@ function DetailPanel({
 										label={`${r.serviceOrder.items.length} plat${r.serviceOrder.items.length !== 1 ? "s" : ""}`}
 										sub={formatPrice(r.serviceOrder.totalAmount)}
 									/>
+									{r.serviceOrder.invoice && (
+										<div className="mt-3">
+											<LinkRow
+												href={`/admin/invoices?id=${r.serviceOrder.invoice.id}`}
+												icon={Receipt}
+												label={`Facture #${r.serviceOrder.invoice.invoiceNumber}`}
+												sub="Voir la facture d'addition"
+											/>
+										</div>
+									)}
 								</div>
 							)}
 
@@ -714,8 +724,6 @@ export default function AdminReservationsClient({ reservations }: Props) {
 	const [cancelReason, setCancelReason] = useState("");
 	const [cancelling, setCancelling] = useState(false);
 
-	// Deep-link support: /admin/reservations?id=xxx opens the side panel directly
-	// (used by notifications, invoices, customer & commandes pages instead of a dedicated route).
 	useEffect(() => {
 		const idParam = searchParams.get("id");
 		if (idParam) setSelectedId(idParam);

@@ -146,6 +146,46 @@ export async function sendPaymentConfirmation(data: {
 	});
 }
 
+/**
+ * Reçu envoyé au client après encaissement d'une addition en salle (ServiceOrder PAYEE).
+ * N'est envoyé que lorsqu'un email est connu (réservation avec compte/email invité) —
+ * un client purement walk-in sans email ne reçoit pas de reçu par email.
+ */
+export async function sendAdditionReceipt(data: {
+	guestFirstName: string;
+	guestEmail: string;
+	amount: number;
+	paymentMethod: string;
+	invoiceNumber: string;
+}): Promise<boolean> {
+	const methodLabels: Record<string, string> = {
+		CB: "Carte bancaire",
+		ESPECES: "Espèces",
+		CHEQUE: "Chèque",
+		TICKET_RESTO: "Ticket-restaurant",
+	};
+	return send({
+		from: FROM_EMAIL,
+		to: data.guestEmail,
+		subject: `Votre reçu — Spoon`,
+		html: `
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0A; color: #F5F0EB; padding: 40px; border-radius: 12px;">
+				<h1 style="font-size: 28px; color: #C8973A; text-align: center;">Spoon</h1>
+				<h2 style="font-size: 20px; margin-top: 32px;">Merci de votre visite ✓</h2>
+				<p>Bonjour ${data.guestFirstName},</p>
+				<p>Voici le reçu de votre addition réglée en salle.</p>
+				<div style="background: #141414; border: 1px solid #222; border-radius: 8px; padding: 24px; margin: 24px 0;">
+					<p style="margin: 8px 0;"><strong>Montant :</strong> ${formatPrice(data.amount)}</p>
+					<p style="margin: 8px 0;"><strong>Mode de paiement :</strong> ${methodLabels[data.paymentMethod] ?? data.paymentMethod}</p>
+					<p style="margin: 8px 0;"><strong>N° Facture :</strong> ${data.invoiceNumber}</p>
+				</div>
+				<p>Nous espérons vous revoir bientôt chez Spoon.</p>
+			</div>
+		`,
+	});
+}
+
+
 export async function sendRefundConfirmation(data: {
 	guestFirstName: string;
 	guestEmail: string;

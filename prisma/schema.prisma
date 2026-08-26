@@ -37,6 +37,11 @@ enum PaymentType {
 	NONE
 }
 
+enum InvoiceType {
+	DEPOSIT
+	ADDITION
+}
+
 enum OfferTarget {
 	ALL
 	REGISTERED
@@ -220,7 +225,7 @@ model Reservation {
 
 	user                User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 	payment             Payment?
-	invoice             Invoice?
+	invoices            Invoice[]
 	serviceOrder        ServiceOrder?
 
 	@@index([date, status])
@@ -282,27 +287,43 @@ model Payment {
 	createdAt             DateTime      @default(now())
 	updatedAt             DateTime      @updatedAt
 	reservation           Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+	invoice               Invoice?
 	@@index([status])
 	@@map("payments")
 }
 
 model Invoice {
-	id            String      @id @default(cuid())
-	invoiceNumber String      @unique
-	reservationId String      @unique
-	userId        String?
-	guestEmail    String
-	amount        Float
-	taxAmount     Float       @default(0)
-	totalAmount   Float
-	pdfUrl        String?
-	pdfPublicId   String?
-	issuedAt      DateTime    @default(now())
-	createdAt     DateTime    @default(now())
-	updatedAt     DateTime    @updatedAt
-	reservation   Reservation @relation(fields: [reservationId], references: [id])
-	user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+	id             String       @id @default(cuid())
+	invoiceNumber  String       @unique
+	type           InvoiceType  @default(DEPOSIT)
+
+	paymentId      String?      @unique
+	payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+	serviceOrderId String?      @unique
+	serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+	reservationId  String?
+	reservation    Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+	userId         String?
+	user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+	guestEmail     String?
+	guestName      String?
+
+	amount         Float
+	taxAmount      Float        @default(0)
+	totalAmount    Float
+	pdfUrl         String?
+	pdfPublicId    String?
+	issuedAt       DateTime     @default(now())
+	createdAt      DateTime     @default(now())
+	updatedAt      DateTime     @updatedAt
+
 	@@index([userId])
+	@@index([reservationId])
+	@@index([type])
 	@@map("invoices")
 }
 
@@ -326,6 +347,7 @@ model ServiceOrder {
 	table           Table                @relation(fields: [tableId], references: [id])
 	reservation     Reservation?         @relation(fields: [reservationId], references: [id], onDelete: SetNull)
 	items           ServiceOrderItem[]
+	invoice         Invoice?
 
 	@@index([tableId, status])
 	@@index([status])

@@ -16,7 +16,10 @@ export async function GET(
 		const userId = session?.user?.id;
 		const reservation = await prisma.reservation.findFirst({
 			where: { id, ...(userId ? { userId } : {}) },
-			include: { payment: true, invoice: true },
+			include: {
+				payment: { include: { invoice: true } },
+				serviceOrder: { include: { invoice: true } },
+			},
 		});
 		if (!reservation) {
 			return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });

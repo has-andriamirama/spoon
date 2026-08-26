@@ -13,15 +13,38 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps) {
 
 	const invoices = await prisma.invoice.findMany({
 		include: {
-			reservation: {
+			payment: {
 				select: {
 					id: true,
-					guestFirstName: true,
-					guestLastName: true,
-					date: true,
-					timeSlot: true,
-					payment: {
-						select: { id: true, status: true, amount: true, type: true },
+					status: true,
+					amount: true,
+					type: true,
+					reservation: {
+						select: {
+							id: true,
+							guestFirstName: true,
+							guestLastName: true,
+							date: true,
+							timeSlot: true,
+						},
+					},
+				},
+			},
+			serviceOrder: {
+				select: {
+					id: true,
+					guestName: true,
+					paymentMethod: true,
+					closedAt: true,
+					table: { select: { numero: true } },
+					reservation: {
+						select: {
+							id: true,
+							guestFirstName: true,
+							guestLastName: true,
+							date: true,
+							timeSlot: true,
+						},
 					},
 				},
 			},

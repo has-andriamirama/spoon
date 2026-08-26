@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { generateInvoice } from "@/services/invoice.service";
+import { generateDepositInvoice } from "@/services/invoice.service";
 import { sendPaymentConfirmation } from "@/services/email.service";
 import { createAdminNotification, broadcastReservationUpdate } from "@/services/notification.service";
 import { formatPrice } from "@/lib/utils";
@@ -69,18 +69,12 @@ export async function POST(request: Request) {
 		});
 
 		if (reservation) {
-			const existingInvoice = await prisma.invoice.findUnique({
-				where: { reservationId },
-			});
-
-			let invoiceNumber = existingInvoice?.invoiceNumber;
-			if (!existingInvoice) {
-				try {
-					const invoice = await generateInvoice(reservationId);
-					invoiceNumber = invoice.invoiceNumber;
-				} catch (err) {
-					console.error("[verify-session] Erreur génération facture:", err);
-				}
+			let invoiceNumber: string | undefined;
+			try {
+				const invoice = await generateDepositInvoice(reservationId);
+				invoiceNumber = invoice.invoiceNumber;
+			} catch (err) {
+				console.error("[verify-session] Erreur génération facture:", err);
 			}
 
 			if (invoiceNumber) {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
+import { generateAdditionInvoice } from "@/services/invoice.service";
+import { sendAdditionReceipt } from "@/services/email.service";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +61,7 @@ export async function POST(
 						select: { id: true, numero: true, zone: true, capaciteMax: true, description: true },
 					},
 					reservation: {
-						select: { id: true, timeSlot: true, guestFirstName: true, guestLastName: true },
+						select: { id: true, timeSlot: true, guestFirstName: true, guestLastName: true, guestEmail: true },
 					},
 					items: { orderBy: { createdAt: "asc" } },
 				},
@@ -95,6 +97,29 @@ export async function POST(
 				link:    `/admin/reservations/plan`,
 			},
 		});
+
+		// Facture d'addition — un ServiceOrder encaissé génère toujours sa propre facture,
+		// liée 1:1 à ce ServiceOrder (indépendante d'une éventuelle facture d'acompte).
+		let invoiceNumber: string | undefined;
+		try {
+			const invoice = await generateAdditionInvoice(id);
+			invoiceNumber = invoice.invoiceNumber;
+		} catch (err) {
+			console.error("[POST /api/admin/service-orders/[id]/payer] Erreur génération facture :", err);
+		}
+
+		const guestEmail = updatedOrder.reservation?.guestEmail;
+		if (invoiceNumber && guestEmail) {
+			sendAdditionReceipt({
+				guestFirstName: updatedOrder.reservation?.guestFirstName ?? order.guestName,
+				guestEmail,
+				amount: finalTotal,
+				paymentMethod,
+				invoiceNumber,
+			}).catch((err) => {
+				console.error("[POST /api/admin/service-orders/[id]/payer] Erreur envoi reçu :", err);
+			});
+		}
 
 		return NextResponse.json({ data: updatedOrder });
 	} catch (error) {
