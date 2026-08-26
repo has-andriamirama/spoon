@@ -30,8 +30,6 @@ import { Badge } from "@/components/ui/badge";
 import { ZONE_LABELS } from "@/lib/constants";
 import type { ServiceStatus, ServiceType, ZoneTable, PaymentMethodService, CourseType } from "@/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface OrderItem {
 	id: string;
 	dishName: string;
@@ -79,8 +77,6 @@ interface Props {
 	initialOrderId?: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const SERVICE_STATUS_META: Record<
 	string,
 	{ label: string; color: "yellow" | "green" | "red" | "gray" | "orange" | "blue" }
@@ -116,13 +112,10 @@ const COURSE_ORDER: Record<string, number> = {
 };
 
 const PER_PAGE = 10;
-// Colonnes : Date | Table | Client | Type | Statut | Total
 const GRID_COLS = "grid-cols-[1.1fr_0.7fr_1.2fr_0.75fr_1fr_0.9fr]";
 
 type SortKey = "date" | "table" | "amount" | "status";
 type SortDir = "asc" | "desc";
-
-// ─── Highlight ────────────────────────────────────────────────────────────────
 
 function Highlight({ text, query }: { text: string; query: string }) {
 	if (!query.trim()) return <>{text}</>;
@@ -143,8 +136,6 @@ function Highlight({ text, query }: { text: string; query: string }) {
 	);
 }
 
-// ─── dateLabel ────────────────────────────────────────────────────────────────
-
 function dateLabel(date: Date): { text: string; accent: boolean } {
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -157,8 +148,6 @@ function dateLabel(date: Date): { text: string; accent: boolean } {
 	return { text: formatDate(date, "dd/MM/yyyy"), accent: false };
 }
 
-// ─── buildPageList ────────────────────────────────────────────────────────────
-
 function buildPageList(current: number, total: number): (number | "…")[] {
 	if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
 	const pages: (number | "…")[] = [1];
@@ -170,8 +159,6 @@ function buildPageList(current: number, total: number): (number | "…")[] {
 	pages.push(total);
 	return pages;
 }
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
 	label,
@@ -210,8 +197,6 @@ function StatCard({
 	);
 }
 
-// ─── SortBtn ─────────────────────────────────────────────────────────────────
-
 function SortBtn({
 	label,
 	sortKey,
@@ -240,8 +225,6 @@ function SortBtn({
 		</button>
 	);
 }
-
-// ─── StatusPill ───────────────────────────────────────────────────────────────
 
 function StatusPill({
 	label,
@@ -288,8 +271,6 @@ function StatusPill({
 	);
 }
 
-// ─── MobileInfoCell ───────────────────────────────────────────────────────────
-
 function MobileInfoCell({
 	label,
 	value,
@@ -313,8 +294,6 @@ function MobileInfoCell({
 		</div>
 	);
 }
-
-// ─── PgBtn ────────────────────────────────────────────────────────────────────
 
 function PgBtn({
 	children,
@@ -344,8 +323,6 @@ function PgBtn({
 	);
 }
 
-// ─── EmptyState ───────────────────────────────────────────────────────────────
-
 function EmptyState({ onReset }: { onReset?: () => void }) {
 	return (
 		<div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
@@ -364,8 +341,6 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 		</div>
 	);
 }
-
-// ─── Section / InfoRow (detail panel building blocks) ─────────────────────────
 
 function Section({ title, icon: Icon, children }: { title: string; icon?: React.ElementType; children: React.ReactNode }) {
 	return (
@@ -399,8 +374,6 @@ function InfoRow({
 		</div>
 	);
 }
-
-// ─── DetailPanel ────────────────────────────────────────────────────────────────
 
 function DetailPanel({
 	order,
@@ -671,8 +644,6 @@ function DetailPanel({
 	);
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 export default function CommandesClient({ orders, initialOrderId }: Props) {
 	const router = useRouter();
 
@@ -684,16 +655,13 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 	const [page,         setPage]         = useState(1);
 	const [selectedId,   setSelectedId]   = useState<string | null>(null);
 
-	// Deep-link support: ?order=<id> opens the panel on load, then the URL is cleaned up.
 	useEffect(() => {
 		if (initialOrderId) {
 			setSelectedId(initialOrderId);
 			router.replace("/admin/commandes", { scroll: false });
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// ── Stats ──
 	const stats = useMemo(() => {
 		return {
 			total:    orders.length,
@@ -703,14 +671,12 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 		};
 	}, [orders]);
 
-	// ── Status counts for pills ──
 	const statusCounts = useMemo(() => {
 		const c: Record<string, number> = {};
 		orders.forEach((o) => { c[o.status] = (c[o.status] ?? 0) + 1; });
 		return c;
 	}, [orders]);
 
-	// ── Filtered + sorted list ──
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
 
@@ -749,13 +715,11 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 		return result;
 	}, [orders, search, activeStatus, typeFilter, sortKey, sortDir]);
 
-	// Reset page on any filter/sort change
 	useEffect(() => { setPage(1); }, [search, activeStatus, typeFilter, sortKey, sortDir]);
 
 	const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
 	const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-	// ── Handlers ──
 	const handleSortClick = useCallback(
 		(key: SortKey) => {
 			if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -814,7 +778,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 	return (
 		<div className="min-h-full">
 
-			{/* ── Header ── */}
 			<div className="flex items-start justify-between mb-6 gap-4">
 				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">Commandes</h1>
@@ -831,7 +794,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 				</button>
 			</div>
 
-			{/* ── Stats ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 				<StatCard
 					label="Total"
@@ -865,7 +827,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 				/>
 			</div>
 
-			{/* ── Filters ── */}
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
 				<div className="flex flex-col gap-3">
 					<div className="relative">
@@ -918,7 +879,7 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 				</div>
 			</div>
 
-			{/* ── Desktop Grid List ── */}
+			{/* ── Desktop ── */}
 			<div className="hidden md:block bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
 
 				<div className={cn("grid items-center px-5 py-3 border-b border-[#222] bg-[#141414]", GRID_COLS)}>
@@ -932,7 +893,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 					</div>
 				</div>
 
-				{/* Lignes */}
 				{paginated.length === 0 ? (
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
 				) : (
@@ -954,7 +914,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 										isSelected ? "bg-[#C8973A]/5" : "hover:bg-[#1a1a1a]"
 									)}
 								>
-									{/* Date */}
 									<div>
 										<span
 											className={cn(
@@ -969,7 +928,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 										</span>
 									</div>
 
-									{/* Table */}
 									<div>
 										<span className="text-sm font-semibold text-[#F5F0EB]">
 											<Highlight text={`T${o.table.numero}`} query={search} />
@@ -982,7 +940,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 										</span>
 									</div>
 
-									{/* Client */}
 									<div className="min-w-0">
 										<span className="text-sm text-[#F5F0EB] truncate block">
 											<Highlight text={o.guestName} query={search} />
@@ -992,19 +949,16 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 										</span>
 									</div>
 
-									{/* Type */}
 									<span className="text-xs text-[#9A8F84]">
 										{SERVICE_TYPE_LABELS[o.type] ?? o.type}
 									</span>
 
-									{/* Statut */}
 									<div>
 										<Badge variant={meta?.color ?? "gray"} className="text-[11px]">
 											{meta?.label ?? o.status}
 										</Badge>
 									</div>
 
-									{/* Total */}
 									<div className="text-right">
 										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
 											{o.totalAmount > 0 ? formatPrice(o.totalAmount) : "—"}
@@ -1022,7 +976,7 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 				)}
 			</div>
 
-			{/* ── Mobile Cards ── */}
+			{/* ── Mobile ── */}
 			<div className="md:hidden space-y-3">
 				{paginated.length === 0 ? (
 					<EmptyState onReset={hasActiveFilters ? resetFilters : undefined} />
@@ -1045,7 +999,6 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 										: "bg-[#141414] border-[#222] hover:border-[#333] hover:bg-[#1a1a1a]"
 								)}
 							>
-								{/* Ligne haute : icône + infos + badge statut */}
 								<div className="flex items-start justify-between gap-3 mb-3">
 									<div className="flex items-center gap-3 min-w-0">
 										<div className="w-9 h-9 rounded-full bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center shrink-0">
@@ -1068,14 +1021,12 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 									</Badge>
 								</div>
 
-								{/* Grille de méta-infos */}
 								<div className="grid grid-cols-3 gap-2 mb-3">
 									<MobileInfoCell label="Date"     value={dl.text}                          accent={dl.accent} />
 									<MobileInfoCell label="Heure"    value={formatDate(o.openedAt, "HH:mm")} />
 									<MobileInfoCell label="Couverts" value={`${o.covers} pers.`}             />
 								</div>
 
-								{/* Pied : total */}
 								<div className="flex items-center justify-between pt-3 border-t border-[#1a1a1a]">
 									<span className="text-xs text-[#5A5249]">Total</span>
 									<span className="text-sm font-semibold text-[#C8973A] tabular-nums">

@@ -19,7 +19,6 @@ export default async function AdminMenuCategoriesPage() {
 
 	return (
 		<div>
-			{/* ── Header ── */}
 			<div className="flex items-start justify-between gap-4 mb-6">
 				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">
@@ -38,7 +37,6 @@ export default async function AdminMenuCategoriesPage() {
 				</Link>
 			</div>
 
-			{/* ── Stats ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 				<div className="flex items-center gap-3 p-4 rounded-xl border border-[#222] bg-[#141414]">
 					<div className="p-2 rounded-lg bg-[#222] text-[#9A8F84] shrink-0">
@@ -89,7 +87,6 @@ export default async function AdminMenuCategoriesPage() {
 				</div>
 			</div>
 
-			{/* ── Table ── */}
 			{categories.length === 0 ? (
 				<div className="bg-[#141414] border border-[#222] rounded-xl py-20 text-center">
 					<FolderTree size={40} className="text-[#333] mx-auto mb-4" />
@@ -106,7 +103,6 @@ export default async function AdminMenuCategoriesPage() {
 				</div>
 			) : (
 				<div className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden">
-					{/* Desktop table header */}
 					<div className="hidden lg:grid grid-cols-[2fr_1.2fr_0.6fr_0.5fr_0.7fr_80px] items-center px-5 py-3 border-b border-[#1a1a1a]">
 						{[
 							"Catégorie",
@@ -131,7 +127,6 @@ export default async function AdminMenuCategoriesPage() {
 								key={category.id}
 								className="group hover:bg-[#1a1a1a] transition-colors"
 							>
-								{/* Desktop row */}
 								<div className="hidden lg:grid grid-cols-[2fr_1.2fr_0.6fr_0.5fr_0.7fr_80px] items-center px-5 py-4">
 									<div>
 										<p className="text-sm text-[#F5F0EB] font-medium">
@@ -168,7 +163,6 @@ export default async function AdminMenuCategoriesPage() {
 									</div>
 								</div>
 
-								{/* Mobile card */}
 								<div className="lg:hidden p-4">
 									<div className="flex items-start justify-between gap-3 mb-2">
 										<div className="min-w-0">

@@ -20,12 +20,10 @@ export async function getInvoiceTemplateById(id: string): Promise<InvoiceTemplat
 	return prisma.invoiceTemplate.findUnique({ where: { id } });
 }
 
-/** Récupère le HTML source d'un template (proxy Cloudinary → texte). */
 export async function getInvoiceTemplateHtml(template: Pick<InvoiceTemplate, "cloudinaryUrl">): Promise<string> {
 	return fetchRawTextFromCloudinary(template.cloudinaryUrl);
 }
 
-/** Retourne le template actif pour un type de facture donné, ou null si aucun. */
 export async function getActiveInvoiceTemplate(type: InvoiceType): Promise<InvoiceTemplate | null> {
 	return prisma.invoiceTemplate.findFirst({ where: { type, isActive: true } });
 }
@@ -79,7 +77,6 @@ export async function updateInvoiceTemplate(
 	let cloudinaryPublicId = existing.cloudinaryPublicId;
 
 	if (input.html !== undefined) {
-		// Réutilise le même public_id complet pour écraser le fichier existant sur Cloudinary.
 		const uploaded = await uploadRawTextToCloudinary(input.html, existing.cloudinaryPublicId);
 		cloudinaryUrl = uploaded.url;
 		cloudinaryPublicId = uploaded.publicId;
@@ -110,7 +107,6 @@ export async function deleteInvoiceTemplate(id: string): Promise<void> {
 
 	await prisma.invoiceTemplate.delete({ where: { id } });
 
-	// Best-effort : on ne bloque pas la suppression en base si Cloudinary échoue.
 	try {
 		await deleteCloudinaryRaw(existing.cloudinaryPublicId);
 	} catch (error) {

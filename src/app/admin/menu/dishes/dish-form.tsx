@@ -279,7 +279,6 @@ export default function DishForm({ dish, categories }: Props) {
 					</label>
 				</div>
 
-				{/* ── Boutons d'action ── */}
 				<div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#1e1e1e]">
 					<Button
 						type="button"

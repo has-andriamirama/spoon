@@ -8,8 +8,6 @@ import { getErrorMessage } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { X, Plus, Save, Loader2 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type Zone = "SALLE" | "TERRASSE" | "BAR" | "PRIVE";
 
 interface TableData {
@@ -26,8 +24,6 @@ interface Props {
 	table: TableData | null;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const ZONE_OPTIONS: { value: Zone; label: string }[] = [
 	{ value: "SALLE",    label: "Salle — intérieur" },
 	{ value: "TERRASSE", label: "Terrasse"           },
@@ -41,8 +37,6 @@ const fieldCls = [
 	"focus:border-[#C8973A]/60 focus:ring-1 focus:ring-[#C8973A]/20 focus:outline-none",
 	"transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
 ].join(" ");
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TableForm({ table }: Props) {
 	const router = useRouter();
@@ -104,7 +98,6 @@ export default function TableForm({ table }: Props) {
 		<form onSubmit={handleSubmit} className="max-w-2xl">
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-6 flex flex-col gap-5">
 
-				{/* ── Section header ── */}
 				<div>
 					<h2 className="font-display text-xl text-[#F5F0EB]">
 						Configuration de la table
@@ -114,7 +107,6 @@ export default function TableForm({ table }: Props) {
 					</p>
 				</div>
 
-				{/* ── Row 1 : numéro + zone ── */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
 						<label className="text-xs text-[#5A5249] block mb-1.5">
@@ -150,7 +142,6 @@ export default function TableForm({ table }: Props) {
 					</div>
 				</div>
 
-				{/* ── Row 2 : capacité min + max ── */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
 						<label className="text-xs text-[#5A5249] block mb-1.5">
@@ -183,7 +174,6 @@ export default function TableForm({ table }: Props) {
 					</div>
 				</div>
 
-				{/* ── Description ── */}
 				<div>
 					<label className="text-xs text-[#5A5249] block mb-1.5">
 						Description (facultatif)
@@ -198,7 +188,6 @@ export default function TableForm({ table }: Props) {
 					/>
 				</div>
 
-				{/* ── Actions ── */}
 				<div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#1e1e1e]">
 					<Button
 						type="button"

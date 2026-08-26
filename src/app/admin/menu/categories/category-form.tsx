@@ -168,7 +168,6 @@ export default function CategoryForm({ category }: Props) {
 					<span className="text-sm text-[#F5F0EB]">Catégorie active</span>
 				</label>
 
-				{/* ── Boutons d'action ── */}
 				<div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#1e1e1e]">
 
 					{category && (

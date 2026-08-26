@@ -2,16 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateInvoicePdf } from "@/services/invoice.service";
 
-// Génération à la volée / régénération manuelle : même contrainte Puppeteer +
-// Chromium que les autres routes déclenchant generateInvoicePdf.
 export const maxDuration = 60;
 export const runtime = "nodejs";
 
-/**
- * Si le PDF n'existe pas encore (échec silencieux à la création, ancienne
- * facture antérieure à cette fonctionnalité, etc.), on le génère à la volée
- * avant de rediriger — l'utilisateur n'a jamais un lien PDF cassé.
- */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 	let invoice = await prisma.invoice.findUnique({ where: { id } });
@@ -30,7 +23,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 	return NextResponse.redirect(invoice.pdfUrl);
 }
 
-/** Régénère explicitement le PDF (utilisé par l'admin : bouton "Régénérer le PDF"). */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 	try {

@@ -59,8 +59,6 @@ const PER_PAGE = 12;
 type SortKey = "name" | "price" | "category";
 type SortDir = "asc" | "desc";
 
-// ─── StatCard ────────────────────────────────────────────────────────────────
-
 function StatCard({
 	label,
 	value,
@@ -99,8 +97,6 @@ function StatCard({
 		</button>
 	);
 }
-
-// ─── SortBtn ─────────────────────────────────────────────────────────────────
 
 function SortBtn({
 	label,

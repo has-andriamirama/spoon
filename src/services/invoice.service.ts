@@ -9,16 +9,6 @@ import type { Invoice } from "@/types";
 
 const INVOICES_FOLDER = "spoon/invoices";
 
-/**
- * Génère (ou régénère) le PDF d'une facture existante : récupère le template
- * actif pour son type (ou un template par défaut codé en dur si aucun n'est
- * actif, pour ne jamais bloquer la génération), injecte les variables, rend
- * le PDF via Puppeteer et l'upload sur Cloudinary.
- *
- * Best-effort : les erreurs sont journalisées mais ne remontent pas, pour ne
- * jamais faire échouer un flux de paiement à cause d'un problème de PDF —
- * l'admin peut toujours régénérer le PDF manuellement depuis l'espace admin.
- */
 export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 	const invoice = await prisma.invoice.findUniqueOrThrow({
 		where: { id: invoiceId },
@@ -58,18 +48,10 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 	});
 }
 
-/** Génère le PDF sans jamais faire échouer l'appelant — journalise en cas d'erreur. */
 async function generateInvoicePdfSafely(invoiceId: string): Promise<void> {
 	try {
 		await generateInvoicePdf(invoiceId);
 	} catch (error) {
-		// Best-effort assumé : on ne relance jamais l'erreur ici pour ne pas
-		// casser un flux de paiement. Mais on journalise le message ET la
-		// pile complète — avant ce correctif, un échec Chromium/Cloudinary
-		// était totalement invisible (la facture restait avec pdfUrl = null,
-		// sans aucun log exploitable). L'admin peut régénérer le PDF depuis
-		// /admin/invoices une fois la cause corrigée (voir bouton
-		// "Régénérer le PDF" sur les factures sans PDF).
 		const message = error instanceof Error ? error.stack ?? error.message : String(error);
 		console.error(
 			`[invoice.service] échec génération PDF pour la facture ${invoiceId} :\n${message}`
@@ -77,11 +59,6 @@ async function generateInvoicePdfSafely(invoiceId: string): Promise<void> {
 	}
 }
 
-/**
- * Génère la facture d'acompte liée à un Payment (réservation payée via Stripe).
- * Un Payment ne peut avoir qu'une seule facture (paymentId est unique côté Invoice) :
- * si une facture existe déjà pour ce paiement, elle est simplement renvoyée.
- */
 export async function generateDepositInvoice(reservationId: string): Promise<Invoice> {
 	const reservation = await prisma.reservation.findUniqueOrThrow({
 		where: { id: reservationId },
@@ -99,7 +76,7 @@ export async function generateDepositInvoice(reservationId: string): Promise<Inv
 
 	const invoiceNumber = generateInvoiceNumber();
 	const amount = reservation.payment.amount || 0;
-	const taxAmount = 0; // TVA à configurer selon le régime fiscal
+	const taxAmount = 0; // To be configured
 	const totalAmount = amount + taxAmount;
 
 	const invoice = await prisma.invoice.create({
@@ -122,11 +99,6 @@ export async function generateDepositInvoice(reservationId: string): Promise<Inv
 	return invoice;
 }
 
-/**
- * Génère la facture d'addition liée à un ServiceOrder encaissé en salle (statut PAYEE).
- * Un ServiceOrder ne peut avoir qu'une seule facture (serviceOrderId est unique côté Invoice) :
- * si une facture existe déjà pour cette commande, elle est simplement renvoyée.
- */
 export async function generateAdditionInvoice(serviceOrderId: string): Promise<Invoice> {
 	const order = await prisma.serviceOrder.findUniqueOrThrow({
 		where: { id: serviceOrderId },
@@ -140,7 +112,7 @@ export async function generateAdditionInvoice(serviceOrderId: string): Promise<I
 
 	const invoiceNumber = generateInvoiceNumber();
 	const amount = order.totalAmount || 0;
-	const taxAmount = 0; // TVA à configurer selon le régime fiscal
+	const taxAmount = 0; // To be configured
 	const totalAmount = amount + taxAmount;
 
 	const invoice = await prisma.invoice.create({
@@ -163,5 +135,4 @@ export async function generateAdditionInvoice(serviceOrderId: string): Promise<I
 	return invoice;
 }
 
-/** @deprecated Utiliser generateDepositInvoice — conservé pour compatibilité. */
 export const generateInvoice = generateDepositInvoice;

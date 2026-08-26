@@ -17,8 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type Zone         = "SALLE" | "TERRASSE" | "BAR" | "PRIVE";
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -32,8 +30,6 @@ type TableRow = {
 	isActif:     boolean;
 	_count:      { reservations: number };
 };
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ZONE_ORDER: Zone[] = ["SALLE", "TERRASSE", "BAR", "PRIVE"];
 
@@ -62,8 +58,6 @@ const ZONE_META: Record<
 		badge: "text-purple-400 bg-purple-950/30 border-purple-900/40",
 	},
 };
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
 	label,
@@ -104,8 +98,6 @@ function StatCard({
 	);
 }
 
-// ─── ZonePill ─────────────────────────────────────────────────────────────────
-
 function ZonePill({
 	zone,
 	count,
@@ -141,8 +133,6 @@ function ZonePill({
 	);
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export default function TablesClient({
 	initialTables,
 }: {
@@ -153,8 +143,6 @@ export default function TablesClient({
 	const [search, setSearch]               = useState("");
 	const [zoneFilter, setZoneFilter]       = useState<Zone | null>(null);
 	const [statusFilter, setStatusFilter]   = useState<StatusFilter>("all");
-
-	// ── Stats ──────────────────────────────────────────────────────────────────
 
 	const stats = useMemo(
 		() => ({
@@ -171,8 +159,6 @@ export default function TablesClient({
 		tables.forEach((t) => { c[t.zone]++; });
 		return c;
 	}, [tables]);
-
-	// ── Filtered & grouped ─────────────────────────────────────────────────────
 
 	const filtered = useMemo(() => {
 		const q = search.toLowerCase().trim();
@@ -197,8 +183,6 @@ export default function TablesClient({
 
 	const hasActiveFilters = search.trim() || zoneFilter || statusFilter !== "all";
 
-	// ── CRUD ──────────────────────────────────────────────────────────────────
-
 	const handleDelete = async (t: TableRow, e: React.MouseEvent) => {
 		e.stopPropagation();
 		if (!confirm(`Supprimer la table T${t.numero} ? Cette action est irréversible.`)) return;
@@ -217,12 +201,9 @@ export default function TablesClient({
 		}
 	};
 
-	// ── Render ─────────────────────────────────────────────────────────────────
-
 	return (
 		<div className="min-h-full">
 
-			{/* ── Header ──────────────────────────────────────────────────────── */}
 			<div className="flex items-start justify-between mb-6 gap-4">
 				<div>
 					<h1 className="font-display text-3xl text-[#F5F0EB] leading-tight">
@@ -250,7 +231,6 @@ export default function TablesClient({
 				</div>
 			</div>
 
-			{/* ── Stats ───────────────────────────────────────────────────────── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
 				<StatCard
 					label="Total tables"
@@ -286,9 +266,7 @@ export default function TablesClient({
 				/>
 			</div>
 
-			{/* ── Filter bar ──────────────────────────────────────────────────── */}
 			<div className="bg-[#141414] border border-[#222] rounded-xl p-4 mb-4 space-y-3">
-				{/* Search */}
 				<div className="relative">
 					<Search
 						size={15}
@@ -312,7 +290,6 @@ export default function TablesClient({
 					)}
 				</div>
 
-				{/* Zone pills */}
 				{ZONE_ORDER.some((z) => zoneCounts[z] > 0) && (
 					<div className="flex items-center gap-2 flex-wrap">
 						<button
@@ -352,10 +329,7 @@ export default function TablesClient({
 				)}
 			</div>
 
-			{/* ── Content ─────────────────────────────────────────────────────── */}
-
 			{tables.length === 0 ? (
-				/* Empty state */
 				<div className="text-center py-24 border border-dashed border-[#222] rounded-xl">
 					<div className="w-12 h-12 rounded-xl bg-[#141414] border border-[#222] flex items-center justify-center mx-auto mb-4">
 						<TableProperties size={22} className="text-[#333]" />
@@ -375,7 +349,6 @@ export default function TablesClient({
 					</Link>
 				</div>
 			) : byZone.length === 0 ? (
-				/* No results after filters */
 				<div className="text-center py-16 border border-dashed border-[#222] rounded-xl">
 					<p className="text-sm text-[#5A5249]">
 						Aucune table ne correspond à vos filtres
@@ -394,7 +367,6 @@ export default function TablesClient({
 					)}
 				</div>
 			) : (
-				/* Grouped by zone */
 				<div className="space-y-3">
 					{byZone.map(({ zone, rows }) => {
 						const meta        = ZONE_META[zone];
@@ -405,7 +377,6 @@ export default function TablesClient({
 								key={zone}
 								className="bg-[#141414] border border-[#222] rounded-xl overflow-hidden"
 							>
-								{/* Zone header */}
 								<div className="px-4 sm:px-5 py-3 border-b border-[#1e1e1e] flex items-center gap-3">
 									<span
 										className={cn(
@@ -423,7 +394,6 @@ export default function TablesClient({
 									</span>
 								</div>
 
-								{/* Table rows */}
 								<div className="divide-y divide-[#1a1a1a]">
 									{rows.map((t) => (
 										<div
@@ -433,7 +403,6 @@ export default function TablesClient({
 												!t.isActif && "opacity-50"
 											)}
 										>
-											{/* Status dot */}
 											<div
 												className={cn(
 													"w-2 h-2 rounded-full shrink-0",
@@ -441,7 +410,6 @@ export default function TablesClient({
 												)}
 											/>
 
-											{/* Table number */}
 											<Link
 												href={`/admin/tables/${t.id}`}
 												className="text-sm font-bold text-[#F5F0EB] w-8 sm:w-10 shrink-0 tabular-nums hover:text-[#C8973A] transition-colors"
@@ -449,7 +417,6 @@ export default function TablesClient({
 												T{t.numero}
 											</Link>
 
-											{/* Capacity */}
 											<div className="flex items-center gap-1 sm:gap-1.5 text-xs text-[#9A8F84] shrink-0">
 												<Users size={12} className="text-[#5A5249] shrink-0" />
 												<span className="tabular-nums">
@@ -459,7 +426,6 @@ export default function TablesClient({
 												</span>
 											</div>
 
-											{/* Description — hidden on mobile */}
 											{t.description ? (
 												<span className="hidden sm:block text-xs text-[#5A5249] flex-1 truncate">
 													{t.description}
@@ -468,16 +434,13 @@ export default function TablesClient({
 												<span className="hidden sm:block flex-1" />
 											)}
 
-											{/* Reservation count */}
 											<span className="text-[11px] text-[#333] shrink-0 ml-auto sm:ml-0">
 												{t._count.reservations} résa
 												{t._count.reservations !== 1 ? "s" : ""}
 											</span>
 
-											{/* ── Actions ──────────────────────────────────── */}
 											<div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
 
-												{/* Edit → dedicated form page */}
 												<Link
 													href={`/admin/tables/${t.id}`}
 													title="Modifier"
@@ -486,7 +449,6 @@ export default function TablesClient({
 													<Edit size={14} />
 												</Link>
 
-												{/* Delete with confirm dialog */}
 												<button
 													onClick={(e) => handleDelete(t, e)}
 													disabled={loading === `delete-${t.id}`}

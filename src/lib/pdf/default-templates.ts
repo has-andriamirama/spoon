@@ -1,10 +1,5 @@
 import type { InvoiceType } from "@/types";
 
-/**
- * Templates HTML codés en dur, utilisés comme filet de sécurité quand aucun
- * template Cloudinary n'est marqué actif pour un type de facture donné.
- * Objectif : ne jamais bloquer la génération d'un PDF de facture.
- */
 const BASE_STYLE = `
 	body { font-family: Helvetica, Arial, sans-serif; color: #1a1a1a; padding: 48px; }
 	.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #C8973A; padding-bottom: 20px; margin-bottom: 32px; }

@@ -561,7 +561,6 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 			setSelectedId(initialInvoiceId);
 			router.replace("/admin/invoices", { scroll: false });
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const stats = useMemo(() => ({
