@@ -546,7 +546,7 @@ function DetailPanel({
 										Commande liée
 									</p>
 									<Link
-										href={`/admin/commandes/${payment.serviceOrderId}`}
+										href={`/admin/commandes?order=${payment.serviceOrderId}`}
 										className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
 									>
 										<div className="flex items-center gap-3 min-w-0">
