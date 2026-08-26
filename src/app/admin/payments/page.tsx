@@ -4,7 +4,13 @@ import PaymentsClient from "./payments-client";
 export const dynamic  = "force-dynamic";
 export const metadata = { title: "Paiements — Spoon Admin" };
 
-export default async function AdminPaymentsPage() {
+interface PageProps {
+	searchParams: Promise<{ id?: string }>;
+}
+
+export default async function AdminPaymentsPage({ searchParams }: PageProps) {
+	const { id: initialPaymentId } = await searchParams;
+
 	const payments = await prisma.payment.findMany({
 		include: {
 			reservation: {
@@ -25,5 +31,10 @@ export default async function AdminPaymentsPage() {
 		take: 500,
 	});
 
-	return <PaymentsClient payments={payments as Parameters<typeof PaymentsClient>[0]["payments"]} />;
+	return (
+		<PaymentsClient
+			payments={payments as Parameters<typeof PaymentsClient>[0]["payments"]}
+			initialPaymentId={initialPaymentId}
+		/>
+	);
 }
