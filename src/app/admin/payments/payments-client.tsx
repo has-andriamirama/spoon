@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
 	Search,
@@ -59,6 +60,7 @@ interface Payment {
 
 interface Props {
 	payments: Payment[];
+	initialPaymentId?: string;
 }
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -488,7 +490,7 @@ function DetailPanel({
 										Facture associée
 									</p>
 									<Link
-										href={`/admin/invoices/${payment.reservation.invoice.id}`}
+										href={`/admin/invoices?id=${payment.reservation.invoice.id}`}
 										className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0A0A0A] border border-[#1a1a1a] hover:border-[#C8973A]/30 transition-colors group"
 									>
 										<div className="flex items-center gap-3 min-w-0">
@@ -523,13 +525,26 @@ function DetailPanel({
 	);
 }
 
-export default function PaymentsClient({ payments }: Props) {
+export default function PaymentsClient({ payments, initialPaymentId }: Props) {
+	const router = useRouter();
+
 	const [search,        setSearch]        = useState("");
 	const [activeStatus,  setActiveStatus]  = useState<PaymentStatus | null>(null);
 	const [sortKey,       setSortKey]       = useState<SortKey>("date");
 	const [sortDir,       setSortDir]       = useState<SortDir>("desc");
 	const [page,          setPage]          = useState(1);
 	const [selectedId,    setSelectedId]    = useState<string | null>(null);
+
+	// Deep-link support: /admin/payments?id=xxx opens the panel on load, with the slide-in
+	// animation (selectedId starts at null and is only set after the first paint), then the
+	// URL is cleaned up. Used by the invoice side panel instead of a dedicated route.
+	useEffect(() => {
+		if (initialPaymentId) {
+			setSelectedId(initialPaymentId);
+			router.replace("/admin/payments", { scroll: false });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const stats = useMemo(() => {
 		const paid     = payments.filter((p) => p.status === "PAID");
