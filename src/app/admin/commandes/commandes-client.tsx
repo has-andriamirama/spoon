@@ -682,11 +682,12 @@ export default function CommandesClient({ orders, initialOrderId }: Props) {
 	const [sortKey,      setSortKey]      = useState<SortKey>("date");
 	const [sortDir,      setSortDir]      = useState<SortDir>("desc");
 	const [page,         setPage]         = useState(1);
-	const [selectedId,   setSelectedId]   = useState<string | null>(initialOrderId ?? null);
+	const [selectedId,   setSelectedId]   = useState<string | null>(null);
 
 	// Deep-link support: ?order=<id> opens the panel on load, then the URL is cleaned up.
 	useEffect(() => {
 		if (initialOrderId) {
+			setSelectedId(initialOrderId);
 			router.replace("/admin/commandes", { scroll: false });
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
