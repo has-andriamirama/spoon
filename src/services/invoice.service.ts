@@ -1,6 +1,71 @@
 import { prisma } from "@/lib/prisma";
 import { generateInvoiceNumber } from "@/lib/utils";
+import { uploadRawBufferToCloudinary } from "@/lib/cloudinary";
+import { htmlToPdfBuffer } from "@/lib/pdf/generate-pdf";
+import { getDefaultTemplateHtml } from "@/lib/pdf/default-templates";
+import { buildInvoiceVariables, injectTemplateVariables } from "@/lib/pdf/template-variables";
+import { getActiveInvoiceTemplate, getInvoiceTemplateHtml } from "@/services/invoice-template.service";
 import type { Invoice } from "@/types";
+
+const INVOICES_FOLDER = "spoon/invoices";
+
+/**
+ * Génère (ou régénère) le PDF d'une facture existante : récupère le template
+ * actif pour son type (ou un template par défaut codé en dur si aucun n'est
+ * actif, pour ne jamais bloquer la génération), injecte les variables, rend
+ * le PDF via Puppeteer et l'upload sur Cloudinary.
+ *
+ * Best-effort : les erreurs sont journalisées mais ne remontent pas, pour ne
+ * jamais faire échouer un flux de paiement à cause d'un problème de PDF —
+ * l'admin peut toujours régénérer le PDF manuellement depuis l'espace admin.
+ */
+export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
+	const invoice = await prisma.invoice.findUniqueOrThrow({
+		where: { id: invoiceId },
+		include: {
+			reservation: { select: { date: true, timeSlot: true } },
+			serviceOrder: { select: { table: { select: { numero: true } } } },
+		},
+	});
+
+	const template = await getActiveInvoiceTemplate(invoice.type);
+	const html = template ? await getInvoiceTemplateHtml(template) : getDefaultTemplateHtml(invoice.type);
+
+	const variables = buildInvoiceVariables({
+		invoiceNumber: invoice.invoiceNumber,
+		amount: invoice.amount,
+		taxAmount: invoice.taxAmount,
+		totalAmount: invoice.totalAmount,
+		issuedAt: invoice.issuedAt,
+		guestName: invoice.guestName,
+		guestEmail: invoice.guestEmail,
+		reservation: invoice.reservation,
+		tableNumero: invoice.serviceOrder?.table.numero ?? null,
+	});
+
+	const finalHtml = injectTemplateVariables(html, variables);
+	const pdfBuffer = await htmlToPdfBuffer(finalHtml);
+	const publicId = `${INVOICES_FOLDER}/${invoice.invoiceNumber}`;
+	const uploaded = await uploadRawBufferToCloudinary(pdfBuffer, publicId);
+
+	return prisma.invoice.update({
+		where: { id: invoice.id },
+		data: {
+			pdfUrl: uploaded.url,
+			pdfPublicId: uploaded.publicId,
+			templateId: template?.id ?? null,
+		},
+	});
+}
+
+/** Génère le PDF sans jamais faire échouer l'appelant — journalise en cas d'erreur. */
+async function generateInvoicePdfSafely(invoiceId: string): Promise<void> {
+	try {
+		await generateInvoicePdf(invoiceId);
+	} catch (error) {
+		console.error(`[invoice.service] échec génération PDF pour la facture ${invoiceId}:`, error);
+	}
+}
 
 /**
  * Génère la facture d'acompte liée à un Payment (réservation payée via Stripe).
@@ -42,6 +107,8 @@ export async function generateDepositInvoice(reservationId: string): Promise<Inv
 		},
 	});
 
+	await generateInvoicePdfSafely(invoice.id);
+
 	return invoice;
 }
 
@@ -80,6 +147,8 @@ export async function generateAdditionInvoice(serviceOrderId: string): Promise<I
 			totalAmount,
 		},
 	});
+
+	await generateInvoicePdfSafely(invoice.id);
 
 	return invoice;
 }

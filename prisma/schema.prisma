@@ -292,6 +292,25 @@ model Payment {
 	@@map("payments")
 }
 
+model InvoiceTemplate {
+	id             String      @id @default(cuid())
+	name           String
+	type           InvoiceType
+	isActive       Boolean     @default(false)
+
+	cloudinaryUrl      String
+	cloudinaryPublicId String
+
+	createdAt      DateTime    @default(now())
+	updatedAt      DateTime    @updatedAt
+
+	invoices       Invoice[]
+
+	@@index([type])
+	@@index([type, isActive])
+	@@map("invoice_templates")
+}
+
 model Invoice {
 	id             String       @id @default(cuid())
 	invoiceNumber  String       @unique
@@ -309,6 +328,9 @@ model Invoice {
 	userId         String?
 	user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+	templateId     String?
+	template       InvoiceTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
 	guestEmail     String?
 	guestName      String?
 
@@ -324,6 +346,7 @@ model Invoice {
 	@@index([userId])
 	@@index([reservationId])
 	@@index([type])
+	@@index([templateId])
 	@@map("invoices")
 }
 

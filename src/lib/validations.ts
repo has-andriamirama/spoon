@@ -169,3 +169,18 @@ export const settingsSchema = z.object({
 	maxBookingAdvanceDays: z.number().int().min(1),
 	autoConfirmReservations: z.boolean(),
 });
+
+// ─── Invoice templates ────────────────────────────────────────────────────────
+
+export const createInvoiceTemplateSchema = z.object({
+	name: z.string().min(2, "Nom requis (min 2 caractères)"),
+	type: z.enum(["DEPOSIT", "ADDITION"]),
+	html: z.string().min(1, "Le contenu HTML est requis"),
+	setActive: z.boolean().optional(),
+});
+
+export const updateInvoiceTemplateSchema = z.object({
+	name: z.string().min(2, "Nom requis (min 2 caractères)").optional(),
+	html: z.string().min(1, "Le contenu HTML est requis").optional(),
+	setActive: z.boolean().optional(),
+});

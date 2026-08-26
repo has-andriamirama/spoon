@@ -22,6 +22,7 @@ import {
 	CreditCard,
 	Percent,
 	TableProperties,
+	FileCode2,
 } from "lucide-react";
 import { cn, formatDate, formatDateTime, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -643,13 +644,22 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 						{invoices.length} facture{invoices.length !== 1 ? "s" : ""} émise{invoices.length !== 1 ? "s" : ""}
 					</p>
 				</div>
-				<button
-					onClick={handleExport}
-					className="flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors shrink-0"
-				>
-					<Download size={14} />
-					<span className="hidden sm:inline">Exporter</span>
-				</button>
+				<div className="flex items-center gap-2 shrink-0">
+					<Link
+						href="/admin/invoices/templates"
+						className="flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+					>
+						<FileCode2 size={14} />
+						<span className="hidden sm:inline">Templates</span>
+					</Link>
+					<button
+						onClick={handleExport}
+						className="flex items-center gap-2 h-9 px-3 sm:px-4 rounded-lg border border-[#222] text-sm text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+					>
+						<Download size={14} />
+						<span className="hidden sm:inline">Exporter</span>
+					</button>
+				</div>
 			</div>
 
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">

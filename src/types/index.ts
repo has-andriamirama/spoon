@@ -6,6 +6,7 @@ import type {
 	OfferType, OfferTarget, GalleryCategory, EventStatus, ZoneTable,
 	ServiceOrder, ServiceOrderItem,
 	ServiceStatus, ServiceType, PaymentMethodService, CourseType,
+	InvoiceTemplate, InvoiceType,
 } from "../../generated/prisma/client";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
@@ -18,6 +19,7 @@ export type {
 	OfferType, OfferTarget, GalleryCategory, EventStatus, ZoneTable,
 	ServiceOrder, ServiceOrderItem,
 	ServiceStatus, ServiceType, PaymentMethodService, CourseType,
+	InvoiceTemplate, InvoiceType,
 };
 
 // ─── Extended types ───────────────────────────────────────────────────────────

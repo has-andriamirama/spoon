@@ -1,4 +1,5 @@
 "use client";
+
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, LogOut, User, Menu } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -16,6 +17,7 @@ const TITLES: Record<string, string> = {
 	"/admin/special-offers": "Offres spéciales",
 	"/admin/customers": "Clients",
 	"/admin/payments": "Paiements",
+	"/admin/invoices/templates": "Templates de factures",
 	"/admin/invoices": "Factures",
 	"/admin/gallery": "Galerie",
 	"/admin/events": "Événements",
