@@ -12,6 +12,7 @@ import {
 	Smartphone,
 	FileCode2,
 	Circle,
+	X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn, getErrorMessage } from "@/lib/utils";
@@ -197,7 +198,7 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 				</div>
 			</div>
 
-			<div className="flex-1 flex flex-col rounded-xl border border-[#222] bg-[#0A0A0A] overflow-hidden h-[75vh] min-h-[560px] max-h-[860px]">
+			<div className="flex-1 flex flex-col rounded-xl border border-[#222] bg-[#0A0A0A] overflow-hidden h-[75vh] min-h-[560px] max-h-[860px] relative">
 				<div className="flex items-center gap-3 border-b border-[#222] px-4 py-3 shrink-0">
 					<div className="w-9 h-9 rounded-lg bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center shrink-0">
 						<FileCode2 size={16} className="text-[#C8973A]" />
@@ -244,7 +245,7 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 				</div>
 			</div>
 
-			<div className="flex flex-1 min-h-0">
+			<div className="flex flex-1 min-h-0 relative">
 				<div className="w-11 shrink-0 border-r border-[#222] flex flex-col items-center pt-3 gap-3">
 					<button
 						onClick={() => setVarPanelOpen((v) => !v)}
@@ -263,10 +264,10 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 
 				<div className="flex-1 min-w-0 flex flex-col lg:flex-row gap-3 p-3">
 					<div className="flex-1 min-w-0 flex flex-col min-h-[260px]">
-						<div className="flex items-center gap-2 px-1 pb-2 shrink-0">
-							<FileCode2 size={12} className="text-[#C8973A]" />
-							<span className="text-[11px] text-[#9A8F84]">template.html</span>
-							<span className="ml-auto text-[10px] text-[#5A5249] hidden sm:inline">
+						<div className="flex items-center h-7 gap-2 px-1 shrink-0">
+							<FileCode2 size={12} className="text-[#C8973A] shrink-0" />
+							<span className="text-[11px] text-[#9A8F84] leading-none">template.html</span>
+							<span className="ml-auto text-[10px] text-[#5A5249] hidden sm:inline leading-none">
 								Tab pour indenter
 							</span>
 						</div>
@@ -276,56 +277,57 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 							onChange={markHtmlChanged}
 							onRunShortcut={runPreview}
 							ref={editorRef}
-							className="flex-1"
+							className="flex-1 mt-2"
 						/>
 					</div>
 
 					<div className="flex-1 min-w-0 flex flex-col min-h-[260px]">
-						<div className="flex items-center gap-2 px-1 pb-2 shrink-0">
-							<span className="text-[11px] text-[#9A8F84]">Aperçu</span>
-							<div className="flex items-center gap-1 ml-2">
-								<button
-									onClick={() => setDevice("desktop")}
-									aria-label="Aperçu large"
-									aria-pressed={device === "desktop"}
-									className={cn(
-										"p-1 rounded-md",
-										device === "desktop"
-											? "text-[#C8973A] bg-[#C8973A]/10"
-											: "text-[#5A5249] hover:text-[#9A8F84]"
-									)}
-								>
-									<Monitor size={13} />
-								</button>
-								<button
-									onClick={() => setDevice("mobile")}
-									aria-label="Aperçu mobile"
-									aria-pressed={device === "mobile"}
-									className={cn(
-										"p-1 rounded-md",
-										device === "mobile"
-											? "text-[#C8973A] bg-[#C8973A]/10"
-											: "text-[#5A5249] hover:text-[#9A8F84]"
-									)}
-								>
-									<Smartphone size={13} />
-								</button>
-							</div>
+						<div className="flex items-center h-7 gap-1 px-1 shrink-0">
+							<span className="text-[11px] text-[#9A8F84] leading-none mr-1">Aperçu</span>
+							<button
+								onClick={() => setDevice("desktop")}
+								aria-label="Aperçu large"
+								aria-pressed={device === "desktop"}
+								className={cn(
+									"p-1 rounded-md transition-colors",
+									device === "desktop"
+										? "text-[#C8973A] bg-[#C8973A]/10"
+										: "text-[#5A5249] hover:text-[#9A8F84]"
+								)}
+							>
+								<Monitor size={13} />
+							</button>
+							<button
+								onClick={() => setDevice("mobile")}
+								aria-label="Aperçu mobile"
+								aria-pressed={device === "mobile"}
+								className={cn(
+									"p-1 rounded-md transition-colors",
+									device === "mobile"
+										? "text-[#C8973A] bg-[#C8973A]/10"
+										: "text-[#5A5249] hover:text-[#9A8F84]"
+								)}
+							>
+								<Smartphone size={13} />
+							</button>
 
 							{previewHtml && previewStale && (
-								<span className="text-[10px] text-[#C8973A]">Aperçu non à jour</span>
+								<span className="text-[10px] text-[#C8973A] ml-2 truncate">
+									Aperçu non à jour
+								</span>
 							)}
 
 							<button
 								onClick={runPreview}
-								className="ml-auto flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[#C8973A] hover:bg-[#E8B04A] text-[#0A0A0A] text-[11px] font-semibold transition-colors"
+								aria-label={previewHtml ? "Relancer l'aperçu" : "Lancer l'aperçu"}
+								title={previewHtml ? "Relancer l'aperçu" : "Lancer l'aperçu"}
+								className="ml-auto p-1 rounded-md text-[#C8973A] hover:bg-[#C8973A]/10 transition-colors"
 							>
-								{previewHtml ? <RotateCw size={12} /> : <Play size={12} />}
-								{previewHtml ? "Relancer" : "Play"}
+								{previewHtml ? <RotateCw size={13} /> : <Play size={13} />}
 							</button>
 						</div>
 
-						<div className="flex-1 rounded-lg border border-[#222] bg-[#050505] overflow-auto flex items-center justify-center p-3">
+						<div className="flex-1 mt-2 rounded-lg border border-[#222] bg-[#050505] overflow-auto flex items-center justify-center p-3">
 							{previewHtml ? (
 								<div
 									className={cn(
@@ -352,15 +354,38 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 				</div>
 
 				<div
+					onClick={() => setVarPanelOpen(false)}
+					aria-hidden="true"
 					className={cn(
-						"shrink-0 border-l border-[#222] overflow-hidden transition-[width] duration-150",
-						varPanelOpen ? "w-64" : "w-0"
+						"absolute inset-0 z-10 bg-black/50 transition-opacity duration-200",
+						varPanelOpen
+							? "opacity-100 pointer-events-auto"
+							: "opacity-0 pointer-events-none"
+					)}
+				/>
+
+				<div
+					role="dialog"
+					aria-label="Variables disponibles"
+					className={cn(
+						"absolute inset-y-0 right-0 z-20 w-72 max-w-[85vw] border-l border-[#222] bg-[#0F0F0F] shadow-2xl transition-transform duration-200 ease-out flex flex-col",
+						varPanelOpen ? "translate-x-0" : "translate-x-full"
 					)}
 				>
-					<div className="w-64 h-full overflow-y-auto p-3">
-						<p className="text-[10px] uppercase tracking-wider text-[#5A5249] mb-2 px-1">
+					<div className="flex items-center gap-2 border-b border-[#222] px-3 h-11 shrink-0">
+						<Braces size={13} className="text-[#C8973A]" />
+						<p className="text-[10px] uppercase tracking-wider text-[#9A8F84]">
 							Variables — clic pour insérer
 						</p>
+						<button
+							onClick={() => setVarPanelOpen(false)}
+							aria-label="Fermer le panneau des variables"
+							className="ml-auto p-1 rounded-md text-[#5A5249] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] transition-colors"
+						>
+							<X size={14} />
+						</button>
+					</div>
+					<div className="flex-1 overflow-y-auto p-3">
 						{variableGroups.map((group) => (
 							<div key={group.label} className="mb-3">
 								<p className="text-[10px] text-[#4A453F] mb-1.5 px-1">{group.label}</p>
