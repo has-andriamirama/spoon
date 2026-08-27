@@ -154,9 +154,8 @@ export function buildSampleVariables(): InvoiceTemplateVariables {
 		items: sampleItems,
 		restaurant: {
 			name: "Spoon Restaurant",
-			logoUrl: "https://res.cloudinary.com/demo/image/upload/v1/spoon/logo-sample.png",
 			address: "12 Rue des Filaos, 97400 Saint-Denis, La Réunion",
-			phone: "+262 262 00 00 00",
+			phone: "+262 262 12 34 56",
 			email: "contact@spoon-restaurant.re",
 		},
 	});
