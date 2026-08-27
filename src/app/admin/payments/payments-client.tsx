@@ -21,6 +21,7 @@ import {
 	Receipt,
 	Wallet,
 	TableProperties,
+	Banknote,
 } from "lucide-react";
 import { cn, formatDate, formatDateTime, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -35,11 +36,6 @@ interface InvoiceInfo {
 
 export type PaymentKind = "DEPOSIT" | "ADDITION";
 
-/**
- * Une entrée unifiée du registre des paiements.
- * - kind = "DEPOSIT"  → acompte de réservation encaissé via Stripe (table `Payment`)
- * - kind = "ADDITION" → addition de commande encaissée en salle (table `ServiceOrder`, statut PAYEE)
- */
 export interface UnifiedPayment {
 	id: string;
 	kind: PaymentKind;
@@ -49,6 +45,7 @@ export interface UnifiedPayment {
 	paymentMethod: PaymentMethodService | null;
 	status: PaymentStatus;
 	refundedAmount: number | null;
+	depositDeducted: number | null;
 	stripePaymentIntentId: string | null;
 	stripeChargeId: string | null;
 	paidAt: Date | null;
@@ -316,10 +313,19 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 	);
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+	title,
+	icon: Icon,
+	children,
+}: {
+	title: string;
+	icon?: React.ElementType;
+	children: React.ReactNode;
+}) {
 	return (
 		<div>
-			<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+			<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2 flex items-center gap-1.5">
+				{Icon && <Icon size={11} />}
 				{title}
 			</p>
 			<div className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] divide-y divide-[#1a1a1a] overflow-hidden">
@@ -374,6 +380,9 @@ function DetailPanel({
 	const kindMeta     = payment ? KIND_META[payment.kind] : null;
 	const isRefundable = isDeposit && payment?.status === "PAID";
 	const refundable   = payment ? payment.amount - (payment.refundedAmount ?? 0) : 0;
+
+	const hasDeposit = !isDeposit && payment != null && (payment.depositDeducted ?? 0) > 0;
+	const amountDue  = payment ? Math.max(0, payment.amount - (payment.depositDeducted ?? 0)) : 0;
 
 	return (
 		<>
@@ -521,23 +530,48 @@ function DetailPanel({
 									/>
 								</Section>
 							) : (
-								<Section title="Détails de l'addition">
-									<InfoRow
-										label="Référence"
-										value={`#${(payment.serviceOrderId ?? payment.id).slice(-8).toUpperCase()}`}
-										valueClass="font-mono text-[#9A8F84] text-[11px]"
-									/>
-									<InfoRow
-										label="Articles"
-										value={payment.itemsCount != null ? `${payment.itemsCount} article${payment.itemsCount !== 1 ? "s" : ""}` : "—"}
-										valueClass="text-[#9A8F84]"
-									/>
-									<InfoRow
-										label="Encaissé le"
-										value={formatDateTime(payment.createdAt)}
-										valueClass="text-[#9A8F84]"
-									/>
-								</Section>
+								<>
+									<Section title="Addition" icon={Banknote}>
+										<InfoRow label="Sous-total" value={formatPrice(payment.amount)} />
+										{hasDeposit && (
+											<InfoRow
+												label="Acompte déjà payé"
+												value={`−${formatPrice(payment.depositDeducted ?? 0)}`}
+												valueClass="text-green-400"
+											/>
+										)}
+										<InfoRow
+											label={hasDeposit ? "Reste à payer" : "Total"}
+											value={formatPrice(hasDeposit ? amountDue : payment.amount)}
+											valueClass="font-semibold text-[#C8973A]"
+										/>
+										{payment.paymentMethod && (
+											<InfoRow
+												label="Mode de paiement"
+												value={PAYMENT_METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod}
+												valueClass="text-[#9A8F84]"
+											/>
+										)}
+										<InfoRow
+											label="Encaissé le"
+											value={formatDateTime(payment.createdAt)}
+											valueClass="text-[#9A8F84]"
+										/>
+									</Section>
+
+									<Section title="Détails de l'addition">
+										<InfoRow
+											label="Référence"
+											value={`#${(payment.serviceOrderId ?? payment.id).slice(-8).toUpperCase()}`}
+											valueClass="font-mono text-[#9A8F84] text-[11px]"
+										/>
+										<InfoRow
+											label="Articles"
+											value={payment.itemsCount != null ? `${payment.itemsCount} article${payment.itemsCount !== 1 ? "s" : ""}` : "—"}
+											valueClass="text-[#9A8F84]"
+										/>
+									</Section>
+								</>
 							)}
 
 							{payment.kind === "ADDITION" && payment.serviceOrderId && (
@@ -645,15 +679,11 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 	const [page,          setPage]          = useState(1);
 	const [selectedId,    setSelectedId]    = useState<string | null>(null);
 
-	// Deep-link support: /admin/payments?id=xxx opens the panel on load, with the slide-in
-	// animation (selectedId starts at null and is only set after the first paint), then the
-	// URL is cleaned up. Used by the invoice side panel instead of a dedicated route.
 	useEffect(() => {
 		if (initialPaymentId) {
 			setSelectedId(initialPaymentId);
 			router.replace("/admin/payments", { scroll: false });
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const stats = useMemo(() => {
@@ -739,7 +769,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 
 	const handleExport = useCallback(() => {
 		const headers = [
-			"Client", "Email", "Date", "Montant (€)", "Genre", "Type / Mode",
+			"Client", "Email", "Date", "Montant (€)", "Acompte déduit (€)", "Genre", "Type / Mode",
 			"Statut", "Table", "Référence Stripe", "Payé le",
 		];
 		const rows = filtered.map((p) => [
@@ -747,6 +777,7 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 			p.guestEmail ?? "",
 			formatDate(p.date, "dd/MM/yyyy"),
 			p.amount.toFixed(2),
+			(p.depositDeducted ?? 0).toFixed(2),
 			KIND_META[p.kind].label,
 			p.kind === "DEPOSIT"
 				? (PAYMENT_TYPE_LABELS[p.type ?? ""] ?? p.type ?? "")
@@ -965,6 +996,11 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 												−{formatPrice(p.refundedAmount)} remboursé
 											</span>
 										)}
+										{p.depositDeducted != null && p.depositDeducted > 0 && (
+											<span className="block text-xs text-[#5A5249]">
+												−{formatPrice(p.depositDeducted)} acompte
+											</span>
+										)}
 									</div>
 
 									<div>
@@ -1045,6 +1081,11 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 										<p className="text-xs font-semibold text-[#C8973A] tabular-nums">
 											{formatPrice(p.amount)}
 										</p>
+										{p.depositDeducted != null && p.depositDeducted > 0 && (
+											<p className="text-[10px] text-[#5A5249] mt-0.5">
+												−{formatPrice(p.depositDeducted)} acompte
+											</p>
+										)}
 									</div>
 									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
 										<p className="text-[10px] text-[#5A5249] mb-0.5">
