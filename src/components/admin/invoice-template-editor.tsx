@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
 	ArrowLeft,
@@ -8,8 +8,9 @@ import {
 	Play,
 	RotateCw,
 	Braces,
-	Monitor,
-	Smartphone,
+	ZoomIn,
+	ZoomOut,
+	Maximize2,
 	FileCode2,
 	Circle,
 	X,
@@ -27,7 +28,6 @@ import TemplateCodeEditor, {
 } from "@/components/admin/template-code-editor";
 
 type InvoiceType = "DEPOSIT" | "ADDITION";
-type Device = "desktop" | "mobile";
 
 const TYPE_META: Record<InvoiceType, { label: string }> = {
 	DEPOSIT: { label: "Acompte" },
@@ -35,6 +35,16 @@ const TYPE_META: Record<InvoiceType, { label: string }> = {
 };
 
 const SAMPLE_VARIABLES = buildSampleVariables();
+
+const PDF_PAGE_WIDTH = 794;
+const PDF_PAGE_HEIGHT = 1123;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 2;
+const VIEWPORT_PADDING = 32;
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(max, Math.max(min, value));
+}
 
 interface VariableGroup {
 	label: string;
@@ -94,12 +104,17 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 	const [setActive, setSetActive] = useState(isNew ? isFirstOfType : initial.isActive);
 	const [saving, setSaving] = useState(false);
 
-	const [device, setDevice] = useState<Device>("desktop");
 	const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 	const [previewStale, setPreviewStale] = useState(false);
 	const [varPanelOpen, setVarPanelOpen] = useState(false);
 
+	const [zoom, setZoom] = useState(1);
+	const [fitToWidthMode, setFitToWidthMode] = useState(true);
+	const [pageCount, setPageCount] = useState(1);
+
 	const editorRef = useRef<TemplateCodeEditorHandle>(null);
+	const iframeRef = useRef<HTMLIFrameElement>(null);
+	const viewportRef = useRef<HTMLDivElement>(null);
 	const savedSnapshot = useRef({ name: initial.name, html: initial.html, type: initial.type });
 
 	const dirty =
@@ -123,6 +138,64 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 		setPreviewHtml(injectTemplateVariables(html, SAMPLE_VARIABLES));
 		setPreviewStale(false);
 	}, [html]);
+
+	const measurePages = useCallback(() => {
+		const iframe = iframeRef.current;
+		if (!iframe) return;
+		let contentHeight = PDF_PAGE_HEIGHT;
+		try {
+			const doc = iframe.contentDocument;
+			if (doc) {
+				contentHeight = Math.max(
+					doc.documentElement?.scrollHeight ?? 0,
+					doc.body?.scrollHeight ?? 0,
+					PDF_PAGE_HEIGHT
+				);
+			}
+		} catch {
+			contentHeight = PDF_PAGE_HEIGHT;
+		}
+		setPageCount(Math.max(1, Math.ceil(contentHeight / PDF_PAGE_HEIGHT)));
+	}, []);
+
+	const handleIframeLoad = useCallback(() => {
+		measurePages();
+		const timers = [150, 500].map((delay) => window.setTimeout(measurePages, delay));
+		return () => timers.forEach((t) => window.clearTimeout(t));
+	}, [measurePages]);
+
+	const computeFitZoom = useCallback(() => {
+		const el = viewportRef.current;
+		if (!el) return 1;
+		const available = el.clientWidth - VIEWPORT_PADDING;
+		if (available <= 0) return 1;
+		return clamp(available / PDF_PAGE_WIDTH, MIN_ZOOM, MAX_ZOOM);
+	}, []);
+
+	useEffect(() => {
+		if (!fitToWidthMode) return;
+		const el = viewportRef.current;
+		if (!el) return;
+		const apply = () => setZoom(computeFitZoom());
+		apply();
+		const observer = new ResizeObserver(apply);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [fitToWidthMode, computeFitZoom, previewHtml]);
+
+	const zoomBy = useCallback((delta: number) => {
+		setFitToWidthMode(false);
+		setZoom((z) => clamp(Math.round((z + delta) * 100) / 100, MIN_ZOOM, MAX_ZOOM));
+	}, []);
+
+	const resetZoom = useCallback(() => {
+		setFitToWidthMode(false);
+		setZoom(1);
+	}, []);
+
+	const fitToWidth = useCallback(() => {
+		setFitToWidthMode(true);
+	}, []);
 
 	const handleInsertVariable = useCallback((key: string) => {
 		editorRef.current?.insertText(`{{${key}}}`);
@@ -284,32 +357,57 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 					<div className="flex-1 min-w-0 flex flex-col min-h-[260px]">
 						<div className="flex items-center h-7 gap-1 px-1 shrink-0">
 							<span className="text-[11px] text-[#9A8F84] leading-none mr-1">Aperçu</span>
-							<button
-								onClick={() => setDevice("desktop")}
-								aria-label="Aperçu large"
-								aria-pressed={device === "desktop"}
-								className={cn(
-									"p-1 rounded-md transition-colors",
-									device === "desktop"
-										? "text-[#C8973A] bg-[#C8973A]/10"
-										: "text-[#5A5249] hover:text-[#9A8F84]"
-								)}
-							>
-								<Monitor size={13} />
-							</button>
-							<button
-								onClick={() => setDevice("mobile")}
-								aria-label="Aperçu mobile"
-								aria-pressed={device === "mobile"}
-								className={cn(
-									"p-1 rounded-md transition-colors",
-									device === "mobile"
-										? "text-[#C8973A] bg-[#C8973A]/10"
-										: "text-[#5A5249] hover:text-[#9A8F84]"
-								)}
-							>
-								<Smartphone size={13} />
-							</button>
+
+							<div className="flex items-center gap-0.5 rounded-md border border-[#1c1c1c] bg-[#0A0A0A] px-0.5">
+								<button
+									onClick={() => zoomBy(-0.1)}
+									disabled={!previewHtml || zoom <= MIN_ZOOM}
+									aria-label="Zoom arrière"
+									title="Zoom arrière"
+									className="p-1 rounded text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+								>
+									<ZoomOut size={12} />
+								</button>
+								<button
+									onClick={resetZoom}
+									disabled={!previewHtml}
+									aria-label="Réinitialiser le zoom à 100%"
+									title="Réinitialiser le zoom (100%)"
+									className="w-11 text-center text-[10px] tabular-nums text-[#9A8F84] hover:text-[#F5F0EB] disabled:opacity-30 transition-colors"
+								>
+									{Math.round(zoom * 100)}%
+								</button>
+								<button
+									onClick={() => zoomBy(0.1)}
+									disabled={!previewHtml || zoom >= MAX_ZOOM}
+									aria-label="Zoom avant"
+									title="Zoom avant"
+									className="p-1 rounded text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+								>
+									<ZoomIn size={12} />
+								</button>
+								<button
+									onClick={fitToWidth}
+									disabled={!previewHtml}
+									aria-label="Ajuster à la largeur"
+									aria-pressed={fitToWidthMode}
+									title="Ajuster à la largeur"
+									className={cn(
+										"p-1 rounded transition-colors disabled:opacity-30",
+										fitToWidthMode
+											? "text-[#C8973A] bg-[#C8973A]/10"
+											: "text-[#9A8F84] hover:text-[#F5F0EB] hover:bg-[#1a1a1a]"
+									)}
+								>
+									<Maximize2 size={12} />
+								</button>
+							</div>
+
+							{previewHtml && pageCount > 1 && (
+								<span className="text-[10px] text-[#5A5249] ml-1.5 truncate hidden sm:inline">
+									{pageCount} pages A4
+								</span>
+							)}
 
 							{previewHtml && previewStale && (
 								<span className="text-[10px] text-[#C8973A] ml-2 truncate">
@@ -327,26 +425,62 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 							</button>
 						</div>
 
-						<div className="flex-1 mt-2 rounded-lg border border-[#222] bg-[#050505] overflow-auto flex items-center justify-center p-3">
+						<div
+							ref={viewportRef}
+							className="flex-1 mt-2 rounded-lg border border-[#222] bg-[#050505] overflow-auto"
+						>
 							{previewHtml ? (
-								<div
-									className={cn(
-										"h-full bg-white rounded-md overflow-hidden transition-all",
-										device === "mobile" ? "w-[375px] max-w-full" : "w-full"
-									)}
-								>
-									<iframe
-										title="Aperçu du template"
-										srcDoc={previewHtml}
-										sandbox=""
-										className="w-full h-full"
-									/>
+								<div className="min-h-full w-max min-w-full flex justify-center p-4">
+									<div
+										style={{
+											width: PDF_PAGE_WIDTH * zoom,
+											height: pageCount * PDF_PAGE_HEIGHT * zoom,
+										}}
+										className="shrink-0"
+									>
+										<div
+											style={{
+												width: PDF_PAGE_WIDTH,
+												height: pageCount * PDF_PAGE_HEIGHT,
+												transform: `scale(${zoom})`,
+												transformOrigin: "top left",
+											}}
+											className="relative bg-white shadow-[0_2px_24px_rgba(0,0,0,0.5)]"
+										>
+											<iframe
+												ref={iframeRef}
+												title="Aperçu du template"
+												srcDoc={previewHtml}
+												sandbox="allow-same-origin"
+												onLoad={handleIframeLoad}
+												style={{
+													width: PDF_PAGE_WIDTH,
+													height: pageCount * PDF_PAGE_HEIGHT,
+													border: "none",
+													display: "block",
+												}}
+											/>
+											{Array.from({ length: pageCount - 1 }, (_, i) => (
+												<div
+													key={i}
+													style={{ top: (i + 1) * PDF_PAGE_HEIGHT }}
+													className="pointer-events-none absolute left-0 right-0 border-t-2 border-dashed border-[#C8973A]/50"
+												>
+													<span className="absolute -top-[18px] right-2 text-[9px] font-medium text-[#8a6a24] bg-[#F5F0EB] px-1.5 py-0.5 rounded-sm shadow-sm">
+														Page {i + 2}
+													</span>
+												</div>
+											))}
+										</div>
+									</div>
 								</div>
 							) : (
-								<div className="text-center text-[#4A453F] px-4">
-									<Play size={24} className="mx-auto mb-2" />
-									<p className="text-xs">Cliquez sur Play pour générer l&apos;aperçu</p>
-									<p className="text-[10px] mt-1 text-[#3A3630]">Ctrl / Cmd + Entrée</p>
+								<div className="h-full flex items-center justify-center">
+									<div className="text-center text-[#4A453F] px-4">
+										<Play size={24} className="mx-auto mb-2" />
+										<p className="text-xs">Cliquez sur Play pour générer l&apos;aperçu</p>
+										<p className="text-[10px] mt-1 text-[#3A3630]">Ctrl / Cmd + Entrée</p>
+									</div>
 								</div>
 							)}
 						</div>
