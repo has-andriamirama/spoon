@@ -90,7 +90,9 @@ const ADDITION_TEMPLATE = `<!DOCTYPE html>
 		<tbody>
 			<tr><td>Sous-total</td><td style="text-align:right;">{{amount}}</td></tr>
 			<tr><td>TVA</td><td style="text-align:right;">{{taxAmount}}</td></tr>
-			<tr class="total-row"><td>Total à régler</td><td style="text-align:right;" class="amount">{{total}}</td></tr>
+			<tr><td>Total</td><td style="text-align:right;">{{total}}</td></tr>
+			<tr><td>Acompte déjà réglé</td><td style="text-align:right;">- {{depositAmount}}</td></tr>
+			<tr class="total-row"><td>Total restant dû</td><td style="text-align:right;" class="amount">{{totalDue}}</td></tr>
 		</tbody>
 	</table>
 	<div class="footer">Merci de votre visite — {{restaurantName}}</div>

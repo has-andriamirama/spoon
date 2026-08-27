@@ -17,6 +17,8 @@ export const INVOICE_TEMPLATE_VARIABLES: TemplateVariableDef[] = [
 	{ key: "amount", label: "Montant HT" },
 	{ key: "taxAmount", label: "TVA" },
 	{ key: "total", label: "Total TTC" },
+	{ key: "depositAmount", label: "Acompte déjà réglé", types: ["ADDITION"] },
+	{ key: "totalDue", label: "Total restant dû (après acompte)", types: ["ADDITION"] },
 	{ key: "tableNumero", label: "N° de table", types: ["ADDITION"] },
 
 	{ key: "restaurantName", label: "Nom du restaurant" },
@@ -71,6 +73,7 @@ export interface InvoiceForVariables {
 	tableNumero?: number | null;
 	items?: InvoiceLineItem[];
 	restaurant?: InvoiceRestaurantInfo | null;
+	depositPaid?: number;
 }
 
 export function escapeHtml(value: string): string {
@@ -108,6 +111,9 @@ export function buildInvoiceVariables(invoice: InvoiceForVariables): InvoiceTemp
 	const restaurant = invoice.restaurant ?? null;
 	const logoUrl = restaurant?.logoUrl?.trim() || DEFAULT_LOGO_URL;
 
+	const depositPaid = invoice.depositPaid ?? 0;
+	const totalDue = Math.max(invoice.totalAmount - depositPaid, 0);
+
 	return {
 		invoiceNumber: invoice.invoiceNumber,
 		customerName: invoice.guestName ?? "Client",
@@ -119,6 +125,8 @@ export function buildInvoiceVariables(invoice: InvoiceForVariables): InvoiceTemp
 		amount: formatPrice(invoice.amount),
 		taxAmount: formatPrice(invoice.taxAmount),
 		total: formatPrice(invoice.totalAmount),
+		depositAmount: formatPrice(depositPaid),
+		totalDue: formatPrice(totalDue),
 		tableNumero: invoice.tableNumero ? `Table ${invoice.tableNumero}` : "—",
 		itemsCount: String(items.reduce((sum, item) => sum + item.qty, 0)),
 
@@ -152,6 +160,7 @@ export function buildSampleVariables(): InvoiceTemplateVariables {
 		reservation: { date: new Date("2026-09-12"), timeSlot: "20:00" },
 		tableNumero: 8,
 		items: sampleItems,
+		depositPaid: 40,
 		restaurant: {
 			name: "Spoon Restaurant",
 			address: "12 Rue des Filaos, 97400 Saint-Denis, La Réunion",

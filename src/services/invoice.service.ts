@@ -31,7 +31,13 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 	const invoice = await prisma.invoice.findUniqueOrThrow({
 		where: { id: invoiceId },
 		include: {
-			reservation: { select: { date: true, timeSlot: true } },
+			reservation: {
+				select: {
+					date: true,
+					timeSlot: true,
+					payment: { select: { amount: true, status: true } },
+				},
+			},
 			serviceOrder: {
 				include: {
 					table: { select: { numero: true } },
@@ -57,6 +63,11 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 				}))
 			: undefined;
 
+	const depositPaid =
+		invoice.type === "ADDITION" && invoice.reservation?.payment?.status === "PAID"
+			? invoice.reservation.payment.amount || 0
+			: 0;
+
 	const variables = buildInvoiceVariables({
 		invoiceNumber: invoice.invoiceNumber,
 		amount: invoice.amount,
@@ -69,6 +80,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 		tableNumero: invoice.serviceOrder?.table.numero ?? null,
 		items,
 		restaurant,
+		depositPaid,
 	});
 
 	const finalHtml = injectTemplateVariables(html, variables);
