@@ -47,14 +47,9 @@ const DEPOSIT_TEMPLATE = `<!DOCTYPE html>
 		<div><strong>Date d'émission</strong>{{issuedAt}}</div>
 	</div>
 	<table>
-		<thead><tr><th>Désignation</th><th style="text-align:center;">Qté</th><th style="text-align:right;">Prix unitaire</th><th style="text-align:right;">Total</th></tr></thead>
+		<thead><tr><th>Description</th><th style="text-align:right;">Montant</th></tr></thead>
 		<tbody>
-			{{itemsRows}}
-		</tbody>
-	</table>
-	<table class="totals">
-		<tbody>
-			<tr><td>Sous-total</td><td style="text-align:right;">{{amount}}</td></tr>
+			<tr><td>Acompte de réservation</td><td style="text-align:right;">{{amount}}</td></tr>
 			<tr><td>TVA</td><td style="text-align:right;">{{taxAmount}}</td></tr>
 			<tr class="total-row"><td>Total réglé</td><td style="text-align:right;" class="amount">{{total}}</td></tr>
 		</tbody>

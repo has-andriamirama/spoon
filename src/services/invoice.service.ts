@@ -46,7 +46,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 
 	const restaurant = await getRestaurantInfoForInvoice();
 
-	const items: InvoiceLineItem[] =
+	const items: InvoiceLineItem[] | undefined =
 		invoice.type === "ADDITION" && invoice.serviceOrder
 			? invoice.serviceOrder.items.map((item) => ({
 					name: item.dishName,
@@ -55,14 +55,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 					totalPrice: item.totalPrice,
 					notes: item.notes,
 				}))
-			: [
-					{
-						name: "Acompte de réservation",
-						qty: 1,
-						unitPrice: invoice.amount,
-						totalPrice: invoice.amount,
-					},
-				];
+			: undefined;
 
 	const variables = buildInvoiceVariables({
 		invoiceNumber: invoice.invoiceNumber,

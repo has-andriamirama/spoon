@@ -301,7 +301,9 @@ function EditorPanel({
 									Variables disponibles — clic pour insérer
 								</p>
 								<div className="flex flex-wrap gap-1.5">
-									{INVOICE_TEMPLATE_VARIABLES.map((v) => (
+									{INVOICE_TEMPLATE_VARIABLES.filter(
+										(v) => !v.types || v.types.includes(state.type)
+									).map((v) => (
 										<VariableChip
 											key={v.key}
 											label={v.key}
@@ -312,11 +314,18 @@ function EditorPanel({
 								<p className="text-[11px] text-[#5A5249] mt-2 leading-relaxed">
 									<span className="text-[#9A8F84] font-medium">{`{{logoImg}}`}</span> insère le
 									logo de l&apos;établissement (balise <code>&lt;img&gt;</code> déjà prête, vide
-									si aucun logo n&apos;est configuré dans les paramètres du restaurant).{" "}
-									<span className="text-[#9A8F84] font-medium">{`{{itemsRows}}`}</span> insère
-									une ligne <code>&lt;tr&gt;</code> par plat (désignation, quantité, prix
-									unitaire, total) — placez-la à l&apos;intérieur d&apos;un{" "}
-									<code>&lt;tbody&gt;</code> d&apos;un tableau à 4 colonnes.
+									si aucun logo n&apos;est configuré dans les paramètres du restaurant).
+									{state.type === "ADDITION" && (
+										<>
+											{" "}
+											<span className="text-[#9A8F84] font-medium">{`{{itemsRows}}`}</span>{" "}
+											insère une ligne <code>&lt;tr&gt;</code> par plat commandé
+											(désignation, quantité, prix unitaire, total) — placez-la à
+											l&apos;intérieur d&apos;un <code>&lt;tbody&gt;</code> d&apos;un
+											tableau à 4 colonnes. Réservé aux templates « Addition » : un
+											acompte n&apos;a pas de plats associés.
+										</>
+									)}
 								</p>
 							</div>
 

@@ -1,6 +1,14 @@
 import { formatDate, formatDateTime, formatPrice } from "@/lib/utils";
 
-export const INVOICE_TEMPLATE_VARIABLES = [
+type TemplateVariableInvoiceType = "DEPOSIT" | "ADDITION";
+
+interface TemplateVariableDef {
+	key: string;
+	label: string;
+	types?: TemplateVariableInvoiceType[];
+}
+
+export const INVOICE_TEMPLATE_VARIABLES: TemplateVariableDef[] = [
 	{ key: "invoiceNumber", label: "N° de facture" },
 	{ key: "customerName", label: "Nom du client" },
 	{ key: "customerEmail", label: "Email du client" },
@@ -9,8 +17,7 @@ export const INVOICE_TEMPLATE_VARIABLES = [
 	{ key: "amount", label: "Montant HT" },
 	{ key: "taxAmount", label: "TVA" },
 	{ key: "total", label: "Total TTC" },
-	{ key: "tableNumero", label: "N° de table" },
-	{ key: "itemsCount", label: "Nombre d'articles" },
+	{ key: "tableNumero", label: "N° de table", types: ["ADDITION"] },
 
 	{ key: "restaurantName", label: "Nom du restaurant" },
 	{ key: "restaurantAddress", label: "Adresse du restaurant" },
@@ -19,8 +26,9 @@ export const INVOICE_TEMPLATE_VARIABLES = [
 	{ key: "logoUrl", label: "URL du logo" },
 	{ key: "logoImg", label: "Logo (balise <img>)" },
 
-	{ key: "itemsRows", label: "Lignes des plats (tableau)" },
-] as const;
+	{ key: "itemsRows", label: "Lignes des plats (tableau)", types: ["ADDITION"] },
+	{ key: "itemsCount", label: "Nombre d'articles", types: ["ADDITION"] },
+];
 
 export type InvoiceTemplateVariables = Record<string, string>;
 
