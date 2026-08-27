@@ -1,17 +1,34 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ImageUploader } from "@/components/admin/image-uploader";
+import { uploadFileToCDN, deleteFromCDN } from "@/lib/client/cloudinary-upload";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/lib/utils";
+import type { ImageInput } from "@/types";
+
+const LOGO_UPLOAD_FOLDER = "spoon/settings/logo";
 
 export default function AdminSettingsGeneralPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [form, setForm] = useState({ name: "", tagline: "", description: "", phone: "", email: "", address: "", googleMapsUrl: "", facebookUrl: "", instagramUrl: "", depositRequired: true, depositAmountPerCover: 20, freeCancellationHours: 48, maxCoversPerSlot: 40, minBookingNoticeHours: 2, maxBookingAdvanceDays: 60, autoConfirmReservations: false });
+  const [logoPublicId, setLogoPublicId] = useState("");
+  const [logoImages, setLogoImages] = useState<ImageInput[]>([]);
 
   useEffect(() => {
-    fetch("/api/settings").then(r => r.json()).then(d => { if (d.data) setForm(d.data); }).finally(() => setFetching(false));
+    fetch("/api/settings").then(r => r.json()).then(d => {
+      if (d.data) {
+        setForm(d.data);
+        setLogoPublicId(d.data.logoPublicId || "");
+        if (d.data.logoUrl) {
+          setLogoImages([{ url: d.data.logoUrl, publicId: d.data.logoPublicId || "", isPrimary: true, order: 0 }]);
+        }
+      }
+    }).finally(() => setFetching(false));
   }, []);
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
@@ -19,11 +36,44 @@ export default function AdminSettingsGeneralPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true);
+
+    let uploadedPublicId: string | null = null;
+
     try {
-      const res = await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      let logoUrl: string | null = logoImages[0]?.url ?? null;
+      let nextLogoPublicId: string | null = logoImages[0]?.publicId || null;
+
+      const pendingLogo = logoImages[0]?.file;
+      if (pendingLogo) {
+        toast.loading("Upload du logo…", { id: "logo-upload-toast" });
+        const result = await uploadFileToCDN(pendingLogo, LOGO_UPLOAD_FOLDER);
+        toast.dismiss("logo-upload-toast");
+        if (!result) throw new Error("Échec de l'upload du logo.");
+        uploadedPublicId = result.publicId;
+        logoUrl = result.url;
+        nextLogoPublicId = result.publicId;
+      } else if (logoImages.length === 0) {
+        logoUrl = null;
+        nextLogoPublicId = null;
+      }
+
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, logoUrl, logoPublicId: nextLogoPublicId }),
+      });
       if (!res.ok) throw new Error();
+
+      if (logoPublicId && logoPublicId !== nextLogoPublicId) {
+        await deleteFromCDN(logoPublicId);
+      }
+      setLogoPublicId(nextLogoPublicId || "");
+
       toast.success("Paramètres enregistrés !");
-    } catch { toast.error("Erreur lors de la sauvegarde."); }
+    } catch (error) {
+      if (uploadedPublicId) await deleteFromCDN(uploadedPublicId);
+      toast.error(getErrorMessage(error, "Erreur lors de la sauvegarde."));
+    }
     finally { setLoading(false); }
   };
 
@@ -35,6 +85,15 @@ export default function AdminSettingsGeneralPage() {
       <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
         <div className="bg-[#141414] border border-[#222] rounded-xl p-6 space-y-4">
           <h2 className="font-display text-xl text-[#F5F0EB]">Identité du restaurant</h2>
+          <ImageUploader
+            images={logoImages}
+            onChange={setLogoImages}
+            maxImages={1}
+            allowPrimary={false}
+            label="Logo"
+            emptyText="Aucun logo — cliquez sur « + » pour en ajouter"
+            emptyHelperText="Utilisé sur les factures et additions (variable {{logoImg}})."
+          />
           <Input label="Nom" value={form.name} onChange={e => set("name", e.target.value)} />
           <Input label="Accroche" value={form.tagline || ""} onChange={e => set("tagline", e.target.value)} placeholder="La cuisine créole élevée au rang d'art" />
           <Textarea label="Description" value={form.description || ""} onChange={e => set("description", e.target.value)} rows={3} />

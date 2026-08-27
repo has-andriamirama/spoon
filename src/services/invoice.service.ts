@@ -3,23 +3,66 @@ import { generateInvoiceNumber } from "@/lib/utils";
 import { uploadRawBufferToCloudinary } from "@/lib/cloudinary";
 import { htmlToPdfBuffer } from "@/lib/pdf/generate-pdf";
 import { getDefaultTemplateHtml } from "@/lib/pdf/default-templates";
-import { buildInvoiceVariables, injectTemplateVariables } from "@/lib/pdf/template-variables";
+import {
+	buildInvoiceVariables,
+	injectTemplateVariables,
+	type InvoiceLineItem,
+	type InvoiceRestaurantInfo,
+} from "@/lib/pdf/template-variables";
 import { getActiveInvoiceTemplate, getInvoiceTemplateHtml } from "@/services/invoice-template.service";
 import type { Invoice } from "@/types";
 
 const INVOICES_FOLDER = "spoon/invoices";
+
+async function getRestaurantInfoForInvoice(): Promise<InvoiceRestaurantInfo | null> {
+	const settings = await prisma.restaurantSettings.findFirst();
+	if (!settings) return null;
+
+	return {
+		name: settings.name,
+		logoUrl: settings.logoUrl,
+		address: settings.address,
+		phone: settings.phone,
+		email: settings.email,
+	};
+}
 
 export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 	const invoice = await prisma.invoice.findUniqueOrThrow({
 		where: { id: invoiceId },
 		include: {
 			reservation: { select: { date: true, timeSlot: true } },
-			serviceOrder: { select: { table: { select: { numero: true } } } },
+			serviceOrder: {
+				include: {
+					table: { select: { numero: true } },
+					items: { orderBy: { createdAt: "asc" } },
+				},
+			},
 		},
 	});
 
 	const template = await getActiveInvoiceTemplate(invoice.type);
 	const html = template ? await getInvoiceTemplateHtml(template) : getDefaultTemplateHtml(invoice.type);
+
+	const restaurant = await getRestaurantInfoForInvoice();
+
+	const items: InvoiceLineItem[] =
+		invoice.type === "ADDITION" && invoice.serviceOrder
+			? invoice.serviceOrder.items.map((item) => ({
+					name: item.dishName,
+					qty: item.qty,
+					unitPrice: item.unitPrice,
+					totalPrice: item.totalPrice,
+					notes: item.notes,
+				}))
+			: [
+					{
+						name: "Acompte de réservation",
+						qty: 1,
+						unitPrice: invoice.amount,
+						totalPrice: invoice.amount,
+					},
+				];
 
 	const variables = buildInvoiceVariables({
 		invoiceNumber: invoice.invoiceNumber,
@@ -31,6 +74,8 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Invoice> {
 		guestEmail: invoice.guestEmail,
 		reservation: invoice.reservation,
 		tableNumero: invoice.serviceOrder?.table.numero ?? null,
+		items,
+		restaurant,
 	});
 
 	const finalHtml = injectTemplateVariables(html, variables);

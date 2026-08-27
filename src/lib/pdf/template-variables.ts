@@ -10,9 +10,35 @@ export const INVOICE_TEMPLATE_VARIABLES = [
 	{ key: "taxAmount", label: "TVA" },
 	{ key: "total", label: "Total TTC" },
 	{ key: "tableNumero", label: "N° de table" },
+	{ key: "itemsCount", label: "Nombre d'articles" },
+
+	{ key: "restaurantName", label: "Nom du restaurant" },
+	{ key: "restaurantAddress", label: "Adresse du restaurant" },
+	{ key: "restaurantPhone", label: "Téléphone du restaurant" },
+	{ key: "restaurantEmail", label: "Email du restaurant" },
+	{ key: "logoUrl", label: "URL du logo" },
+	{ key: "logoImg", label: "Logo (balise <img>)" },
+
+	{ key: "itemsRows", label: "Lignes des plats (tableau)" },
 ] as const;
 
 export type InvoiceTemplateVariables = Record<string, string>;
+
+export interface InvoiceLineItem {
+	name: string;
+	qty: number;
+	unitPrice: number;
+	totalPrice: number;
+	notes?: string | null;
+}
+
+export interface InvoiceRestaurantInfo {
+	name: string;
+	logoUrl?: string | null;
+	address?: string | null;
+	phone?: string | null;
+	email?: string | null;
+}
 
 export interface InvoiceForVariables {
 	invoiceNumber: string;
@@ -24,9 +50,49 @@ export interface InvoiceForVariables {
 	guestEmail: string | null;
 	reservation?: { date: Date; timeSlot: string } | null;
 	tableNumero?: number | null;
+	items?: InvoiceLineItem[];
+	restaurant?: InvoiceRestaurantInfo | null;
+}
+
+export function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+export function buildItemsRowsHtml(items: InvoiceLineItem[]): string {
+	if (!items.length) {
+		return `<tr><td colspan="4" style="text-align:center;color:#999;">Aucun article</td></tr>`;
+	}
+
+	return items
+		.map((item) => {
+			const name = escapeHtml(item.name);
+			const notes = item.notes
+				? `<br><span style="font-size:11px;color:#999;">${escapeHtml(item.notes)}</span>`
+				: "";
+			return `<tr>
+		<td>${name}${notes}</td>
+		<td style="text-align:center;">${item.qty}</td>
+		<td style="text-align:right;">${formatPrice(item.unitPrice)}</td>
+		<td style="text-align:right;">${formatPrice(item.totalPrice)}</td>
+	</tr>`;
+		})
+		.join("\n");
+}
+
+function buildLogoImgHtml(logoUrl?: string | null): string {
+	if (!logoUrl) return "";
+	return `<img src="${escapeHtml(logoUrl)}" alt="Logo" style="max-height:56px;max-width:180px;object-fit:contain;" />`;
 }
 
 export function buildInvoiceVariables(invoice: InvoiceForVariables): InvoiceTemplateVariables {
+	const items = invoice.items ?? [];
+	const restaurant = invoice.restaurant ?? null;
+
 	return {
 		invoiceNumber: invoice.invoiceNumber,
 		customerName: invoice.guestName ?? "Client",
@@ -39,21 +105,47 @@ export function buildInvoiceVariables(invoice: InvoiceForVariables): InvoiceTemp
 		taxAmount: formatPrice(invoice.taxAmount),
 		total: formatPrice(invoice.totalAmount),
 		tableNumero: invoice.tableNumero ? `Table ${invoice.tableNumero}` : "—",
+		itemsCount: String(items.reduce((sum, item) => sum + item.qty, 0)),
+
+		restaurantName: restaurant?.name ?? "Spoon",
+		restaurantAddress: restaurant?.address ?? "",
+		restaurantPhone: restaurant?.phone ?? "",
+		restaurantEmail: restaurant?.email ?? "",
+		logoUrl: restaurant?.logoUrl ?? "",
+		logoImg: buildLogoImgHtml(restaurant?.logoUrl),
+
+		itemsRows: buildItemsRowsHtml(items),
 	};
 }
 
 export function buildSampleVariables(): InvoiceTemplateVariables {
-	return {
+	const sampleItems: InvoiceLineItem[] = [
+		{ name: "Rougail saucisses", qty: 2, unitPrice: 16, totalPrice: 32 },
+		{ name: "Samoussas (x6)", qty: 1, unitPrice: 9, totalPrice: 9 },
+		{ name: "Cari poulet coco", qty: 2, unitPrice: 18, totalPrice: 36, notes: "Sans piment" },
+		{ name: "Punch maison", qty: 3, unitPrice: 7, totalPrice: 21 },
+		{ name: "Tarte à la banane", qty: 2, unitPrice: 6, totalPrice: 12 },
+	];
+
+	return buildInvoiceVariables({
 		invoiceNumber: "SPO-2026-04213765",
-		customerName: "M. et Mme Payet",
-		customerEmail: "j.payet@example.re",
-		reservationDate: "12 septembre 2026 · 20:00",
-		issuedAt: formatDateTime(new Date()),
-		amount: formatPrice(160),
-		taxAmount: formatPrice(0),
-		total: formatPrice(160),
-		tableNumero: "Table 8",
-	};
+		amount: 160,
+		taxAmount: 0,
+		totalAmount: 160,
+		issuedAt: new Date(),
+		guestName: "M. et Mme Payet",
+		guestEmail: "j.payet@example.re",
+		reservation: { date: new Date("2026-09-12"), timeSlot: "20:00" },
+		tableNumero: 8,
+		items: sampleItems,
+		restaurant: {
+			name: "Spoon Restaurant",
+			logoUrl: "https://res.cloudinary.com/demo/image/upload/v1/spoon/logo-sample.png",
+			address: "12 Rue des Filaos, 97400 Saint-Denis, La Réunion",
+			phone: "+262 262 00 00 00",
+			email: "contact@spoon-restaurant.re",
+		},
+	});
 }
 
 export function injectTemplateVariables(html: string, variables: InvoiceTemplateVariables): string {
