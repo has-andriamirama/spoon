@@ -15,7 +15,24 @@ const LOGO_UPLOAD_FOLDER = "spoon/settings/logo";
 export default function AdminSettingsGeneralPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [form, setForm] = useState({ name: "", tagline: "", description: "", phone: "", email: "", address: "", googleMapsUrl: "", facebookUrl: "", instagramUrl: "", depositRequired: true, depositAmountPerCover: 20, freeCancellationHours: 48, maxCoversPerSlot: 40, minBookingNoticeHours: 2, maxBookingAdvanceDays: 60, autoConfirmReservations: false });
+  const [form, setForm] = useState({
+    name: "",
+    tagline: "",
+    description: "",
+    phone: "",
+    email: "",
+    address: "",
+    googleMapsUrl: "",
+    facebookUrl: "",
+    instagramUrl: "",
+    depositRequired: true,
+    depositAmountPerCover: 10,
+    freeCancellationHours: 24,
+    maxCoversPerSlot: 40,
+    minBookingNoticeHours: 2,
+    maxBookingAdvanceDays: 60,
+    autoConfirmReservations: false
+  });
   const [logoPublicId, setLogoPublicId] = useState("");
   const [logoImages, setLogoImages] = useState<ImageInput[]>([]);
 
@@ -92,7 +109,7 @@ export default function AdminSettingsGeneralPage() {
             allowPrimary={false}
             label="Logo"
             emptyText="Aucun logo — cliquez sur « + » pour en ajouter"
-            emptyHelperText="Utilisé sur les factures et additions (variable {{logoImg}})."
+            emptyHelperText="Utilisé sur les factures et additions (variable {{logoUrl}})."
           />
           <Input label="Nom" value={form.name} onChange={e => set("name", e.target.value)} />
           <Input label="Accroche" value={form.tagline || ""} onChange={e => set("tagline", e.target.value)} placeholder="La cuisine créole élevée au rang d'art" />

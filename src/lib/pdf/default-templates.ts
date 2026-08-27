@@ -30,7 +30,7 @@ const DEPOSIT_TEMPLATE = `<!DOCTYPE html>
 <body>
 	<div class="header">
 		<div class="brand-block">
-			{{logoImg}}
+			<img src="{{logoUrl}}" alt="Logo" style="display:block;max-height:56px;max-width:180px;object-fit:contain;" />
 			<div>
 				<div class="brand">{{restaurantName}}<span>.</span></div>
 				<div class="brand-coords">{{restaurantAddress}}<br>{{restaurantPhone}} · {{restaurantEmail}}</div>
@@ -64,7 +64,7 @@ const ADDITION_TEMPLATE = `<!DOCTYPE html>
 <body>
 	<div class="header">
 		<div class="brand-block">
-			{{logoImg}}
+			<img src="{{logoUrl}}" alt="Logo" style="display:block;max-height:56px;max-width:180px;object-fit:contain;" />
 			<div>
 				<div class="brand">{{restaurantName}}<span>.</span></div>
 				<div class="brand-coords">{{restaurantAddress}}<br>{{restaurantPhone}} · {{restaurantEmail}}</div>

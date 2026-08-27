@@ -24,13 +24,24 @@ export const INVOICE_TEMPLATE_VARIABLES: TemplateVariableDef[] = [
 	{ key: "restaurantPhone", label: "Téléphone du restaurant" },
 	{ key: "restaurantEmail", label: "Email du restaurant" },
 	{ key: "logoUrl", label: "URL du logo" },
-	{ key: "logoImg", label: "Logo (balise <img>)" },
 
 	{ key: "itemsRows", label: "Lignes des plats (tableau)", types: ["ADDITION"] },
 	{ key: "itemsCount", label: "Nombre d'articles", types: ["ADDITION"] },
 ];
 
 export type InvoiceTemplateVariables = Record<string, string>;
+
+const DEFAULT_LOGO_SVG =
+	'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
+	'<rect width="64" height="64" rx="16" fill="#C8973A"/>' +
+	'<g transform="translate(20,20)" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+	'<path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" />' +
+	'<path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7" />' +
+	'<path d="m2.1 21.8 6.4-6.3" />' +
+	'<path d="m19 5-7 7" />' +
+	"</g></svg>";
+
+export const DEFAULT_LOGO_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(DEFAULT_LOGO_SVG)}`;
 
 export interface InvoiceLineItem {
 	name: string;
@@ -92,14 +103,10 @@ export function buildItemsRowsHtml(items: InvoiceLineItem[]): string {
 		.join("\n");
 }
 
-function buildLogoImgHtml(logoUrl?: string | null): string {
-	if (!logoUrl) return "";
-	return `<img src="${escapeHtml(logoUrl)}" alt="Logo" style="max-height:56px;max-width:180px;object-fit:contain;" />`;
-}
-
 export function buildInvoiceVariables(invoice: InvoiceForVariables): InvoiceTemplateVariables {
 	const items = invoice.items ?? [];
 	const restaurant = invoice.restaurant ?? null;
+	const logoUrl = restaurant?.logoUrl?.trim() || DEFAULT_LOGO_URL;
 
 	return {
 		invoiceNumber: invoice.invoiceNumber,
@@ -119,8 +126,7 @@ export function buildInvoiceVariables(invoice: InvoiceForVariables): InvoiceTemp
 		restaurantAddress: restaurant?.address ?? "",
 		restaurantPhone: restaurant?.phone ?? "",
 		restaurantEmail: restaurant?.email ?? "",
-		logoUrl: restaurant?.logoUrl ?? "",
-		logoImg: buildLogoImgHtml(restaurant?.logoUrl),
+		logoUrl,
 
 		itemsRows: buildItemsRowsHtml(items),
 	};
