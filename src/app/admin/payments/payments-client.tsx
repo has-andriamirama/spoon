@@ -36,6 +36,11 @@ interface InvoiceInfo {
 
 export type PaymentKind = "DEPOSIT" | "ADDITION";
 
+/**
+ * Une entrée unifiée du registre des paiements.
+ * - kind = "DEPOSIT"  → acompte de réservation encaissé via Stripe (table `Payment`)
+ * - kind = "ADDITION" → addition de commande encaissée en salle (table `ServiceOrder`, statut PAYEE)
+ */
 export interface UnifiedPayment {
 	id: string;
 	kind: PaymentKind;
@@ -45,6 +50,7 @@ export interface UnifiedPayment {
 	paymentMethod: PaymentMethodService | null;
 	status: PaymentStatus;
 	refundedAmount: number | null;
+	/** Acompte de réservation déjà encaissé et déduit de cette addition (kind = "ADDITION" uniquement). */
 	depositDeducted: number | null;
 	stripePaymentIntentId: string | null;
 	stripeChargeId: string | null;
@@ -381,6 +387,9 @@ function DetailPanel({
 	const isRefundable = isDeposit && payment?.status === "PAID";
 	const refundable   = payment ? payment.amount - (payment.refundedAmount ?? 0) : 0;
 
+	// Pour une addition (kind = "ADDITION"), payment.amount est le sous-total de la commande ;
+	// un éventuel acompte de réservation déjà encaissé vient s'en déduire — même logique que
+	// dans le panneau de détail de la page Commandes.
 	const hasDeposit = !isDeposit && payment != null && (payment.depositDeducted ?? 0) > 0;
 	const amountDue  = payment ? Math.max(0, payment.amount - (payment.depositDeducted ?? 0)) : 0;
 
@@ -679,11 +688,15 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 	const [page,          setPage]          = useState(1);
 	const [selectedId,    setSelectedId]    = useState<string | null>(null);
 
+	// Deep-link support: /admin/payments?id=xxx opens the panel on load, with the slide-in
+	// animation (selectedId starts at null and is only set after the first paint), then the
+	// URL is cleaned up. Used by the invoice side panel instead of a dedicated route.
 	useEffect(() => {
 		if (initialPaymentId) {
 			setSelectedId(initialPaymentId);
 			router.replace("/admin/payments", { scroll: false });
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const stats = useMemo(() => {
