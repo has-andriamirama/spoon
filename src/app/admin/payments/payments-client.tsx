@@ -536,48 +536,33 @@ function DetailPanel({
 									/>
 								</Section>
 							) : (
-								<>
-									<Section title="Addition" icon={Banknote}>
-										<InfoRow label="Sous-total" value={formatPrice(payment.amount)} />
-										{hasDeposit && (
-											<InfoRow
-												label="Acompte déjà payé"
-												value={`−${formatPrice(payment.depositDeducted ?? 0)}`}
-												valueClass="text-green-400"
-											/>
-										)}
+								<Section title="Addition" icon={Banknote}>
+									<InfoRow label="Sous-total" value={formatPrice(payment.amount)} />
+									{hasDeposit && (
 										<InfoRow
-											label={hasDeposit ? "Reste à payer" : "Total"}
-											value={formatPrice(hasDeposit ? amountDue : payment.amount)}
-											valueClass="font-semibold text-[#C8973A]"
+											label="Acompte déjà payé"
+											value={`−${formatPrice(payment.depositDeducted ?? 0)}`}
+											valueClass="text-green-400"
 										/>
-										{payment.paymentMethod && (
-											<InfoRow
-												label="Mode de paiement"
-												value={PAYMENT_METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod}
-												valueClass="text-[#9A8F84]"
-											/>
-										)}
+									)}
+									<InfoRow
+										label={hasDeposit ? "Reste à payer" : "Total"}
+										value={formatPrice(hasDeposit ? amountDue : payment.amount)}
+										valueClass="font-semibold text-[#C8973A]"
+									/>
+									{payment.paymentMethod && (
 										<InfoRow
-											label="Encaissé le"
-											value={formatDateTime(payment.createdAt)}
+											label="Mode de paiement"
+											value={PAYMENT_METHOD_LABELS[payment.paymentMethod] ?? payment.paymentMethod}
 											valueClass="text-[#9A8F84]"
 										/>
-									</Section>
-
-									<Section title="Détails de l'addition">
-										<InfoRow
-											label="Référence"
-											value={`#${(payment.serviceOrderId ?? payment.id).slice(-8).toUpperCase()}`}
-											valueClass="font-mono text-[#9A8F84] text-[11px]"
-										/>
-										<InfoRow
-											label="Articles"
-											value={payment.itemsCount != null ? `${payment.itemsCount} article${payment.itemsCount !== 1 ? "s" : ""}` : "—"}
-											valueClass="text-[#9A8F84]"
-										/>
-									</Section>
-								</>
+									)}
+									<InfoRow
+										label="Encaissé le"
+										value={formatDateTime(payment.createdAt)}
+										valueClass="text-[#9A8F84]"
+									/>
+								</Section>
 							)}
 
 							{payment.kind === "ADDITION" && payment.serviceOrderId && (
@@ -685,11 +670,15 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 	const [page,          setPage]          = useState(1);
 	const [selectedId,    setSelectedId]    = useState<string | null>(null);
 
+	// Deep-link support: /admin/payments?id=xxx opens the panel on load, with the slide-in
+	// animation (selectedId starts at null and is only set after the first paint), then the
+	// URL is cleaned up. Used by the invoice side panel instead of a dedicated route.
 	useEffect(() => {
 		if (initialPaymentId) {
 			setSelectedId(initialPaymentId);
 			router.replace("/admin/payments", { scroll: false });
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const stats = useMemo(() => {
@@ -946,12 +935,12 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 				<div className={cn("grid items-center px-5 py-3 border-b border-[#222] bg-[#141414]", GRID_COLS)}>
 					<SortBtn label="Client"  sortKey="client" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					<SortBtn label="Date"    sortKey="date"   current={sortKey} dir={sortDir} onClick={handleSortClick} />
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
-					<SortBtn label="Statut"  sortKey="status" current={sortKey} dir={sortDir} onClick={handleSortClick} />
-					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Référence</span>
 					<div className="flex justify-end">
 						<SortBtn label="Montant" sortKey="amount" current={sortKey} dir={sortDir} onClick={handleSortClick} />
 					</div>
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Type</span>
+					<SortBtn label="Statut"  sortKey="status" current={sortKey} dir={sortDir} onClick={handleSortClick} />
+					<span className="text-xs font-semibold uppercase tracking-wider text-[#5A5249]">Référence</span>
 				</div>
 
 				{paginated.length === 0 ? (
@@ -993,6 +982,22 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 										</span>
 									</div>
 
+									<div className="text-right">
+										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
+											{formatPrice(p.amount)}
+										</span>
+										{p.refundedAmount != null && p.refundedAmount > 0 && (
+											<span className="block text-[10px] text-blue-400 mt-0.5">
+												−{formatPrice(p.refundedAmount)} remboursé
+											</span>
+										)}
+										{p.depositDeducted != null && p.depositDeducted > 0 && (
+											<span className="block text-xs text-[#5A5249]">
+												−{formatPrice(p.depositDeducted)} acompte
+											</span>
+										)}
+									</div>
+
 									<div>
 										<Badge variant={kindMeta.badge} className="text-[10px]">
 											{kindMeta.label}
@@ -1019,22 +1024,6 @@ export default function PaymentsClient({ payments, initialPaymentId }: Props) {
 												? <Highlight text={`Table ${p.tableNumero}`} query={search} />
 												: "—")}
 									</span>
-
-									<div className="text-right">
-										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
-											{formatPrice(p.amount)}
-										</span>
-										{p.refundedAmount != null && p.refundedAmount > 0 && (
-											<span className="block text-[10px] text-blue-400 mt-0.5">
-												−{formatPrice(p.refundedAmount)} remboursé
-											</span>
-										)}
-										{p.depositDeducted != null && p.depositDeducted > 0 && (
-											<span className="block text-xs text-[#5A5249]">
-												−{formatPrice(p.depositDeducted)} acompte
-											</span>
-										)}
-									</div>
 								</div>
 							);
 						})}
