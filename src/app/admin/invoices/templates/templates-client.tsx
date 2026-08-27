@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
 	ArrowLeft,
 	Plus,
-	Pencil,
+	Edit,
 	Trash2,
 	CheckCircle2,
 	Loader2,
@@ -150,7 +150,7 @@ function TemplateActions({
 				aria-label="Modifier ce template"
 				className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-all"
 			>
-				<Pencil size={14} />
+				<Edit size={14} />
 			</button>
 			<button
 				onClick={onDelete}
