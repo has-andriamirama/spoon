@@ -272,8 +272,8 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 			</div>
 
 			<div className="flex-1 flex flex-col rounded-xl border border-[#222] bg-[#0A0A0A] overflow-hidden h-[75vh] min-h-[560px] max-h-[860px] relative">
-				<div className="flex items-center gap-3 border-b border-[#222] px-4 py-3 shrink-0">
-					<div className="w-9 h-9 rounded-lg bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center shrink-0">
+				<div className="flex items-center gap-2 sm:gap-3 border-b border-[#222] px-3 sm:px-4 py-2.5 sm:py-3 shrink-0">
+					<div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#C8973A]/10 border border-[#C8973A]/20 flex items-center justify-center shrink-0">
 						<FileCode2 size={16} className="text-[#C8973A]" />
 					</div>
 
@@ -281,17 +281,17 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 					value={name}
 					onChange={(e) => setName(e.target.value)}
 					placeholder="Nom du template"
-					className="min-w-[160px] max-w-[320px] flex-1 sm:flex-none bg-transparent text-sm font-semibold text-[#F5F0EB] placeholder:text-[#5A5249] rounded-md px-2 py-1.5 outline-none focus:bg-[#1a1a1a] transition-colors"
+					className="min-w-[70px] sm:min-w-[160px] max-w-[320px] flex-1 sm:flex-none bg-transparent text-sm font-semibold text-[#F5F0EB] placeholder:text-[#5A5249] rounded-md px-2 py-1.5 outline-none focus:bg-[#1a1a1a] transition-colors"
 				/>
 
-				<div className="flex items-center gap-1.5 shrink-0">
+				<div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
 					{(Object.keys(TYPE_META) as InvoiceType[]).map((t) => (
 						<button
 							key={t}
 							disabled={!isNew}
 							onClick={() => handleTypeChange(t)}
 							className={cn(
-								"px-2.5 h-7 rounded-full border text-[11px] font-medium transition-all",
+								"px-2 sm:px-2.5 h-7 rounded-full border text-[11px] font-medium transition-all whitespace-nowrap",
 								type === t
 									? "bg-[#C8973A]/10 border-[#C8973A]/30 text-[#C8973A]"
 									: "border-[#222] text-[#5A5249]",
@@ -304,16 +304,22 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 					))}
 				</div>
 
-				<div className="ml-auto flex items-center gap-3 shrink-0">
+				<div className="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
 					{dirty && (
 						<span className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#C8973A]">
 							<Circle size={6} className="fill-[#C8973A]" />
 							Non enregistré
 						</span>
 					)}
-					<Button onClick={handleSave} loading={saving} size="sm">
-						<Save size={14} />
-						Enregistrer
+					<Button
+						onClick={handleSave}
+						loading={saving}
+						size="sm"
+						aria-label="Enregistrer"
+						className="shrink-0 px-2.5 gap-1.5 sm:px-3 sm:gap-2"
+					>
+						<Save size={14} className="shrink-0" />
+						<span className="hidden sm:inline">Enregistrer</span>
 					</Button>
 				</div>
 			</div>
