@@ -113,6 +113,10 @@ function EmptyState({ onReset }: { onReset?: () => void }) {
 	);
 }
 
+<<<<<<< HEAD
+=======
+/** Groupe d'actions icônes (activer / modifier / supprimer) — jamais de texte. */
+>>>>>>> e1c0511a475b3cc45f8103b30b898dd779b5fb85
 function TemplateActions({
 	template,
 	onEdit,

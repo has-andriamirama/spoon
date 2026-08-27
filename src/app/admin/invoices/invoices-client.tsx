@@ -873,7 +873,21 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 												<Download size={14} />
 											</a>
 										) : (
-											<span className="text-sm text-[#333]">—</span>
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleRegeneratePdf(inv);
+												}}
+												disabled={regeneratingId === inv.id}
+												className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-all disabled:opacity-40"
+												title="Régénérer le PDF"
+											>
+												{regeneratingId === inv.id ? (
+													<Loader2 size={14} className="animate-spin" />
+												) : (
+													<RefreshCw size={14} />
+												)}
+											</button>
 										)}
 									</div>
 								</div>
@@ -899,13 +913,13 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 								tabIndex={0}
 								onKeyDown={(e) => e.key === "Enter" && setSelectedId(inv.id)}
 								className={cn(
-									"bg-[#141414] border rounded-xl p-4 space-y-3 cursor-pointer transition-colors",
+									"bg-[#141414] border rounded-xl p-4 cursor-pointer transition-colors",
 									selectedId === inv.id
 										? "border-[#C8973A]/30 bg-[#C8973A]/5"
 										: "border-[#222] hover:border-[#333] hover:bg-[#1a1a1a]"
 								)}
 							>
-								<div className="flex items-start justify-between gap-3">
+								<div className="flex items-start justify-between gap-3 mb-3">
 									<div className="min-w-0">
 										<p className="text-xs font-mono font-medium text-[#C8973A] truncate">
 											<Highlight text={inv.invoiceNumber} query={search} />
@@ -927,34 +941,46 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 									</div>
 								</div>
 
-								<div className="grid grid-cols-2 gap-2">
-									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
-										<p className="text-[10px] text-[#5A5249] mb-0.5">HT</p>
-										<p className="text-xs font-medium text-[#F5F0EB]">{formatPrice(inv.amount)}</p>
+								<div className="flex items-center justify-between gap-2 pt-3 border-t border-[#1a1a1a]">
+									<div className="flex items-center gap-3 text-xs text-[#5A5249]">
+										<span>HT {formatPrice(inv.amount)}</span>
+										<span>TVA {formatPrice(inv.taxAmount)}</span>
 									</div>
-									<div className="bg-[#0A0A0A] rounded-lg px-2.5 py-2">
-										<p className="text-[10px] text-[#5A5249] mb-0.5">TVA</p>
-										<p className="text-xs font-medium text-[#F5F0EB]">{formatPrice(inv.taxAmount)}</p>
-									</div>
+									{inv.pdfUrl ? (
+										<a
+											href={inv.pdfUrl}
+											target="_blank"
+											rel="noopener noreferrer"
+											onClick={(e) => e.stopPropagation()}
+											className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-all"
+											title="Télécharger PDF"
+										>
+											<Download size={14} />
+										</a>
+									) : (
+										<button
+											onClick={(e) => {
+												e.stopPropagation();
+												handleRegeneratePdf(inv);
+											}}
+											disabled={regeneratingId === inv.id}
+											className="p-1.5 rounded-lg text-[#5A5249] hover:text-[#C8973A] hover:bg-[#252525] transition-all disabled:opacity-40"
+											title="Régénérer le PDF"
+										>
+											{regeneratingId === inv.id ? (
+												<Loader2 size={14} className="animate-spin" />
+											) : (
+												<RefreshCw size={14} />
+											)}
+										</button>
+									)}
 								</div>
-
-								{inv.pdfUrl && (
-									<a
-										href={inv.pdfUrl}
-										target="_blank"
-										rel="noopener noreferrer"
-										onClick={(e) => e.stopPropagation()}
-										className="flex items-center justify-center gap-2 h-8 rounded-lg border border-[#222] text-xs text-[#9A8F84] hover:text-[#C8973A] hover:border-[#C8973A]/30 transition-colors"
-									>
-										<Download size={12} />
-										PDF
-									</a>
-								)}
 							</div>
 						);
 					})
 				)}
 			</div>
+
 
 			{/* ── Pagination ── */}
 			{totalPages > 1 && (
