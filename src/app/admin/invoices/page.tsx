@@ -36,6 +36,7 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps) {
 					guestName: true,
 					paymentMethod: true,
 					closedAt: true,
+					depositDeducted: true,
 					table: { select: { numero: true } },
 					reservation: {
 						select: {
