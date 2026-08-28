@@ -8,6 +8,7 @@ import {
 	UserX,
 	Flag,
 	Clock,
+	Users,
 	AlertTriangle,
 	Loader2,
 	TableProperties,
@@ -18,15 +19,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ZONE_LABELS } from "@/lib/constants";
-import type { ReservationStatus, ZoneTable, PaymentStatus } from "@/types";
-
-interface TableInfo {
-	id: string;
-	numero: number;
-	zone: ZoneTable;
-	capaciteMax: number;
-	isActif: boolean;
-}
+import type { ReservationStatus, PaymentStatus, TableWithStatus } from "@/types";
 
 interface PaymentInfo {
 	id: string;
@@ -41,6 +34,15 @@ interface Props {
 		status: ReservationStatus;
 		covers: number;
 		payment: PaymentInfo | null;
+		date: Date;
+		timeSlot: string;
+		guestFirstName: string;
+		guestLastName: string;
+		guestEmail: string;
+		guestPhone: string;
+		occasion: string | null;
+		notes: string | null;
+		allergies: string | null;
 	};
 }
 
@@ -50,7 +52,7 @@ export default function ReservationActions({ reservation }: Props) {
 	const [confirmOpen,  setConfirmOpen]  = useState(false);
 	const [cancelOpen,   setCancelOpen]   = useState(false);
 
-	const [tables,          setTables]          = useState<TableInfo[]>([]);
+	const [tables,          setTables]          = useState<TableWithStatus[]>([]);
 	const [tablesLoading,   setTablesLoading]   = useState(false);
 	const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 	const [adminNotes,      setAdminNotes]       = useState("");
@@ -65,22 +67,30 @@ export default function ReservationActions({ reservation }: Props) {
 	const isPending   = reservation.status === "PENDING";
 	const isConfirmed = reservation.status === "CONFIRMED";
 
+	// Tables réellement disponibles ce jour-là (statut calculé côté serveur :
+	// exclut les tables bloquées, en service, ou déjà réservées/confirmées sur la date),
+	// exactement comme dans le modal du plan de salle.
+	const compatibleTables = tables.filter(
+		(t) => t.status === "LIBRE" && t.isActif && t.capaciteMax >= reservation.covers
+	);
+
 	const openConfirmModal = useCallback(async () => {
 		setConfirmOpen(true);
 		setSelectedTableId(null);
 		setAdminNotes("");
 		setTablesLoading(true);
 		try {
-			const res = await fetch("/api/admin/tables");
+			const dateStr = new Date(reservation.date).toISOString().split("T")[0];
+			const res = await fetch(`/api/admin/plan?date=${dateStr}`);
 			const data = await res.json();
-			const all: TableInfo[] = data.data ?? [];
-			setTables(all.filter((t) => t.isActif && t.capaciteMax >= reservation.covers));
+			const all: TableWithStatus[] = data.data?.tables ?? [];
+			setTables(all);
 		} catch {
 			toast.error("Impossible de charger les tables");
 		} finally {
 			setTablesLoading(false);
 		}
-	}, [reservation.covers]);
+	}, [reservation.date]);
 
 	const handleConfirm = async () => {
 		if (!selectedTableId) return;
@@ -222,24 +232,54 @@ export default function ReservationActions({ reservation }: Props) {
 				className="max-w-xl"
 			>
 				<div className="space-y-5">
+					<div className="bg-[#0A0A0A] rounded-xl border border-[#1e1e1e] p-4">
+						<div className="flex items-start justify-between gap-3 mb-2">
+							<div>
+								<p className="text-sm font-semibold text-[#F5F0EB]">
+									{reservation.guestFirstName} {reservation.guestLastName}
+								</p>
+								<p className="text-xs text-[#5A5249] mt-0.5">
+									{reservation.guestEmail} · {reservation.guestPhone}
+								</p>
+							</div>
+							<div className="flex items-center gap-2 shrink-0">
+								<span className="flex items-center gap-1 text-xs text-[#9A8F84] bg-[#1a1a1a] border border-[#222] px-2 py-1 rounded-lg">
+									<Users size={11} /> {reservation.covers} cv
+								</span>
+								<span className="flex items-center gap-1 text-xs text-[#9A8F84] bg-[#1a1a1a] border border-[#222] px-2 py-1 rounded-lg">
+									<Clock size={11} /> {reservation.timeSlot}
+								</span>
+							</div>
+						</div>
+						{reservation.occasion && (
+							<span className="inline-block text-[11px] text-[#C8973A] border border-[#C8973A]/30 bg-[#C8973A]/5 px-2 py-0.5 rounded-md mb-2">
+								{reservation.occasion}
+							</span>
+						)}
+						{(reservation.notes || reservation.allergies) && (
+							<div className="flex items-start gap-2 text-xs text-yellow-600/80 bg-yellow-950/20 border border-yellow-900/30 rounded-lg p-2.5">
+								<AlertTriangle size={11} className="mt-0.5 shrink-0 text-yellow-500" />
+								<span>{reservation.notes || reservation.allergies}</span>
+							</div>
+						)}
+					</div>
+
 					<div>
 						<p className="text-xs font-medium text-[#5A5249] mb-2">
-							Choisir une table (minimum {reservation.covers} couverts requis)
+							Choisir une table libre (minimum {reservation.covers} couverts)
 						</p>
 
 						{tablesLoading ? (
 							<div className="flex items-center justify-center py-8">
 								<Loader2 size={18} className="animate-spin text-[#5A5249]" />
 							</div>
-						) : tables.length === 0 ? (
-							<div className="text-center py-5 border border-dashed border-red-900/30 rounded-xl">
-								<p className="text-sm text-red-400">
-									Aucune table disponible avec {reservation.covers} couverts
-								</p>
+						) : compatibleTables.length === 0 ? (
+							<div className="text-center py-4 border border-dashed border-red-900/30 rounded-xl">
+								<p className="text-sm text-red-400">Aucune table disponible</p>
 							</div>
 						) : (
 							<div className="flex flex-wrap gap-2">
-								{tables.map((t) => {
+								{compatibleTables.map((t) => {
 									const isSelected = selectedTableId === t.id;
 									return (
 										<button
