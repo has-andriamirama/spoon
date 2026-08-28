@@ -115,8 +115,6 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 	const editorRef = useRef<TemplateCodeEditorHandle>(null);
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const viewportRef = useRef<HTMLDivElement>(null);
-	const zoomRef = useRef(zoom);
-	const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
 	const savedSnapshot = useRef({ name: initial.name, html: initial.html, type: initial.type });
 
 	const dirty =
@@ -197,62 +195,6 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 
 	const fitToWidth = useCallback(() => {
 		setFitToWidthMode(true);
-	}, []);
-
-	useEffect(() => {
-		zoomRef.current = zoom;
-	}, [zoom]);
-
-	useEffect(() => {
-		const el = viewportRef.current;
-		if (!el) return;
-
-		const pinchDistance = (touches: TouchList) => {
-			const [a, b] = [touches[0], touches[1]];
-			return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-		};
-
-		const onTouchStart = (e: TouchEvent) => {
-			if (e.touches.length === 2) {
-				pinchRef.current = { distance: pinchDistance(e.touches), zoom: zoomRef.current };
-			}
-		};
-
-		const onTouchMove = (e: TouchEvent) => {
-			if (e.touches.length === 2 && pinchRef.current) {
-				e.preventDefault();
-				const scale = pinchDistance(e.touches) / pinchRef.current.distance;
-				const next = clamp(
-					Math.round(pinchRef.current.zoom * scale * 100) / 100,
-					MIN_ZOOM,
-					MAX_ZOOM
-				);
-				setFitToWidthMode(false);
-				setZoom(next);
-			}
-		};
-
-		const onTouchEnd = (e: TouchEvent) => {
-			if (e.touches.length < 2) pinchRef.current = null;
-		};
-
-		const preventGesture = (e: Event) => e.preventDefault();
-
-		el.addEventListener("touchstart", onTouchStart, { passive: true });
-		el.addEventListener("touchmove", onTouchMove, { passive: false });
-		el.addEventListener("touchend", onTouchEnd, { passive: true });
-		el.addEventListener("touchcancel", onTouchEnd, { passive: true });
-		(el as EventTarget).addEventListener("gesturestart", preventGesture);
-		(el as EventTarget).addEventListener("gesturechange", preventGesture);
-
-		return () => {
-			el.removeEventListener("touchstart", onTouchStart);
-			el.removeEventListener("touchmove", onTouchMove);
-			el.removeEventListener("touchend", onTouchEnd);
-			el.removeEventListener("touchcancel", onTouchEnd);
-			(el as EventTarget).removeEventListener("gesturestart", preventGesture);
-			(el as EventTarget).removeEventListener("gesturechange", preventGesture);
-		};
 	}, []);
 
 	const handleInsertVariable = useCallback((key: string) => {
@@ -492,7 +434,6 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 						<div
 							ref={viewportRef}
 							className="flex-1 mt-2 rounded-lg border border-[#222] bg-[#050505] overflow-auto"
-							style={{ touchAction: "pan-x pan-y" }}
 						>
 							{previewHtml ? (
 								<div className="min-h-full w-max min-w-full flex justify-center p-4">
