@@ -624,6 +624,15 @@ function DetailPanel({
 										status: r.status,
 										covers: r.covers,
 										payment: r.payment,
+										date: r.date,
+										timeSlot: r.timeSlot,
+										guestFirstName: r.guestFirstName,
+										guestLastName: r.guestLastName,
+										guestEmail: r.guestEmail,
+										guestPhone: r.guestPhone,
+										occasion: r.occasion,
+										notes: r.notes,
+										allergies: r.allergies,
 									}}
 								/>
 							</div>
