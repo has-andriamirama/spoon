@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
 	ArrowLeft,
 	Save,
+	Loader2,
 	Play,
 	RotateCw,
 	Braces,
@@ -313,13 +314,20 @@ export default function TemplateEditorClient({ initial, isFirstOfType }: Props) 
 					)}
 					<Button
 						onClick={handleSave}
-						loading={saving}
+						disabled={saving}
 						size="sm"
 						aria-label="Enregistrer"
+						aria-busy={saving}
 						className="shrink-0 px-2.5 gap-1.5 sm:px-3 sm:gap-2"
 					>
-						<Save size={14} className="shrink-0" />
-						<span className="hidden sm:inline">Enregistrer</span>
+						{saving ? (
+							<Loader2 size={14} className="shrink-0 animate-spin" />
+						) : (
+							<Save size={14} className="shrink-0" />
+						)}
+						<span className="hidden sm:inline">
+							{saving ? "Enregistrement..." : "Enregistrer"}
+						</span>
 					</Button>
 				</div>
 			</div>
