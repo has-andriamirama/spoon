@@ -25,6 +25,7 @@ import {
 	FileCode2,
 	RefreshCw,
 	Loader2,
+	Banknote,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn, formatDate, formatDateTime, formatPrice, getErrorMessage } from "@/lib/utils";
@@ -54,6 +55,7 @@ interface ServiceOrderInfo {
 	guestName: string;
 	paymentMethod: string | null;
 	closedAt: Date | null;
+	depositDeducted: number;
 	table: { numero: number };
 	reservation: ReservationRef | null;
 }
@@ -99,6 +101,13 @@ const BADGE_VARIANT: Record<string, "yellow" | "green" | "red" | "gray" | "orang
 const TYPE_META: Record<InvoiceType, { label: string; badge: "gold" | "orange" }> = {
 	DEPOSIT:  { label: "Acompte réservation", badge: "gold"   },
 	ADDITION: { label: "Addition",            badge: "orange" },
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+	CB:           "Carte bancaire",
+	ESPECES:      "Espèces",
+	CHEQUE:       "Chèque",
+	TICKET_RESTO: "Ticket-restaurant",
 };
 
 const PER_PAGE = 10;
@@ -270,10 +279,19 @@ function InfoRow({ label, value, valueClass }: { label: string; value: string; v
 	);
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+	title,
+	icon: Icon,
+	children,
+}: {
+	title: string;
+	icon?: React.ElementType;
+	children: React.ReactNode;
+}) {
 	return (
 		<div>
-			<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+			<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2 flex items-center gap-1.5">
+				{Icon && <Icon size={11} />}
 				{title}
 			</p>
 			<div className="bg-[#0A0A0A] rounded-xl border border-[#1a1a1a] divide-y divide-[#1a1a1a] overflow-hidden">
@@ -347,6 +365,8 @@ function DetailPanel({
 	const display = inv ? invoiceDisplay(inv) : null;
 	const initials = display ? getInitialsFromName(display.name) : "";
 	const typeMeta = inv ? TYPE_META[inv.type] : null;
+	const hasDeposit = inv?.type === "ADDITION" && (inv.serviceOrder?.depositDeducted ?? 0) > 0;
+	const amountDue  = inv ? Math.max(0, inv.totalAmount - (inv.serviceOrder?.depositDeducted ?? 0)) : 0;
 
 	return (
 		<>
@@ -498,17 +518,49 @@ function DetailPanel({
 							)}
 
 							{inv.type === "ADDITION" && inv.serviceOrder && (
-								<div>
-									<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
-										Addition liée
-									</p>
-									<LinkRow
-										href={`/admin/payments?id=so_${inv.serviceOrder.id}`}
-										icon={TableProperties}
-										label={`Table ${inv.serviceOrder.table.numero}`}
-										sub="Voir le paiement"
-									/>
-								</div>
+								<>
+									<Section title="Addition" icon={Banknote}>
+										<InfoRow label="Sous-total" value={formatPrice(inv.totalAmount)} />
+										{hasDeposit && (
+											<InfoRow
+												label="Acompte déjà payé"
+												value={`−${formatPrice(inv.serviceOrder.depositDeducted)}`}
+												valueClass="text-green-400"
+											/>
+										)}
+										<InfoRow
+											label={hasDeposit ? "Reste à payer" : "Total"}
+											value={formatPrice(hasDeposit ? amountDue : inv.totalAmount)}
+											valueClass="font-semibold text-[#C8973A]"
+										/>
+										{inv.serviceOrder.paymentMethod && (
+											<InfoRow
+												label="Mode de paiement"
+												value={PAYMENT_METHOD_LABELS[inv.serviceOrder.paymentMethod] ?? inv.serviceOrder.paymentMethod}
+												valueClass="text-[#9A8F84]"
+											/>
+										)}
+										{inv.serviceOrder.closedAt && (
+											<InfoRow
+												label="Encaissé le"
+												value={formatDateTime(inv.serviceOrder.closedAt)}
+												valueClass="text-[#9A8F84]"
+											/>
+										)}
+									</Section>
+
+									<div>
+										<p className="text-[10px] font-semibold uppercase tracking-widest text-[#5A5249] mb-2">
+											Addition liée
+										</p>
+										<LinkRow
+											href={`/admin/payments?id=so_${inv.serviceOrder.id}`}
+											icon={TableProperties}
+											label={`Table ${inv.serviceOrder.table.numero}`}
+											sub="Voir le paiement"
+										/>
+									</div>
+								</>
 							)}
 						</div>
 
@@ -622,7 +674,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 	const hasActiveFilters = !!search || typeFilter !== "ALL";
 
 	const handleExport = useCallback(() => {
-		const headers = ["N° Facture", "Type", "Client", "Email", "Date émission", "Montant HT (€)", "TVA (€)", "Total TTC (€)", "PDF"];
+		const headers = ["N° Facture", "Type", "Client", "Email", "Date émission", "Montant HT (€)", "TVA (€)", "Total TTC (€)", "Acompte déduit (€)", "PDF"];
 		const rows = filtered.map((inv) => {
 			const { name, email } = invoiceDisplay(inv);
 			return [
@@ -634,6 +686,7 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 				inv.amount.toFixed(2),
 				inv.taxAmount.toFixed(2),
 				inv.totalAmount.toFixed(2),
+				(inv.type === "ADDITION" ? inv.serviceOrder?.depositDeducted ?? 0 : 0).toFixed(2),
 				inv.pdfUrl ?? "",
 			];
 		});
@@ -858,6 +911,11 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 										<span className="text-sm font-semibold text-[#C8973A] tabular-nums">
 											{formatPrice(inv.totalAmount)}
 										</span>
+										{inv.type === "ADDITION" && (inv.serviceOrder?.depositDeducted ?? 0) > 0 && (
+											<span className="block text-xs text-[#5A5249]">
+												−{formatPrice(inv.serviceOrder!.depositDeducted)} acompte
+											</span>
+										)}
 									</div>
 
 									<div className="flex items-center justify-end">
@@ -935,6 +993,11 @@ export default function InvoicesClient({ invoices, initialInvoiceId }: Props) {
 										<span className="text-base font-semibold text-[#C8973A] tabular-nums">
 											{formatPrice(inv.totalAmount)}
 										</span>
+										{inv.type === "ADDITION" && (inv.serviceOrder?.depositDeducted ?? 0) > 0 && (
+											<span className="text-[10px] text-[#5A5249]">
+												−{formatPrice(inv.serviceOrder!.depositDeducted)} acompte
+											</span>
+										)}
 										<Badge variant={typeMeta.badge} className="text-[10px]">
 											{typeMeta.label}
 										</Badge>
